@@ -22,7 +22,7 @@ export function useSupabaseProfile() {
         .single();
       
       if (!error && data) {
-        setProfile(data);
+        setProfile({ ...data, medicalNotes: data.medical_notes });
       }
       setLoading(false);
     }
@@ -33,16 +33,24 @@ export function useSupabaseProfile() {
   const updateProfile = async (updates) => {
     if (!user) return;
     
+    // Convert camelCase to snake_case for the database
+    const dbPayload = { ...updates };
+    if ('medicalNotes' in dbPayload) {
+      dbPayload.medical_notes = dbPayload.medicalNotes;
+      delete dbPayload.medicalNotes;
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
-      .upsert({ id: user.id, ...updates, updated_at: new Date() })
+      .upsert({ id: user.id, ...dbPayload, updated_at: new Date() })
       .select()
       .single();
       
     if (!error && data) {
-      setProfile(data);
+      setProfile({ ...data, medicalNotes: data.medical_notes });
     } else {
       console.error('Error updating profile', error);
+      alert('Failed to save profile: ' + error.message);
     }
   };
 
