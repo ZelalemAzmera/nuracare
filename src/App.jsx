@@ -53,7 +53,7 @@ const DynamicIcon = ({ name, ...props }) => {
 export default function App() {
   const { user, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, loading: authLoading } = useAuth();
   const { profile, setProfile, loading: profileLoading } = useSupabaseProfile();
-  const { sessions, loading: sessionsLoading } = useSupabaseSessions();
+  const { sessions, saveSession, deleteSession, loading: sessionsLoading } = useSupabaseSessions();
   const { t, lang, setLang } = useTranslation();
   
   const [onboardingStep, setOnboardingStep] = useState(0);
