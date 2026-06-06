@@ -7,6 +7,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 // Vercel AI SDK used in api/chat.js (server-side streaming)
 import { discoveryData, getDailyTip } from './data';
 import FloatingLeaves, { LeafSVG, FlowerSVG, DropletSVG } from './FloatingLeaves';
+import DailyCheckIn from './DailyCheckIn';
+import WellnessDashboard from './WellnessDashboard';
+import LifestyleCoach from './LifestyleCoach';
+import { getCheckins } from './wellnessEngine';
 
 class ChatErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, message: '' }; }
@@ -302,6 +306,7 @@ export default function App() {
 
   return (
     <div className="main-app">
+      <DailyCheckIn isGlobal={true} />
       <FloatingLeaves />
       <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={() => setSidebarOpen(false)}></div>
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
@@ -311,10 +316,12 @@ export default function App() {
         </div>
         <nav className="sidebar-nav">
           <NavItem icon={Icons.Home} label={t("home")} active={activePage === 'home'} onClick={() => {setActivePage('home'); setSidebarOpen(false);}} />
+          <NavItem icon={Icons.CalendarCheck} label="Daily Check-in" active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.Stethoscope} label="Checkups" active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.ClipboardList} label="Records" active={activePage === 'records'} onClick={() => { setActivePage('records'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
@@ -362,6 +369,8 @@ export default function App() {
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
         {activePage === 'records' && <Records profile={profile} />}
+        {activePage === 'lifestyle' && <LifestyleCoach />}
+        {activePage === 'checkin' && <CheckinPage profile={profile} />}
         {activePage === 'profile' && (
           <div className="page active">
             <div className="page-header">
@@ -605,7 +614,6 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
       </div>
 
       <div className="dashboard-grid">
-        <div style={{ gridColumn: 'span 2' }}><WellnessScore records={records} /></div>
         <div className="dash-card card-large">
           <div className="dash-card-icon"><Icons.HeartPulse size={24} color="var(--green)" /></div>
           <div className="dash-card-info">
@@ -660,6 +668,149 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
         <button className="quick-btn" onClick={() => setActivePage('discovery')}><Icons.Compass size={18} color="var(--green)"/> Explore Tips</button>
         <button className="quick-btn" onClick={() => setActivePage('records')}><Icons.ClipboardList size={18} color="var(--green)"/> View Records</button>
       </div>
+    </div>
+  );
+}
+
+function CheckinPage({ profile }) {
+  const records = profile?.records || [];
+  const [tab, setTab] = useState('today');
+  const [checkins, setCheckins] = useState([]);
+  
+  useEffect(() => {
+    const fetch = () => setCheckins(getCheckins());
+    fetch();
+    window.addEventListener('checkin-completed', fetch);
+    return () => window.removeEventListener('checkin-completed', fetch);
+  }, []);
+
+  const today = new Date().toISOString().split('T')[0];
+  const todayEntry = checkins.find(c => c.date === today);
+
+  const getAverages = (daysBack) => {
+    if (checkins.length === 0) return null;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysBack);
+    const recent = checkins.filter(c => new Date(c.date) >= cutoff);
+    if (recent.length === 0) return null;
+
+    return {
+      sleep: Math.round(recent.reduce((sum, c) => sum + (c.sleepHours || 0), 0) / recent.length * 10) / 10,
+      stress: Math.round(recent.reduce((sum, c) => sum + c.stress, 0) / recent.length),
+      energy: Math.round(recent.reduce((sum, c) => sum + c.energy, 0) / recent.length),
+      mood: Math.round(recent.reduce((sum, c) => sum + c.mood, 0) / recent.length),
+      count: recent.length
+    };
+  };
+
+  const weekAvg = getAverages(7);
+  const monthAvg = getAverages(30);
+  const yearAvg = getAverages(365);
+
+  const [forceCheckin, setForceCheckin] = useState(false);
+
+  return (
+    <div className="page active">
+      {forceCheckin && <DailyCheckIn forceShow={true} isGlobal={false} onComplete={() => setForceCheckin(false)} />}
+      <div className="page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <h1 className="page-title">Wellness History</h1>
+              {todayEntry && <span className="urgency-badge-sm urgency-low"><Icons.CheckCircle size={12} style={{marginRight: 4, verticalAlign: 'text-bottom'}} /> Check-in Complete</span>}
+            </div>
+            <p className="page-subtitle">Track your wellness records and historical trends</p>
+          </div>
+          <button className="btn-outline-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => setForceCheckin(true)}>
+            <Icons.RotateCw size={14} /> Retake Check-in
+          </button>
+        </div>
+      </div>
+
+      <div className="discovery-tabs">
+        {['today', 'week', 'month', 'year'].map(t => (
+          <button key={t} className={`disc-tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>
+            {t === 'today' ? 'Today' : `This ${t.charAt(0).toUpperCase() + t.slice(1)}`}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'today' && (
+        <div className="dashboard-grid">
+          <div style={{ gridColumn: 'span 2' }}>
+            <WellnessScore records={records} />
+          </div>
+          
+          <div className="dash-card card-large" style={{ gridColumn: 'span 4' }}>
+            {todayEntry ? (
+              <div style={{ width: '100%' }}>
+                <h3 style={{ margin: '0 0 20px 0', fontSize: 18 }}>Today's Breakdown</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                  <RecordStat icon={<Icons.Moon size={20} color="var(--green-dark)"/>} label="Sleep" value={`${todayEntry.sleepHours}h (${todayEntry.wakeFeeling})`} />
+                  <RecordStat icon={<Icons.Zap size={20} color="var(--green-dark)"/>} label="Energy" value={`${todayEntry.energy}/10`} />
+                  <RecordStat icon={<Icons.Wind size={20} color="var(--green-dark)"/>} label="Stress & Tension" value={`${todayEntry.stress}/10 (${todayEntry.tension})`} />
+                  <RecordStat icon={<Icons.Smile size={20} color="var(--green-dark)"/>} label="Mood & Activity" value={`${todayEntry.mood}/10 (${todayEntry.activity})`} />
+                </div>
+              </div>
+            ) : (
+              <div style={{ color: 'var(--text-muted)' }}>You haven't completed your check-in today.</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {(tab === 'week' || tab === 'month' || tab === 'year') && (
+        <div className="dash-card card-large" style={{ gridColumn: 'span 6' }}>
+          <div style={{ width: '100%' }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 18 }}>
+              {tab === 'week' ? '7-Day' : tab === 'month' ? '30-Day' : '365-Day'} Averages
+            </h3>
+            
+            {((tab === 'week' && weekAvg) || (tab === 'month' && monthAvg) || (tab === 'year' && yearAvg)) ? (() => {
+              const avg = tab === 'week' ? weekAvg : tab === 'month' ? monthAvg : yearAvg;
+              return (
+                <div>
+                  <div style={{ marginBottom: 16, fontSize: 13, color: 'var(--text-muted)' }}>Based on {avg.count} check-ins</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16 }}>
+                    <AvgStat icon={<Icons.Moon size={24} color="var(--green-dark)"/>} label="Avg Sleep" value={`${avg.sleep}h`} />
+                    <AvgStat icon={<Icons.Zap size={24} color="var(--green-dark)"/>} label="Avg Energy" value={`${avg.energy}/10`} />
+                    <AvgStat icon={<Icons.Wind size={24} color="var(--green-dark)"/>} label="Avg Stress" value={`${avg.stress}/10`} />
+                    <AvgStat icon={<Icons.Smile size={24} color="var(--green-dark)"/>} label="Avg Mood" value={`${avg.mood}/10`} />
+                  </div>
+                </div>
+              );
+            })() : (
+              <div style={{ color: 'var(--text-muted)' }}>Not enough data for this timeframe.</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RecordStat({ icon, label, value }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.6)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: 16, padding: '16px', display: 'flex', alignItems: 'center', gap: 16, transition: 'all 0.2s', boxShadow: '0 4px 12px rgba(34,197,94,0.03)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 44, height: 44, borderRadius: 12, background: 'var(--green-light)', flexShrink: 0 }}>
+        {icon}
+      </div>
+      <div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 4 }}>{label}</div>
+        <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
+function AvgStat({ icon, label, value }) {
+  return (
+    <div style={{ background: 'rgba(255,255,255,0.7)', border: '1px solid rgba(255,255,255,0.9)', borderRadius: 20, padding: '24px 16px', textAlign: 'center', boxShadow: '0 8px 24px rgba(34,197,94,0.04)', transition: 'all 0.3s' }}>
+      <div style={{ display: 'flex', justifyContent: 'center', margin: '0 auto 16px', width: 56, height: 56, borderRadius: 16, background: 'var(--green-light)', alignItems: 'center' }}>
+        {icon}
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)', marginBottom: 6 }}>{value}</div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--green-dark)' }}>{label}</div>
     </div>
   );
 }
@@ -774,16 +925,39 @@ function Chat({ profile, saveProfile, t = (k)=>k, lang = 'en' }) {
   const [messages, setMessages] = useState(() => {
     try {
       const fn = profile?.name?.split(' ')[0] || 'there';
-      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. What's going on today? Feel free to describe how you're feeling — I'm here to listen.` };
+      const recentCheckins = getCheckins().slice(-3);
+      const checkinContext = recentCheckins.length > 0 
+        ? `\n\nRecent Wellness Check-ins (scale 1-10):\n${recentCheckins.map(c => `[${c.date}] Mood: ${c.mood}, Sleep: ${c.sleep}, Stress: ${c.stress}, Energy: ${c.energy}`).join('\n')}` 
+        : '';
+      
+      const systemPrompt = {
+        id: 'system',
+        role: 'system',
+        content: `You are Nura, a proactive AI Wellness and Health Companion. Your tone is calm, empathetic, and intelligent.
+WELLNESS CONTEXT:${checkinContext}
+- You must proactively ask about the user's wellness (mood, sleep, stress, energy) natively in the chat if they haven't checked in recently.
+- If you notice elevated stress or poor sleep in their history, bring it up naturally and suggest they visit the "Lifestyle" or "Wellness" tabs for 5-5 breathing or recovery tips.
+- Do not just wait for symptom complaints. Ask "How did you sleep?" or "How is your energy today?" to start the conversation.
+- Always provide natural remedies and lifestyle tips first before recommending a doctor, unless the urgency is high.`
+      };
+
+      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. How did you sleep last night? How are your stress and energy levels today?` };
+      
       const sid = localStorage.getItem('nuracare_current_session_id');
       if (sid) {
         const saved = JSON.parse(localStorage.getItem('nuracare_sessions') || '[]');
         const cur = saved.find(s => s.id === sid);
-        if (cur && cur.messages.length > 0) return cur.messages;
+        if (cur && cur.messages.length > 0) {
+           // Ensure system prompt is at the top
+           if (cur.messages[0].role !== 'system') {
+             return [systemPrompt, ...cur.messages];
+           }
+           return cur.messages;
+        }
       }
       const legacy = localStorage.getItem('nuracare_chat');
-      return legacy ? JSON.parse(legacy) : [welcome];
-    } catch { return [{ id: 'welcome', role: 'assistant', content: `Hi there 👋 I'm Nura. What's going on today?` }]; }
+      return legacy ? [systemPrompt, ...JSON.parse(legacy)] : [systemPrompt, welcome];
+    } catch { return [{ id: 'welcome', role: 'assistant', content: `Hi there 👋 I'm Nura. How are you feeling today?` }]; }
   });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -1126,7 +1300,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
             </div>
           )}
           <div className="chat-messages">
-            {messages.map((m) => {
+            {messages.filter(m => m.role !== 'system').map((m) => {
               if (m.role === 'assistant') {
                 const urgencyData = parseUrgencyFromContent(m.content || '');
                 const displayText = stripJsonBlock(m.content || '');
