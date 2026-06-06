@@ -1225,20 +1225,34 @@ Only include the JSON once — after you know symptom + duration + severity.${la
     setShowQuickStart(!s.messages || s.messages.length <= 1);
   };
 
-  // Sync messages when currentSessionId changes from parent (e.g. sidebar)
+  const activeSessionIdLocally = useRef(currentSessionId);
+
+  // Sync messages when currentSessionId changes from parent (e.g. sidebar) or when DB finishes initial load
   useEffect(() => {
-    const s = sessions.find(x => x.id === currentSessionId);
-    if (s && s.messages) {
-      setMessages(s.messages);
-      setShowQuickStart(s.messages.length <= 1);
+    // 1. If the user switched sessions, force a sync from DB or reset to welcome message
+    if (activeSessionIdLocally.current !== currentSessionId) {
+      const s = sessions.find(x => x.id === currentSessionId);
+      if (s && s.messages) {
+        setMessages(s.messages);
+        setShowQuickStart(s.messages.length <= 1);
+      } else {
+        const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
+        setMessages([welcome]);
+        setShowQuickStart(true);
+      }
       setChatError(null);
-    } else if (messages.length === 0 || messages[0]?.id !== 'welcome') {
-      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
-      setMessages([welcome]);
-      setShowQuickStart(true);
-      setChatError(null);
+      activeSessionIdLocally.current = currentSessionId;
+      return;
     }
-  }, [currentSessionId, sessions]);
+
+    // 2. Otherwise, we are in the SAME session. We only sync from DB if our local messages are empty/new
+    // (e.g. initial load where DB finished fetching after component mount)
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (s && s.messages && messages.length <= 1 && s.messages.length > 1) {
+      setMessages(s.messages);
+      setShowQuickStart(false);
+    }
+  }, [currentSessionId, sessions, firstName, messages.length]);
 
   const quickOptions = ['Headache', 'Stomach ache', 'Sore throat', 'Fatigue', 'Cough', 'Fever'];
 
