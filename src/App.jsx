@@ -123,6 +123,15 @@ export default function App() {
     signOut();
   };
 
+  const handleDeleteSession = async (id) => {
+    if (confirm("Are you sure you want to delete this session?")) {
+      await deleteSession(id);
+      if (currentSessionId === id) {
+        setCurrentSessionId('session-' + Date.now());
+      }
+    }
+  };
+
   const toggleCondition = (cond) => {
     setObConditions(prev => prev.includes(cond) ? prev.filter(c => c !== cond) : [...prev, cond]);
   };
@@ -350,15 +359,20 @@ export default function App() {
           <div className="mobile-only-sessions">
             <div style={{fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.5}}>{t("past_sessions").toUpperCase()}</div>
             {sessions.slice(0, 5).map(s => (
-               <a href="#" key={s.id} className={`nav-item ${currentSessionId === s.id && activePage === 'chat' ? 'active' : ''}`} style={{padding:'8px 20px', fontSize: 13, minHeight: '36px'}} onClick={(e) => {
-                 e.preventDefault();
-                 setCurrentSessionId(s.id);
-                 setActivePage('chat');
-                 setSidebarOpen(false);
-               }}>
-                 <span className="nav-icon" style={{marginRight: 8}}><Icons.MessageCircle size={14}/></span>
-                 <span className="nav-label" style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{s.name}</span>
-               </a>
+               <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+                 <a href="#" className={`nav-item ${currentSessionId === s.id && activePage === 'chat' ? 'active' : ''}`} style={{padding:'8px 20px', fontSize: 13, minHeight: '36px', flex: 1, paddingRight: '8px'}} onClick={(e) => {
+                   e.preventDefault();
+                   setCurrentSessionId(s.id);
+                   setActivePage('chat');
+                   setSidebarOpen(false);
+                 }}>
+                   <span className="nav-icon" style={{marginRight: 8}}><Icons.MessageCircle size={14}/></span>
+                   <span className="nav-label" style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{s.name}</span>
+                 </a>
+                 <button style={{ background: 'none', border: 'none', padding: '8px', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.7 }} onClick={(e) => { e.preventDefault(); handleDeleteSession(s.id); }}>
+                   <Icons.Trash2 size={14} />
+                 </button>
+               </div>
             ))}
             <a href="#" className="nav-item" style={{padding:'8px 20px', fontSize: 13, minHeight: '36px', color:'var(--green)', marginBottom: 12}} onClick={(e) => {
                  e.preventDefault();
@@ -382,7 +396,7 @@ export default function App() {
 
       <main className="content-area">
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
-        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
         {activePage === 'records' && <Records profile={profile} />}
@@ -930,7 +944,7 @@ function buildCrossSessionMemory(sessions, currentSessionId) {
   }).filter(Boolean).join('\n') || 'No previous sessions yet.';
 }
 
-function Chat({ profile, saveProfile, sessions, saveSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
+function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
 
   const [messages, setMessages] = useState(() => {
@@ -1276,20 +1290,54 @@ Only include the JSON once — after you know symptom + duration + severity.${la
               <p className="sessions-empty">Your past sessions will appear here</p>
             )}
             {[...sessions].reverse().map(s => (
-              <button
-                key={s.id}
-                className={`session-item ${s.id === currentSessionId ? 'active' : ''}`}
-                onClick={() => switchToSession(s.id)}
-              >
-                <Icons.MessageCircle size={13} style={{ flexShrink: 0, opacity: 0.6 }} />
-                <span>{s.name}</span>
-              </button>
+              <div key={s.id} style={{ display: 'flex', alignItems: 'center' }}>
+                <button
+                  className={`session-item ${s.id === currentSessionId ? 'active' : ''}`}
+                  style={{ flex: 1, marginRight: 0, paddingRight: '8px' }}
+                  onClick={() => switchToSession(s.id)}
+                >
+                  <Icons.MessageCircle size={13} style={{ flexShrink: 0, opacity: 0.6 }} />
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
+                </button>
+                <button 
+                  style={{ background: 'none', border: 'none', padding: '10px 12px', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.7 }}
+                  onClick={() => {
+                    if (confirm("Are you sure you want to delete this session?")) {
+                      deleteSession(s.id);
+                      if (currentSessionId === s.id) {
+                        setCurrentSessionId('session-' + Date.now());
+                      }
+                    }
+                  }}
+                >
+                  <Icons.Trash2 size={14} />
+                </button>
+              </div>
             ))}
           </div>
         </div>
 
         {/* ── Chat Area ── */}
-        <div className="chat-container" style={{ flex: 1, minWidth: 0 }}>
+        <div className="chat-container" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 16, right: 20, zIndex: 10 }}>
+            <button 
+              className="btn-icon"
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+              onClick={async () => {
+                const textContent = messages.filter(m => m.role !== 'system').map(m => `${m.role === 'user' ? (profile?.name?.split(' ')[0] || 'User') : 'Nura'}: ${m.content.replace(/```json[\s\S]*?```/g, '').trim()}`).join('\n\n');
+                try {
+                  if (navigator.share) {
+                    await navigator.share({ title: 'My Chat with Nura', text: textContent });
+                  } else {
+                    await navigator.clipboard.writeText(textContent);
+                    alert("Chat transcript copied to clipboard!");
+                  }
+                } catch (e) { console.log('Share failed:', e); }
+              }}
+            >
+              <Icons.Share size={14} /> Share
+            </button>
+          </div>
           {chatError && (
             <div className="chat-error-banner">
               <Icons.AlertCircle size={18} style={{ flexShrink: 0 }} />
