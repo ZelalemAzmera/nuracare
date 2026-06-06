@@ -8,6 +8,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 import { discoveryData, getDailyTip } from './data';
 import FloatingLeaves, { LeafSVG, FlowerSVG, DropletSVG } from './FloatingLeaves';
 import { useAuth } from './AuthContext';
+import { useSupabaseProfile, useSupabaseSessions } from './useSupabase';
 
 class ChatErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, message: '' }; }
