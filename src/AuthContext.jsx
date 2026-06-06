@@ -21,6 +21,18 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const signUpWithEmail = async (email, password) => {
+    const { data, error } = await supabase.auth.signUp({ email, password });
+    if (error) throw error;
+    return data;
+  };
+
+  const signInWithEmail = async (email, password) => {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  };
+
   const signInWithGoogle = async () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -37,7 +49,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, signInWithGoogle, signOut, loading }}>
+    <AuthContext.Provider value={{ user, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, loading }}>
       {children}
     </AuthContext.Provider>
   );
