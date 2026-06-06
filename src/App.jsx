@@ -7,6 +7,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs
 // Vercel AI SDK used in api/chat.js (server-side streaming)
 import { discoveryData, getDailyTip } from './data';
 import FloatingLeaves, { LeafSVG, FlowerSVG, DropletSVG } from './FloatingLeaves';
+import { useAuth } from './AuthContext';
 
 class ChatErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, message: '' }; }
@@ -45,22 +46,19 @@ const DynamicIcon = ({ name, ...props }) => {
 };
 
 export default function App() {
+  const { user, signInWithGoogle, signOut, loading: authLoading } = useAuth();
+  const { profile, setProfile, loading: profileLoading } = useSupabaseProfile();
+  const { sessions, loading: sessionsLoading } = useSupabaseSessions();
   const { t, lang, setLang } = useTranslation();
-  const [profile, setProfile] = useState(null);
+  
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [activePage, setActivePage] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState('herbs');
-  const [mobileSessions, setMobileSessions] = useState([]);
-
-  useEffect(() => {
-    if (sidebarOpen) {
-      try {
-        setMobileSessions(JSON.parse(localStorage.getItem('nuracare_sessions') || '[]'));
-      } catch {}
-    }
-  }, [sidebarOpen]);
   
+  // We keep currentSessionId in state at App level so sidebar can highlight the active session
+  const [currentSessionId, setCurrentSessionId] = useState(() => 'session-' + Date.now());
+
   // Onboarding Form State
   const [obName, setObName] = useState('');
   const [obAge, setObAge] = useState('');
@@ -72,17 +70,14 @@ export default function App() {
   const [profileMedsInput, setProfileMedsInput] = useState([]);
 
   useEffect(() => {
-    const saved = localStorage.getItem('nuracare_profile');
-    if (saved) {
-      const p = JSON.parse(saved);
-      setProfile(p);
-      if (typeof p.medications === 'string') {
-        setProfileMedsInput(p.medications.split(',').map(s=>s.trim()).filter(Boolean));
+    if (profile) {
+      if (typeof profile.medications === 'string') {
+        setProfileMedsInput(profile.medications.split(',').map(s=>s.trim()).filter(Boolean));
       } else {
-        setProfileMedsInput(p.medications || []);
+        setProfileMedsInput(profile.medications || []);
       }
     }
-  }, []);
+  }, [profile]);
 
   useEffect(() => {
     if (!profile || profile.location) return;
@@ -99,23 +94,22 @@ export default function App() {
               city: data.city
             }
           };
-          saveProfile(p);
+          setProfile(p);
         }
       })
       .catch(() => {});
-  }, [profile]);
+  }, [profile, setProfile]);
 
   const saveProfile = (p) => {
-    localStorage.setItem('nuracare_profile', JSON.stringify(p));
     setProfile(p);
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('nuracare_profile');
     setProfile(null);
     setOnboardingStep(0);
     setActivePage('home');
     setObName(''); setObAge(''); setObConditions([]); setObOtherCondition(''); setObMeds([]);
+    signOut();
   };
 
   const toggleCondition = (cond) => {
@@ -139,6 +133,10 @@ export default function App() {
     setProfileMedsInput(p.medications);
   };
 
+  if (authLoading || profileLoading) {
+    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}><Icons.Loader className="spin" size={32} color="var(--green)"/></div>;
+  }
+
   if (!profile) {
     if (onboardingStep === 0) {
       return (
@@ -148,8 +146,18 @@ export default function App() {
             <div className="hero-icon-wrap"><Icons.Leaf /></div>
             <h1 className="hero-title">NuraCare</h1>
             <p className="hero-subtitle">Your calm, natural health companion.</p>
-            <button className="btn-primary btn-large mb-4" onClick={() => setOnboardingStep(1)}>
-              Start your session <Icons.ArrowRight size={20} style={{marginLeft: 8}}/>
+            <button className="btn-primary btn-large mb-4" onClick={() => {
+              if (user) {
+                setOnboardingStep(1);
+              } else {
+                signInWithGoogle();
+              }
+            }}>
+              {user ? (
+                <>Complete your profile <Icons.ArrowRight size={20} style={{marginLeft: 8}}/></>
+              ) : (
+                <>Log in with Google <Icons.LogIn size={20} style={{marginLeft: 8}}/></>
+              )}
             </button>
             <div style={{height: 40}}></div>
             <img src="/hero.png" alt="Natural Wellness" className="hero-media" />
@@ -323,13 +331,12 @@ export default function App() {
           </select>
           <div className="mobile-only-sessions">
             <div style={{fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.5}}>{t("past_sessions").toUpperCase()}</div>
-            {mobileSessions.slice(0, 5).map(s => (
-               <a href="#" key={s.id} className={`nav-item ${localStorage.getItem('nuracare_current_session_id') === s.id && activePage === 'chat' ? 'active' : ''}`} style={{padding:'8px 20px', fontSize: 13, minHeight: '36px'}} onClick={(e) => {
+            {sessions.slice(0, 5).map(s => (
+               <a href="#" key={s.id} className={`nav-item ${currentSessionId === s.id && activePage === 'chat' ? 'active' : ''}`} style={{padding:'8px 20px', fontSize: 13, minHeight: '36px'}} onClick={(e) => {
                  e.preventDefault();
-                 localStorage.setItem('nuracare_current_session_id', s.id);
+                 setCurrentSessionId(s.id);
                  setActivePage('chat');
                  setSidebarOpen(false);
-                 window.dispatchEvent(new Event('switchSession'));
                }}>
                  <span className="nav-icon" style={{marginRight: 8}}><Icons.MessageCircle size={14}/></span>
                  <span className="nav-label" style={{whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{s.name}</span>
@@ -337,10 +344,9 @@ export default function App() {
             ))}
             <a href="#" className="nav-item" style={{padding:'8px 20px', fontSize: 13, minHeight: '36px', color:'var(--green)', marginBottom: 12}} onClick={(e) => {
                  e.preventDefault();
-                 localStorage.setItem('nuracare_current_session_id', 'session-' + Date.now());
+                 setCurrentSessionId('session-' + Date.now());
                  setActivePage('chat');
                  setSidebarOpen(false);
-                 window.dispatchEvent(new Event('switchSession'));
                }}>
                  <span className="nav-icon" style={{marginRight: 8}}><Icons.Plus size={14}/></span>
                  <span className="nav-label">New Session</span>
@@ -358,7 +364,7 @@ export default function App() {
 
       <main className="content-area">
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
-        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
         {activePage === 'records' && <Records profile={profile} />}
@@ -762,43 +768,23 @@ function buildCrossSessionMemory(sessions, currentSessionId) {
   }).filter(Boolean).join('\n') || 'No previous sessions yet.';
 }
 
-function Chat({ profile, saveProfile, t = (k)=>k, lang = 'en' }) {
+function Chat({ profile, saveProfile, sessions, saveSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
 
-  const [sessions, setSessions] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('nuracare_sessions') || '[]'); } catch { return []; }
-  });
-  const [currentSessionId, setCurrentSessionId] = useState(() =>
-    localStorage.getItem('nuracare_current_session_id') || ('session-' + Date.now())
-  );
   const [messages, setMessages] = useState(() => {
-    try {
-      const fn = profile?.name?.split(' ')[0] || 'there';
-      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. What's going on today? Feel free to describe how you're feeling — I'm here to listen.` };
-      const sid = localStorage.getItem('nuracare_current_session_id');
-      if (sid) {
-        const saved = JSON.parse(localStorage.getItem('nuracare_sessions') || '[]');
-        const cur = saved.find(s => s.id === sid);
-        if (cur && cur.messages.length > 0) return cur.messages;
-      }
-      const legacy = localStorage.getItem('nuracare_chat');
-      return legacy ? JSON.parse(legacy) : [welcome];
-    } catch { return [{ id: 'welcome', role: 'assistant', content: `Hi there 👋 I'm Nura. What's going on today?` }]; }
+    const fn = profile?.name?.split(' ')[0] || 'there';
+    const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. What's going on today? Feel free to describe how you're feeling — I'm here to listen.` };
+    const cur = sessions.find(s => s.id === currentSessionId);
+    if (cur && cur.messages && cur.messages.length > 0) return cur.messages;
+    return [welcome];
   });
+
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [chatError, setChatError] = useState(null);
   const [showQuickStart, setShowQuickStart] = useState(() => {
-    try {
-      const sid = localStorage.getItem('nuracare_current_session_id');
-      if (sid) {
-        const saved = JSON.parse(localStorage.getItem('nuracare_sessions') || '[]');
-        const cur = saved.find(s => s.id === sid);
-        return !cur || cur.messages.length <= 1;
-      }
-      const legacy = localStorage.getItem('nuracare_chat');
-      return !legacy || JSON.parse(legacy).length <= 1;
-    } catch { return true; }
+    const cur = sessions.find(s => s.id === currentSessionId);
+    return !cur || !cur.messages || cur.messages.length <= 1;
   });
   const chatEndRef = useRef(null);
   const GROQ_KEY = import.meta.env.VITE_GROQ_API_KEY || '';
@@ -827,13 +813,10 @@ function Chat({ profile, saveProfile, t = (k)=>k, lang = 'en' }) {
       }
       
       if (title) {
-        setSessions(prev => {
-          const updated = prev.map(s => s.id === sessionId ? { ...s, name: title, isSmartName: true } : s);
-          localStorage.setItem('nuracare_sessions', JSON.stringify(updated));
-          return updated;
-        });
-        // Also fire switchSession to update mobile sidebar if it's open
-        window.dispatchEvent(new Event('switchSession'));
+        const cur = sessions.find(s => s.id === sessionId);
+        if (cur) {
+          saveSession({ ...cur, name: title, isSmartName: true });
+        }
       }
     } catch (e) {
       console.error('Smart title failed:', e);
@@ -843,25 +826,20 @@ function Chat({ profile, saveProfile, t = (k)=>k, lang = 'en' }) {
   // Persist to sessions store
   useEffect(() => {
     try {
-      const savedSessions = JSON.parse(localStorage.getItem('nuracare_sessions') || '[]');
-      const existingSession = savedSessions.find(s => s.id === currentSessionId);
+      const existingSession = sessions.find(s => s.id === currentSessionId);
       const name = existingSession?.isSmartName ? existingSession.name : getSessionName(messages);
       
-      const exists = savedSessions.some(s => s.id === currentSessionId);
-      let updated;
-      if (exists) {
-        updated = savedSessions.map(s => s.id === currentSessionId ? { ...s, messages, name: existingSession?.isSmartName ? existingSession.name : name } : s);
-      } else if (messages.length > 1) {
-        updated = [{ id: currentSessionId, name, messages, createdAt: Date.now() }, ...savedSessions];
-      } else {
-        updated = savedSessions;
+      if (messages.length > 1 || existingSession) {
+        saveSession({
+          id: currentSessionId,
+          name: existingSession?.isSmartName ? existingSession.name : name,
+          messages
+        });
       }
-      localStorage.setItem('nuracare_sessions', JSON.stringify(updated));
-      localStorage.setItem('nuracare_current_session_id', currentSessionId);
-      localStorage.setItem('nuracare_chat', JSON.stringify(messages));
-      setSessions(updated);
-    } catch {}
-  }, [messages, currentSessionId]);
+    } catch (e) {
+      console.error('Error auto-saving session', e);
+    }
+  }, [messages, currentSessionId]); // Note: saveSession and sessions omitted from dep array to avoid infinite loops when sessions update
 
 
   useEffect(() => {
@@ -1055,33 +1033,25 @@ Only include the JSON once — after you know symptom + duration + severity.${la
     const s = sessions.find(x => x.id === sid);
     if (!s) return;
     setCurrentSessionId(sid);
-    setMessages(s.messages);
-    localStorage.setItem('nuracare_current_session_id', sid);
+    setMessages(s.messages || []);
     setChatError(null);
-    setShowQuickStart(s.messages.length <= 1);
+    setShowQuickStart(!s.messages || s.messages.length <= 1);
   };
 
+  // Sync messages when currentSessionId changes from parent (e.g. sidebar)
   useEffect(() => {
-    const handleSwitch = () => {
-      const sid = localStorage.getItem('nuracare_current_session_id');
-      if (sid) {
-        const saved = JSON.parse(localStorage.getItem('nuracare_sessions') || '[]');
-        const s = saved.find(x => x.id === sid);
-        if (s) {
-          setCurrentSessionId(sid);
-          setMessages(s.messages);
-          setChatError(null);
-          setShowQuickStart(s.messages.length <= 1);
-        } else {
-          startNewSession();
-        }
-      } else {
-        startNewSession();
-      }
-    };
-    window.addEventListener('switchSession', handleSwitch);
-    return () => window.removeEventListener('switchSession', handleSwitch);
-  }, []);
+    const s = sessions.find(x => x.id === currentSessionId);
+    if (s && s.messages) {
+      setMessages(s.messages);
+      setShowQuickStart(s.messages.length <= 1);
+      setChatError(null);
+    } else if (messages.length === 0 || messages[0]?.id !== 'welcome') {
+      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
+      setMessages([welcome]);
+      setShowQuickStart(true);
+      setChatError(null);
+    }
+  }, [currentSessionId, sessions]);
 
   const quickOptions = ['Headache', 'Stomach ache', 'Sore throat', 'Fatigue', 'Cough', 'Fever'];
 
