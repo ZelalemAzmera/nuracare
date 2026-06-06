@@ -968,6 +968,7 @@ WELLNESS CONTEXT:${checkinContext}
 
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [chatError, setChatError] = useState(null);
   const [showQuickStart, setShowQuickStart] = useState(() => {
     const cur = sessions.find(s => s.id === currentSessionId);
@@ -1012,6 +1013,7 @@ WELLNESS CONTEXT:${checkinContext}
 
   // Persist to sessions store
   useEffect(() => {
+    if (isStreaming) return;
     try {
       const existingSession = sessions.find(s => s.id === currentSessionId);
       const name = existingSession?.isSmartName ? existingSession.name : getSessionName(messages);
@@ -1026,7 +1028,7 @@ WELLNESS CONTEXT:${checkinContext}
     } catch (e) {
       console.error('Error auto-saving session', e);
     }
-  }, [messages, currentSessionId]); // Note: saveSession and sessions omitted from dep array to avoid infinite loops when sessions update
+  }, [messages, currentSessionId, isStreaming]); // Note: saveSession and sessions omitted from dep array to avoid infinite loops when sessions update
 
 
   useEffect(() => {
@@ -1105,8 +1107,6 @@ WHEN YOU HAVE ENOUGH INFO, append this JSON at the END of your message:
 \`\`\`
 Only include the JSON once — after you know symptom + duration + severity.${lang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
   };
-
-  const [isStreaming, setIsStreaming] = useState(false);
 
   const sendMessage = async (text) => {
     const trimmed = (text || '').trim();
