@@ -42,12 +42,78 @@ class ChatErrorBoundary extends Component {
   }
 }
 
-
 const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
 const DynamicIcon = ({ name, ...props }) => {
   const IconComponent = Icons[name];
   return IconComponent ? <IconComponent {...props} /> : <Icons.HelpCircle {...props} />;
+};
+
+const DeleteModal = ({ isOpen, onClose, onConfirm }) => {
+  if (!isOpen) return null;
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="modal-title">Delete Session</h3>
+          <button className="modal-close-btn" onClick={onClose}><Icons.X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          Are you sure you want to delete this session? This action cannot be undone.
+        </div>
+        <div className="modal-footer">
+          <button className="btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="btn-danger" onClick={onConfirm}>Delete</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ShareModal = ({ isOpen, onClose, transcript }) => {
+  if (!isOpen) return null;
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(transcript);
+      alert("Chat transcript copied to clipboard!");
+      onClose();
+    } catch(e) { console.error('Failed to copy', e); }
+  };
+  const shareWhatsApp = () => {
+    window.open(`https://wa.me/?text=${encodeURIComponent(transcript)}`, '_blank');
+    onClose();
+  };
+  const shareEmail = () => {
+    window.open(`mailto:?subject=My Chat with Nura&body=${encodeURIComponent(transcript)}`, '_blank');
+    onClose();
+  };
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-container" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="modal-title">Share Chat</h3>
+          <button className="modal-close-btn" onClick={onClose}><Icons.X size={20} /></button>
+        </div>
+        <div className="modal-body">
+          <p>Share your conversation transcript securely:</p>
+          <div className="share-options-grid">
+            <button className="share-option" onClick={copyToClipboard}>
+              <div className="share-icon-wrap share-icon-copy"><Icons.Copy size={24} /></div>
+              <span className="share-option-label">Copy Text</span>
+            </button>
+            <button className="share-option" onClick={shareWhatsApp}>
+              <div className="share-icon-wrap share-icon-whatsapp"><Icons.MessageCircle size={24} /></div>
+              <span className="share-option-label">WhatsApp</span>
+            </button>
+            <button className="share-option" onClick={shareEmail}>
+              <div className="share-icon-wrap share-icon-email"><Icons.Mail size={24} /></div>
+              <span className="share-option-label">Email</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default function App() {
@@ -60,6 +126,9 @@ export default function App() {
   const [activePage, setActivePage] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState('herbs');
+  
+  const [sessionToDelete, setSessionToDelete] = useState(null);
+  const [shareTranscript, setShareTranscript] = useState(null);
   
   // We keep currentSessionId in state at App level so sidebar can highlight the active session
   const [currentSessionId, setCurrentSessionId] = useState(() => 'session-' + Date.now());
@@ -123,12 +192,17 @@ export default function App() {
     signOut();
   };
 
-  const handleDeleteSession = async (id) => {
-    if (confirm("Are you sure you want to delete this session?")) {
-      await deleteSession(id);
-      if (currentSessionId === id) {
+  const handleDeleteSession = (id) => {
+    setSessionToDelete(id);
+  };
+
+  const confirmDeleteSession = async () => {
+    if (sessionToDelete) {
+      await deleteSession(sessionToDelete);
+      if (currentSessionId === sessionToDelete) {
         setCurrentSessionId('session-' + Date.now());
       }
+      setSessionToDelete(null);
     }
   };
 
@@ -396,7 +470,7 @@ export default function App() {
 
       <main className="content-area">
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
-        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareTranscript={setShareTranscript} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
         {activePage === 'records' && <Records profile={profile} />}
@@ -443,6 +517,17 @@ export default function App() {
           </div>
         )}
       </main>
+
+      <DeleteModal 
+        isOpen={!!sessionToDelete} 
+        onClose={() => setSessionToDelete(null)} 
+        onConfirm={confirmDeleteSession} 
+      />
+      <ShareModal 
+        isOpen={!!shareTranscript} 
+        onClose={() => setShareTranscript(null)} 
+        transcript={shareTranscript} 
+      />
     </div>
   );
 }
@@ -944,7 +1029,7 @@ function buildCrossSessionMemory(sessions, currentSessionId) {
   }).filter(Boolean).join('\n') || 'No previous sessions yet.';
 }
 
-function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
+function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, handleDeleteSession, setShareTranscript, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
 
   const [messages, setMessages] = useState(() => {
@@ -1301,14 +1386,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
                 </button>
                 <button 
                   style={{ background: 'none', border: 'none', padding: '10px 12px', color: 'var(--text-muted)', cursor: 'pointer', opacity: 0.7 }}
-                  onClick={() => {
-                    if (confirm("Are you sure you want to delete this session?")) {
-                      deleteSession(s.id);
-                      if (currentSessionId === s.id) {
-                        setCurrentSessionId('session-' + Date.now());
-                      }
-                    }
-                  }}
+                  onClick={() => handleDeleteSession(s.id)}
                 >
                   <Icons.Trash2 size={14} />
                 </button>
@@ -1323,16 +1401,9 @@ Only include the JSON once — after you know symptom + duration + severity.${la
             <button 
               className="btn-icon"
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-              onClick={async () => {
+              onClick={() => {
                 const textContent = messages.filter(m => m.role !== 'system').map(m => `${m.role === 'user' ? (profile?.name?.split(' ')[0] || 'User') : 'Nura'}: ${m.content.replace(/```json[\s\S]*?```/g, '').trim()}`).join('\n\n');
-                try {
-                  if (navigator.share) {
-                    await navigator.share({ title: 'My Chat with Nura', text: textContent });
-                  } else {
-                    await navigator.clipboard.writeText(textContent);
-                    alert("Chat transcript copied to clipboard!");
-                  }
-                } catch (e) { console.log('Share failed:', e); }
+                setShareTranscript(textContent);
               }}
             >
               <Icons.Share size={14} /> Share
