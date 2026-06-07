@@ -21,7 +21,8 @@ export default async function handler(req, res) {
     if (!sessionId) return res.status(400).json({ error: 'Missing sessionId' });
 
     // Verify ownership
-    const { data: session } = await supabase.from('sessions').select('id, share_token').eq('id', sessionId).eq('user_id', user.id).single();
+    const { data: session, error: dbError } = await supabase.from('sessions').select('id, share_token').eq('id', sessionId).eq('user_id', user.id).single();
+    if (dbError) return res.status(500).json({ error: `Database error: ${dbError.message}` });
     if (!session) return res.status(404).json({ error: 'Session not found' });
 
     // Generate token if it doesn't exist
