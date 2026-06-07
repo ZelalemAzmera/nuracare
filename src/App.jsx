@@ -13,6 +13,7 @@ import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
 import { getCheckins } from './wellnessEngine';
+import { supabase } from './supabase';
 
 export const showToast = (message, type = 'success') => {
   window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message, type } }));
@@ -123,60 +124,117 @@ const DeleteModal = ({ isOpen, onClose, onConfirm }) => {
   );
 };
 
-const ShareModal = ({ isOpen, onClose, transcript }) => {
-  if (!isOpen) return null;
-  const copyToClipboard = async () => {
+const ShareModal = ({ isOpen, onClose, session }) => {
+  if (!isOpen || !session) return null;
+  const [loading, setLoading] = useState(false);
+  const [shareToken, setShareToken] = useState(session.share_token || null);
+
+  const getShareUrl = () => `${window.location.origin}/share/${shareToken}`;
+
+  const createShareLink = async () => {
+    setLoading(true);
     try {
-      await navigator.clipboard.writeText(transcript);
-      showToast("Chat transcript copied to clipboard!");
-      onClose();
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({ sessionId: session.id })
+      });
+      const data = await res.json();
+      if (res.ok && data.shareToken) {
+        setShareToken(data.shareToken);
+        await navigator.clipboard.writeText(`${window.location.origin}/share/${data.shareToken}`);
+        showToast("Share link created and copied to clipboard!");
+      } else {
+        showToast(data.error || "Failed to create share link", "error");
+      }
+    } catch(e) {
+      console.error(e);
+      showToast("Error creating share link", "error");
+    }
+    setLoading(false);
+  };
+
+  const revokeShareLink = async () => {
+    setLoading(true);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      const res = await fetch('/api/share', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${authSession.access_token}` },
+        body: JSON.stringify({ sessionId: session.id })
+      });
+      if (res.ok) {
+        setShareToken(null);
+        showToast("Share link revoked.");
+      } else {
+        showToast("Failed to revoke share link", "error");
+      }
+    } catch(e) { console.error(e); }
+    setLoading(false);
+  };
+
+  const copyToClipboard = async () => {
+    if (!shareToken) {
+      await createShareLink();
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(getShareUrl());
+      showToast("Link copied to clipboard!");
     } catch(e) { console.error('Failed to copy', e); }
   };
-  const shareWhatsApp = () => {
-    window.open(`https://wa.me/?text=${encodeURIComponent(transcript)}`, '_blank');
+
+  const shareAction = (fn) => () => {
+    if(!shareToken) return showToast("Create a link first!", "error");
+    fn();
     onClose();
   };
-  const shareTelegram = () => {
-    window.open(`https://t.me/share/url?url=${encodeURIComponent(transcript)}`, '_blank');
-    onClose();
-  };
-  const shareTwitter = () => {
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(transcript)}`, '_blank');
-    onClose();
-  };
-  const shareEmail = () => {
-    window.open(`mailto:?subject=My Chat with Nura&body=${encodeURIComponent(transcript)}`, '_blank');
-    onClose();
-  };
-  const shareNative = async () => {
+
+  const shareWhatsApp = shareAction(() => window.open(`https://wa.me/?text=${encodeURIComponent(getShareUrl())}`, '_blank'));
+  const shareTelegram = shareAction(() => window.open(`https://t.me/share/url?url=${encodeURIComponent(getShareUrl())}`, '_blank'));
+  const shareTwitter = shareAction(() => window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(getShareUrl())}`, '_blank'));
+  const shareEmail = shareAction(() => window.open(`mailto:?subject=My Chat with Nura&body=${encodeURIComponent(getShareUrl())}`, '_blank'));
+  const shareNative = shareAction(async () => {
     try {
-      if (navigator.share) {
-        await navigator.share({
-          title: 'My Chat with Nura',
-          text: transcript,
-        });
-      } else {
-        showToast("Your device doesn't support native sharing.", "error");
-      }
-      onClose();
-    } catch(e) {
-      if (e.name !== 'AbortError') console.error('Share failed', e);
-    }
-  };
+      if (navigator.share) await navigator.share({ title: 'My Chat with Nura', url: getShareUrl() });
+      else showToast("Your device doesn't support native sharing.", "error");
+    } catch(e) { if (e.name !== 'AbortError') console.error('Share failed', e); }
+  });
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-container" onClick={e => e.stopPropagation()}>
+      <div className="modal-container" onClick={e => e.stopPropagation()} style={{maxWidth: 400}}>
         <div className="modal-header">
           <h3 className="modal-title">Share Chat</h3>
           <button className="modal-close-btn" onClick={onClose}><Icons.X size={20} /></button>
         </div>
-        <div className="modal-body">
-          <p>Share your conversation transcript securely:</p>
-          <div className="share-options-grid">
-            <button className="share-option" onClick={copyToClipboard}>
-              <div className="share-icon-wrap share-icon-copy"><Icons.Copy size={24} /></div>
-              <span className="share-option-label">Copy Text</span>
+        <div className="modal-body" style={{paddingTop: 10}}>
+          <p style={{marginBottom: 16, color: 'var(--text-muted)'}}>Anyone with this link will be able to view this conversation. They will not see your private medical profile.</p>
+          
+          <div style={{display: 'flex', gap: 10, marginBottom: 24}}>
+            <button className="btn-primary" style={{flex: 1, display: 'flex', gap: 8, justifyContent: 'center', opacity: loading ? 0.7 : 1}} onClick={copyToClipboard} disabled={loading}>
+              {loading ? <Icons.Loader className="spin" size={18} /> : <Icons.Link size={18} />}
+              {shareToken ? 'Copy Link' : 'Create Link'}
             </button>
+            {shareToken && (
+              <button onClick={revokeShareLink} disabled={loading} style={{background: 'none', border: '1px solid #fca5a5', color: '#dc2626', borderRadius: 12, padding: '0 16px', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center'}}>
+                Stop
+              </button>
+            )}
+          </div>
+
+          {shareToken && (
+            <div style={{background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', fontSize: 13, color: 'var(--text-muted)', marginBottom: 24, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>
+              {getShareUrl()}
+            </div>
+          )}
+
+          <div style={{height: 1, background: 'var(--border)', margin: '0 -24px 20px', position: 'relative'}}>
+            <span style={{position: 'absolute', top: -10, left: '50%', transform: 'translateX(-50%)', background: 'var(--surface)', padding: '0 10px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 600, letterSpacing: 0.5, textTransform: 'uppercase'}}>Also share via</span>
+          </div>
+
+          <div className="share-options-grid" style={{opacity: shareToken ? 1 : 0.5, pointerEvents: shareToken ? 'auto' : 'none'}}>
             <button className="share-option" onClick={shareWhatsApp}>
               <div className="share-icon-wrap share-icon-whatsapp"><Icons.MessageCircle size={24} /></div>
               <span className="share-option-label">WhatsApp</span>
@@ -187,7 +245,7 @@ const ShareModal = ({ isOpen, onClose, transcript }) => {
             </button>
             <button className="share-option" onClick={shareTwitter}>
               <div className="share-icon-wrap" style={{background: '#f1f5f9', color: '#0f1419'}}><Icons.Twitter size={24} /></div>
-              <span className="share-option-label">X (Twitter)</span>
+              <span className="share-option-label">X</span>
             </button>
             <button className="share-option" onClick={shareEmail}>
               <div className="share-icon-wrap share-icon-email"><Icons.Mail size={24} /></div>
@@ -216,7 +274,7 @@ export default function App() {
   const [discoveryTab, setDiscoveryTab] = useState('herbs');
   
   const [sessionToDelete, setSessionToDelete] = useState(null);
-  const [shareTranscript, setShareTranscript] = useState(null);
+  const [shareSession, setShareSession] = useState(null);
   
   // We keep currentSessionId in state at App level so sidebar can highlight the active session
   const [currentSessionId, setCurrentSessionId] = useState(() => 'session-' + Date.now());
@@ -612,9 +670,9 @@ export default function App() {
         onConfirm={confirmDeleteSession} 
       />
       <ShareModal 
-        isOpen={!!shareTranscript} 
-        onClose={() => setShareTranscript(null)} 
-        transcript={shareTranscript} 
+        isOpen={!!shareSession} 
+        onClose={() => setShareSession(null)} 
+        session={shareSession} 
       />
       <ToastContainer />
     </div>
@@ -1023,7 +1081,11 @@ function AvgStat({ icon, label, value }) {
 /* ─────────────────────────────────────────
    AI-POWERED CHAT (Vercel AI SDK)
 ───────────────────────────────────────── */
-function parseUrgencyFromContent(content) {
+export function stripJsonBlock(content) {
+  return content.replace(/```json[\s\S]*?```/g, '').trim();
+}
+
+export function parseUrgencyFromContent(content) {
   try {
     const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
     if (jsonMatch) return JSON.parse(jsonMatch[1]);
@@ -1031,11 +1093,7 @@ function parseUrgencyFromContent(content) {
   return null;
 }
 
-function stripJsonBlock(content) {
-  return content.replace(/```json[\s\S]*?```/g, '').trim();
-}
-
-function UrgencyCard({ data }) {
+export function UrgencyCard({ data }) {
   const isMentalHealth = !!data.summary?.toLowerCase().match(/mental|emotion|sad|anxiet|depress|unhappy|stress/);
   const label = data.urgency === 'high' ? '🔴 High Urgency'
     : data.urgency === 'mid' ? '🟡 Moderate — Monitor Closely'
@@ -1497,8 +1555,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
               className="btn-icon"
               style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
               onClick={() => {
-                const textContent = messages.filter(m => m.role !== 'system').map(m => `${m.role === 'user' ? (profile?.name?.split(' ')[0] || 'User') : 'Nura'}: ${m.content.replace(/```json[\s\S]*?```/g, '').trim()}`).join('\n\n');
-                setShareTranscript(textContent);
+                setShareSession(sessions.find(s => s.id === currentSessionId));
               }}
             >
               <Icons.Share size={14} /> Share

@@ -33,12 +33,20 @@ CREATE TABLE IF NOT EXISTS public.sessions (
   name TEXT,
   messages JSONB,
   isSmartName BOOLEAN DEFAULT FALSE,
+  share_token TEXT UNIQUE,
+  shared_at TIMESTAMP WITH TIME ZONE,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
 );
 
 -- Enable RLS for sessions
 ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
+
+-- Public can read shared sessions
+CREATE POLICY "Public can view shared sessions."
+  ON public.sessions FOR SELECT
+  TO anon
+  USING (share_token IS NOT NULL);
 
 CREATE POLICY "Users can view their own sessions."
   ON public.sessions FOR SELECT
