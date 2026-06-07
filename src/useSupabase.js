@@ -51,7 +51,7 @@ export function useSupabaseProfile() {
       setProfile({ ...data, medicalNotes: data.medical_notes });
     } else {
       console.error('Error updating profile', error);
-      alert('Failed to save profile: ' + error.message);
+      window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message: 'Failed to save profile: ' + error.message, type: 'error' } }));
     }
   };
 

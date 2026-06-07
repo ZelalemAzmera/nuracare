@@ -14,6 +14,36 @@ import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
 import { getCheckins } from './wellnessEngine';
 
+export const showToast = (message, type = 'success') => {
+  window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message, type } }));
+};
+
+const ToastContainer = () => {
+  const [toasts, setToasts] = useState([]);
+  
+  useEffect(() => {
+    const handleToast = (e) => {
+      const id = Date.now() + Math.random();
+      setToasts(prev => [...prev, { id, ...e.detail }]);
+      setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
+    };
+    window.addEventListener('nuracare-toast', handleToast);
+    return () => window.removeEventListener('nuracare-toast', handleToast);
+  }, []);
+
+  if (toasts.length === 0) return null;
+  return (
+    <div className="toast-container">
+      {toasts.map(t => (
+        <div key={t.id} className={`toast ${t.type}`}>
+          {t.type === 'success' ? <Icons.CheckCircle2 size={18} color="var(--green)" /> : <Icons.AlertCircle size={18} color="#ef4444" />}
+          <span>{t.message}</span>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 class ChatErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { hasError: false, message: '' }; }
   static getDerivedStateFromError(error) { return { hasError: true, message: error?.message || 'Unknown error' }; }
@@ -75,12 +105,20 @@ const ShareModal = ({ isOpen, onClose, transcript }) => {
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(transcript);
-      alert("Chat transcript copied to clipboard!");
+      showToast("Chat transcript copied to clipboard!");
       onClose();
     } catch(e) { console.error('Failed to copy', e); }
   };
   const shareWhatsApp = () => {
     window.open(`https://wa.me/?text=${encodeURIComponent(transcript)}`, '_blank');
+    onClose();
+  };
+  const shareTelegram = () => {
+    window.open(`https://t.me/share/url?url=${encodeURIComponent(transcript)}`, '_blank');
+    onClose();
+  };
+  const shareTwitter = () => {
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(transcript)}`, '_blank');
     onClose();
   };
   const shareEmail = () => {
@@ -104,6 +142,14 @@ const ShareModal = ({ isOpen, onClose, transcript }) => {
             <button className="share-option" onClick={shareWhatsApp}>
               <div className="share-icon-wrap share-icon-whatsapp"><Icons.MessageCircle size={24} /></div>
               <span className="share-option-label">WhatsApp</span>
+            </button>
+            <button className="share-option" onClick={shareTelegram}>
+              <div className="share-icon-wrap" style={{background: '#e0f2fe', color: '#0ea5e9'}}><Icons.Send size={24} /></div>
+              <span className="share-option-label">Telegram</span>
+            </button>
+            <button className="share-option" onClick={shareTwitter}>
+              <div className="share-icon-wrap" style={{background: '#f1f5f9', color: '#0f1419'}}><Icons.Twitter size={24} /></div>
+              <span className="share-option-label">X (Twitter)</span>
             </button>
             <button className="share-option" onClick={shareEmail}>
               <div className="share-icon-wrap share-icon-email"><Icons.Mail size={24} /></div>
@@ -323,7 +369,7 @@ export default function App() {
                   <label>How old are you?</label>
                   <input type="number" value={obAge} onChange={e => setObAge(e.target.value)} placeholder="e.g. 28" />
                 </div>
-                <button className="btn-primary" onClick={() => { if(obName) setOnboardingStep(2); else alert("Please enter your name"); }}>Continue</button>
+                <button className="btn-primary" onClick={() => { if(obName) setOnboardingStep(2); else showToast("Please enter your name", "error"); }}>Continue</button>
               </div>
             )}
             {onboardingStep === 2 && (
@@ -512,7 +558,7 @@ export default function App() {
               existingNotes={profile.medicalNotes || ''} 
               isProfile={true} 
               t={t}
-              onComplete={(notes) => { const p = {...profile, medicalNotes: notes}; saveProfile(p); alert('Saved!'); }} 
+              onComplete={(notes) => { const p = {...profile, medicalNotes: notes}; saveProfile(p); showToast('Saved!', 'success'); }} 
             />
           </div>
         )}
@@ -528,6 +574,7 @@ export default function App() {
         onClose={() => setShareTranscript(null)} 
         transcript={shareTranscript} 
       />
+      <ToastContainer />
     </div>
   );
 }
@@ -610,7 +657,7 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
       setExtractedText(limitedText);
     } catch (err) {
       console.error('File extraction failed:', err);
-      alert('Could not read file. Please try another.');
+      showToast('Could not read file. Please try another.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -1600,7 +1647,7 @@ function AuthPage({ setOnboardingStep, useAuth, t = (k)=>k }) {
         await signInWithEmail(email, password);
       } else {
         await signUpWithEmail(email, password);
-        alert('Signup successful! Please check your email to verify, or try logging in.');
+        showToast('Signup successful! Please check your email to verify, or try logging in.', 'success');
       }
     } catch (error) {
       setErrorMsg(error.message);
