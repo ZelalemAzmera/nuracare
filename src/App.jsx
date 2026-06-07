@@ -1110,9 +1110,12 @@ WELLNESS CONTEXT:${checkinContext}
     }
   };
 
+  const activeSessionIdLocally = useRef(currentSessionId);
+
   // Persist to sessions store
   useEffect(() => {
     if (isStreaming) return;
+    if (currentSessionId !== activeSessionIdLocally.current) return; // Prevent saving old messages to new session ID during switch
     try {
       const existingSession = sessions.find(s => s.id === currentSessionId);
       const name = existingSession?.isSmartName ? existingSession.name : getSessionName(messages);
@@ -1310,9 +1313,10 @@ Only include the JSON once — after you know symptom + duration + severity.${la
 
   const startNewSession = () => {
     const newId = 'session-' + Date.now();
+    const systemPromptObj = { id: 'system', role: 'system', content: buildSystemPrompt() };
     const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
     setCurrentSessionId(newId);
-    setMessages([welcome]);
+    setMessages([systemPromptObj, welcome]);
     setInput(''); setShowQuickStart(true); setChatError(null);
   };
 
@@ -1325,7 +1329,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
     setShowQuickStart(!s.messages || s.messages.length <= 1);
   };
 
-  const activeSessionIdLocally = useRef(currentSessionId);
+
 
   // Sync messages when currentSessionId changes from parent (e.g. sidebar) or when DB finishes initial load
   useEffect(() => {
@@ -1336,8 +1340,9 @@ Only include the JSON once — after you know symptom + duration + severity.${la
         setMessages(s.messages);
         setShowQuickStart(s.messages.length <= 1);
       } else {
+        const systemPromptObj = { id: 'system', role: 'system', content: buildSystemPrompt() };
         const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
-        setMessages([welcome]);
+        setMessages([systemPromptObj, welcome]);
         setShowQuickStart(true);
       }
       setChatError(null);
