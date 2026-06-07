@@ -1117,7 +1117,8 @@ WELLNESS CONTEXT:${checkinContext}
       const existingSession = sessions.find(s => s.id === currentSessionId);
       const name = existingSession?.isSmartName ? existingSession.name : getSessionName(messages);
       
-      if (messages.length > 1 || existingSession) {
+      const hasUserMessage = messages.some(m => m.role === 'user');
+      if (hasUserMessage || existingSession) {
         saveSession({
           id: currentSessionId,
           name: existingSession?.isSmartName ? existingSession.name : name,
