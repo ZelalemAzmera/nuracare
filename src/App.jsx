@@ -616,7 +616,9 @@ export default function App() {
 
       <main className="content-area">
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
-        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareTranscript={setShareTranscript} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
+        {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'coach' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
         {activePage === 'records' && <Records profile={profile} />}
@@ -1127,7 +1129,6 @@ function getSessionName(messages) {
   return t.length > 40 ? t.slice(0, 40) + '…' : t;
 }
 
-// Extract a memory snapshot from a single past session
 function extractSessionMemory(session) {
   if (!session || !session.messages || session.messages.length <= 1) return null;
   const firstUser = session.messages.find(m => m.role === 'user' && m.content);
@@ -1159,7 +1160,6 @@ function extractSessionMemory(session) {
   };
 }
 
-// Build a compact cross-session memory string for the system prompt
 function buildCrossSessionMemory(sessions, currentSessionId) {
   const pastSessions = sessions
     .filter(s => s.id !== currentSessionId && s.messages.length > 1)
@@ -1176,7 +1176,7 @@ function buildCrossSessionMemory(sessions, currentSessionId) {
   }).filter(Boolean).join('\n') || 'No previous sessions yet.';
 }
 
-function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, handleDeleteSession, setShareTranscript, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
+function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, handleDeleteSession, setShareSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
 
   const [messages, setMessages] = useState(() => {
