@@ -72,6 +72,29 @@ class ChatErrorBoundary extends Component {
   }
 }
 
+const AppSkeleton = () => (
+  <div className="skeleton-app">
+    <div className="skeleton-sidebar">
+      <div className="skeleton-block" style={{ height: 40, width: '60%', marginBottom: 24 }} />
+      <div className="skeleton-block" style={{ height: 24, width: '100%', marginBottom: 12 }} />
+      <div className="skeleton-block" style={{ height: 24, width: '80%', marginBottom: 12 }} />
+      <div className="skeleton-block" style={{ height: 24, width: '90%', marginBottom: 12 }} />
+    </div>
+    <div className="skeleton-main">
+      <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+        <div className="skeleton-circle" style={{ width: 48, height: 48 }} />
+        <div className="skeleton-block" style={{ height: 32, width: 200 }} />
+      </div>
+      <div style={{ display: 'flex', gap: 24, marginTop: 24 }}>
+        <div className="skeleton-block" style={{ height: 120, flex: 1 }} />
+        <div className="skeleton-block" style={{ height: 120, flex: 1 }} />
+        <div className="skeleton-block" style={{ height: 120, flex: 1 }} />
+      </div>
+      <div className="skeleton-block" style={{ height: 300, width: '100%', marginTop: 24 }} />
+    </div>
+  </div>
+);
+
 const formatDate = (date) => date.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
 
 const DynamicIcon = ({ name, ...props }) => {
@@ -125,6 +148,21 @@ const ShareModal = ({ isOpen, onClose, transcript }) => {
     window.open(`mailto:?subject=My Chat with Nura&body=${encodeURIComponent(transcript)}`, '_blank');
     onClose();
   };
+  const shareNative = async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'My Chat with Nura',
+          text: transcript,
+        });
+      } else {
+        showToast("Your device doesn't support native sharing.", "error");
+      }
+      onClose();
+    } catch(e) {
+      if (e.name !== 'AbortError') console.error('Share failed', e);
+    }
+  };
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-container" onClick={e => e.stopPropagation()}>
@@ -154,6 +192,10 @@ const ShareModal = ({ isOpen, onClose, transcript }) => {
             <button className="share-option" onClick={shareEmail}>
               <div className="share-icon-wrap share-icon-email"><Icons.Mail size={24} /></div>
               <span className="share-option-label">Email</span>
+            </button>
+            <button className="share-option" onClick={shareNative}>
+              <div className="share-icon-wrap" style={{background: '#f3f4f6', color: '#4b5563'}}><Icons.MoreHorizontal size={24} /></div>
+              <span className="share-option-label">More</span>
             </button>
           </div>
         </div>
@@ -274,7 +316,7 @@ export default function App() {
   };
 
   if (authLoading || profileLoading) {
-    return <div style={{display:'flex',justifyContent:'center',alignItems:'center',height:'100vh'}}><Icons.Loader className="spin" size={32} color="var(--green)"/></div>;
+    return <AppSkeleton />;
   }
 
   if (!profile) {

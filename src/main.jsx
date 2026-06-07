@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/react"
 import App from './App.jsx'
 import '../css/style.css'
 import '../css/toast.css'
+import '../css/skeleton.css'
 import { AuthProvider } from './AuthContext'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
