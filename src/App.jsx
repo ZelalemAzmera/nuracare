@@ -1445,7 +1445,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
           </div>
 
           <div className="chat-input-area">
-            {showQuickStart && messages.length <= 1 && (
+            {showQuickStart && !messages.some(m => m.role === 'user') && (
               <div className="chat-options">
                 {quickOptions.map(opt => (
                   <button key={opt} className="chat-opt-btn" onClick={() => sendMessage(opt)}>{opt}</button>
