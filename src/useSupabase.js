@@ -15,6 +15,7 @@ export function useSupabaseProfile() {
     }
 
     async function fetchProfile() {
+      setLoading(true);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
@@ -70,6 +71,7 @@ export function useSupabaseSessions() {
     }
 
     async function fetchSessions() {
+      setLoading(true);
       const { data, error } = await supabase
         .from('sessions')
         .select('*')
