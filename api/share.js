@@ -4,12 +4,15 @@ import { createClient } from '@supabase/supabase-js';
 export default async function handler(req, res) {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || '';
   const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || '';
-  const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-  // Authenticate user from auth header
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ error: 'Unauthorized' });
   const token = authHeader.replace('Bearer ', '');
+
+  // Initialize Supabase client WITH the user's auth token so RLS policies pass
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: `Bearer ${token}` } }
+  });
+
   const { data: { user }, error: authError } = await supabase.auth.getUser(token);
   if (authError || !user) return res.status(401).json({ error: 'Unauthorized' });
 
