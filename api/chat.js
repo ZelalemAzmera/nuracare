@@ -103,7 +103,7 @@ export default async function handler(req) {
         .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
     ];
 
-    const modelOptions = ['deepseek-r1-distill-llama-70b', 'qwen-2.5-32b'];
+    const modelOptions = ['deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile'];
     let groqRes = null;
     
     for (const model of modelOptions) {

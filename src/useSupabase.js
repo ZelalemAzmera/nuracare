@@ -23,7 +23,8 @@ export function useSupabaseProfile() {
         .single();
       
       if (!error && data) {
-        setProfile({ ...data, medicalNotes: data.medical_notes });
+        const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
+        setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode });
       }
       setLoading(false);
     }
@@ -41,6 +42,11 @@ export function useSupabaseProfile() {
       delete dbPayload.medicalNotes;
     }
     
+    if ('fastingMode' in dbPayload) {
+      localStorage.setItem(`fastingMode_${user.id}`, dbPayload.fastingMode);
+      delete dbPayload.fastingMode;
+    }
+    
     const { data, error } = await supabase
       .from('profiles')
       .upsert({ id: user.id, ...dbPayload, updated_at: new Date() })
@@ -48,7 +54,8 @@ export function useSupabaseProfile() {
       .single();
       
     if (!error && data) {
-      setProfile({ ...data, medicalNotes: data.medical_notes });
+      const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
+      setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode });
     } else {
       console.error('Error updating profile', error);
       window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message: 'Failed to save profile: ' + error.message, type: 'error' } }));

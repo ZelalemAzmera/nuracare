@@ -12,7 +12,7 @@ import { useSupabaseProfile, useSupabaseSessions } from './useSupabase';
 import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
-import { getCheckins } from './wellnessEngine';
+import { getCheckins, compute5CoreWellness, getRecoveryRecommendations } from './wellnessEngine';
 import { getDiscoveryFeed, getAvailableTags } from './discoveryEngine';
 import { supabase } from './supabase';
 
@@ -1012,6 +1012,8 @@ function CheckinPage({ profile }) {
 
   const today = new Date().toISOString().split('T')[0];
   const todayEntry = checkins.find(c => c.date === today);
+  const wellness = compute5CoreWellness(todayEntry);
+  const recommendations = getRecoveryRecommendations(checkins);
 
   const getAverages = (daysBack) => {
     if (checkins.length === 0) return null;
@@ -1063,8 +1065,18 @@ function CheckinPage({ profile }) {
 
       {tab === 'today' && (
         <div className="dashboard-grid">
-          <div style={{ gridColumn: 'span 2' }}>
-            <WellnessScore records={records} />
+          <div className="dash-card card-large" style={{ gridColumn: 'span 2', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 8 }}>5-CORE WELLNESS SCORE</span>
+            <div style={{ position: 'relative', width: 120, height: 120 }}>
+              <svg width="120" height="120" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="var(--border)" strokeWidth="10" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke={wellness.color} strokeWidth="10"
+                  strokeLinecap="round" strokeDasharray="251.2" strokeDashoffset={251.2 - (wellness.total / 100) * 251.2}
+                  transform="rotate(-90 50 50)" />
+                <text x="50" y="50" textAnchor="middle" dominantBaseline="middle" fontSize="26" fontWeight="800" fill={wellness.color}>{wellness.total}</text>
+              </svg>
+            </div>
+            <span style={{ fontSize: 14, fontWeight: 600, color: wellness.color, marginTop: 8 }}>{wellness.label}</span>
           </div>
           
           <div className="dash-card card-large" style={{ gridColumn: 'span 4' }}>
@@ -1081,6 +1093,31 @@ function CheckinPage({ profile }) {
             ) : (
               <div style={{ color: 'var(--text-muted)' }}>You haven't completed your check-in today.</div>
             )}
+          </div>
+          
+          <div className="dash-card card-large" style={{ gridColumn: 'span 6', marginTop: 8 }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 18 }}>5-Core Deep Analysis</h3>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+              <CoreStat label="Physical Vitality" score={wellness.cores.physical} icon={<Icons.Activity size={18} color="var(--green-dark)" />} />
+              <CoreStat label="Mental Resilience" score={wellness.cores.mental} icon={<Icons.Brain size={18} color="var(--green-dark)" />} />
+              <CoreStat label="Recovery & Sleep" score={wellness.cores.recovery} icon={<Icons.Moon size={18} color="var(--green-dark)" />} />
+              <CoreStat label="Nutrition & Hydration" score={wellness.cores.nutrition} icon={<Icons.Droplet size={18} color="var(--green-dark)" />} />
+              <CoreStat label="Preventive Maintenance" score={wellness.cores.preventive} icon={<Icons.Shield size={18} color="var(--green-dark)" />} />
+            </div>
+          </div>
+          
+          <div className="dash-card card-large" style={{ gridColumn: 'span 6', marginTop: 8 }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 18 }}>Way Forward & Recommendations</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {recommendations.length > 0 ? recommendations.map((rec, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, borderLeft: '4px solid var(--green)', paddingLeft: 12 }}>
+                  <Icons.Sparkles size={20} color="var(--green)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <span style={{ fontSize: 15, lineHeight: 1.5, color: 'var(--text)' }}>{rec}</span>
+                </div>
+              )) : (
+                <div style={{ color: 'var(--text-muted)' }}>Complete more check-ins to receive personalized AI recommendations.</div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1111,6 +1148,25 @@ function CheckinPage({ profile }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function CoreStat({ label, score, icon }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+      <div style={{ width: 32, height: 32, borderRadius: 8, background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {icon}
+      </div>
+      <div style={{ flex: 1 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>{label}</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--green-dark)' }}>{score}</span>
+        </div>
+        <div style={{ width: '100%', height: 8, background: 'var(--border)', borderRadius: 4, overflow: 'hidden' }}>
+          <div style={{ width: `${score}%`, height: '100%', background: score < 40 ? '#ef4444' : score < 70 ? '#f59e0b' : 'var(--green)', borderRadius: 4 }}></div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1307,7 +1363,7 @@ WELLNESS CONTEXT:${checkinContext}
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
-          body: JSON.stringify({ model: 'qwen-2.5-32b', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
+          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
         });
         const data = await res.json();
         title = data.choices?.[0]?.message?.content?.trim()?.replace(/["']/g, '');
@@ -1739,7 +1795,9 @@ function Checkups({ profile, setActivePage }) {
                 <span style={{ fontSize: 12, background: 'var(--green-light)', color: 'var(--green-dark)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.freq}</span>
               </div>
               <p style={{ margin: '4px 0 12px 0', fontSize: 13, color: 'var(--text-muted)' }}>{item.desc}</p>
-              <button style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <button 
+                onClick={() => showToast(`${item.name} logged successfully!`, 'success')}
+                style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
                 Log Visit
               </button>
             </div>
@@ -1797,22 +1855,38 @@ function Discovery({ t }) {
         ))}
       </div>
 
-      <div className="discovery-grid" style={{ gridTemplateColumns: '1fr', gap: 20 }}>
-        {feed.map((item, i) => (
-          <div key={i} className="dash-card card-large" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <img src={item.image} alt={item.name} style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12 }} />
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: '0 0 8px 0', fontSize: 18 }}>{item.name}</h3>
-                <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.category.toUpperCase()}</span>
+      <div className="section-title">Articles & Guides</div>
+      <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+        {feed.filter(i => !i.vid).map((item, i) => (
+          <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden' }}>
+            <img src={item.image} alt={item.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80'}} />
+            <div style={{ padding: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <h3 style={{ margin: 0, fontSize: 16 }}>{item.name}</h3>
+                <span style={{ fontSize: 11, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.category.toUpperCase()}</span>
               </div>
-              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.benefit}</p>
-              
-              {item.vid && (
-                <a href={`https://youtube.com/watch?v=${item.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, fontSize: 14, color: '#ef4444', textDecoration: 'none', fontWeight: 600 }}>
-                  <Icons.Youtube size={18} /> Watch Video
-                </a>
-              )}
+              <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.benefit}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="section-title" style={{ marginTop: 40 }}>Watch & Learn</div>
+      <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
+        {feed.filter(i => !!i.vid).map((item, i) => (
+          <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden', background: '#fafafa' }}>
+            <div style={{ position: 'relative' }}>
+              <img src={item.image} alt={item.name} style={{ width: '100%', height: 180, objectFit: 'cover', opacity: 0.8 }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=400&q=80'}} />
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 12 }}>
+                <Icons.Play size={24} color="#fff" fill="#fff" />
+              </div>
+            </div>
+            <div style={{ padding: 16 }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{item.name}</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.4 }}>{item.benefit}</p>
+              <a href={item.vid} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#ef4444', textDecoration: 'none', fontWeight: 600, border: '1px solid #ef4444', padding: '6px 12px', borderRadius: 20 }}>
+                <Icons.Youtube size={16} /> Watch on YouTube
+              </a>
             </div>
           </div>
         ))}

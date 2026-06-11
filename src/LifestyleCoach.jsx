@@ -37,7 +37,7 @@ const YOGA_DB = {
   ]
 };
 
-export default function LifestyleCoach() {
+export default function LifestyleCoach({ profile, t = (k)=>k }) {
   const [activeSection, setActiveSection] = useState('overview');
   const [recentData, setRecentData] = useState(null);
   const [analysis, setAnalysis] = useState(null);

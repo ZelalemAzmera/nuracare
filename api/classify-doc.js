@@ -42,7 +42,7 @@ ${text.slice(0, 3000)}
 Output ONLY valid JSON wrapped in triple backticks: \`\`\`json { ... } \`\`\``;
 
     const { text: responseText } = await generateText({
-      model: groq('qwen-2.5-32b'),
+      model: groq('llama-3.3-70b-versatile'),
       prompt,
       temperature: 0.1,
     });
