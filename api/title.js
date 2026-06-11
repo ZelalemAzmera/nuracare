@@ -14,7 +14,7 @@ export default async function handler(req) {
   try {
     const { firstUserMsg, firstAiSummary } = await req.json();
 
-    const prompt = `Generate a 3-5 word chat session title for this health conversation.
+    const prompt = `Generate a concise 2-4 word chat session title for this health conversation.
 User said: "${firstUserMsg || ''}". Nura responded about: "${firstAiSummary || ''}".
 Format: Title Case, no quotes, no punctuation.`;
 
@@ -22,7 +22,7 @@ Format: Title Case, no quotes, no punctuation.`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({ 
-        model: 'llama-3.3-70b-versatile', 
+        model: 'qwen-2.5-32b', 
         messages: [{ role: 'user', content: prompt }], 
         temperature: 0.3, 
         max_tokens: 20, 
@@ -36,7 +36,8 @@ Format: Title Case, no quotes, no punctuation.`;
     }
 
     const data = await groqRes.json();
-    const title = data.choices?.[0]?.message?.content?.trim()?.replace(/["']/g, '') || 'New Session';
+    let title = data.choices?.[0]?.message?.content?.trim()?.replace(/["']/g, '') || 'New Session';
+    title = title.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim();
 
     return new Response(JSON.stringify({ title }), {
       headers: { 'Content-Type': 'application/json' }

@@ -45,13 +45,13 @@ TONE: Warm, human, 2-4 sentences max. Use user name occasionally.
 
 RED FLAGS (always HIGH urgency): chest pain, difficulty breathing, stroke, severe bleeding, loss of consciousness.
 NEVER classify mental/emotional health (sadness, anxiety, depression, unhappiness) as low urgency — minimum is "mid".
-CRITICAL NAME RULE: The user's name is spelled EXACTLY as written in the profile. Address them letter-for-letter with zero modifications. Never shorten or alter it. Example — if name is "${profile?.name}", always write "${profile?.name}".
+CRITICAL NAME RULE: The user's name is "${profile?.name || 'there'}". This contains numbers and letters. It is NOT a typo. Write it EXACTLY as "${profile?.name || 'there'}" — every single character including numbers. NEVER remove, shorten, or modify any part of it.
 
 WHEN YOU HAVE ENOUGH INFO, append this JSON at the END of your message:
 \`\`\`json
 {"urgency":"low|mid|high","summary":"one-line description","naturalRemedies":["remedy 1","remedy 2","remedy 3"],"action":"what to do next"}
 \`\`\`
-Only include the JSON once — after you know symptom + duration + severity.${lang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
+You MUST wrap your JSON in triple-backtick json fences. NEVER output raw JSON without fences. Only include the JSON once — after you know symptom + duration + severity.${lang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
 }
 
 async function sendDiscordAlert(urgencyData, profile) {
@@ -103,15 +103,21 @@ export default async function handler(req) {
         .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
     ];
 
-    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: groqMessages, temperature: 0.75, max_tokens: 1024, stream: true })
-    });
+    const modelOptions = ['deepseek-r1-distill-llama-70b', 'qwen-2.5-32b'];
+    let groqRes = null;
+    
+    for (const model of modelOptions) {
+      groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+        body: JSON.stringify({ model, messages: groqMessages, temperature: 0.6, max_tokens: 1500, stream: true })
+      });
+      if (groqRes.ok) break;
+    }
 
-    if (!groqRes.ok) {
+    if (!groqRes || !groqRes.ok) {
       const err = await groqRes.json().catch(() => ({}));
-      return new Response(JSON.stringify(err), { status: groqRes.status, headers: { 'Content-Type': 'application/json' } });
+      return new Response(JSON.stringify(err), { status: groqRes?.status || 500, headers: { 'Content-Type': 'application/json' } });
     }
 
     // Forward the raw Groq SSE stream — accumulate for Discord alert

@@ -2,7 +2,6 @@
 
 const STORAGE_KEY = 'nuracare_wellness_checkins';
 
-// Get all check-ins, sorted by date (oldest to newest)
 export function getCheckins() {
   try {
     const data = localStorage.getItem(STORAGE_KEY);
@@ -101,6 +100,47 @@ export function computeWellnessScore(checkin) {
   }
 
   return { score: finalScore, label, color };
+}
+
+// Compute 5-Core Wellness Score (0-100)
+export function compute5CoreWellness(checkin, profile = {}) {
+  if (!checkin) {
+    return {
+      total: 0,
+      label: 'Needs Data',
+      color: '#cbd5e1',
+      cores: { physical: 0, mental: 0, recovery: 0, nutrition: 0, preventive: 0 }
+    };
+  }
+
+  // 1. Physical Vitality
+  let physical = Math.round((checkin.energy * 10 + (checkin.activity === 'Active' ? 10 : checkin.activity === 'Moderate' ? 5 : 0)) / 1.1);
+
+  // 2. Mental Resilience
+  const invStress = 10 - checkin.stress;
+  let mental = Math.round((checkin.mood * 5 + invStress * 5));
+
+  // 3. Recovery & Sleep
+  let recovery = Math.round((checkin.sleep * 10));
+
+  // 4. Nutrition & Hydration
+  let nutrition = checkin.hydration ? Math.round(checkin.hydration * 10) : 80;
+
+  // 5. Preventive Maintenance
+  let preventive = profile.records && profile.records.length > 0 ? 90 : 60;
+
+  physical = Math.min(100, Math.max(0, physical));
+  mental = Math.min(100, Math.max(0, mental));
+  recovery = Math.min(100, Math.max(0, recovery));
+  
+  const total = Math.round((physical + mental + recovery + nutrition + preventive) / 5);
+
+  let label = 'Optimal';
+  let color = '#22c55e';
+  if (total < 40) { label = 'Needs Attention'; color = '#ef4444'; }
+  else if (total < 70) { label = 'Fair'; color = '#f59e0b'; }
+
+  return { total, label, color, cores: { physical, mental, recovery, nutrition, preventive } };
 }
 
 // Generate personalized recovery recommendations

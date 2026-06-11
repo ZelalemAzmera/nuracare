@@ -11,10 +11,30 @@ const EXERCISE_DB = {
 };
 
 const YOGA_DB = {
-  vinyasa: ['Sun Salutation', 'Downward Dog', 'Warrior I', 'Warrior II', 'Triangle Pose', 'Chaturanga', 'Upward Dog'],
-  restorative: ['Child\'s Pose', 'Corpse Pose (Savasana)', 'Supported Bridge', 'Legs-Up-The-Wall', 'Reclining Bound Angle'],
-  release: ['Cat-Cow', 'Thread the Needle', 'Puppy Pose', 'Seated Neck Release', 'Eagle Arms'],
-  yin: ['Butterfly Pose', 'Dragon Pose', 'Sleeping Swan', 'Sphinx Pose', 'Supported Fish Pose']
+  vinyasa: [
+    { name: 'Sun Salutation', desc: 'A flowing sequence to build heat and stretch the whole body.', dur: '5 mins', diff: 'Beginner', vid: '2PJV0PZ5O3A' },
+    { name: 'Downward Dog', desc: 'Invert your body to stretch hamstrings and shoulders.', dur: '60 sec', diff: 'Beginner', vid: 'j97SSGsnCAQ' },
+    { name: 'Warrior I', desc: 'Lunge forward, arms up, hips forward. Builds leg strength.', dur: '45 sec/leg', diff: 'Beginner', vid: '8P1X_I_zIuE' },
+    { name: 'Warrior II', desc: 'Lunge forward, arms open to sides. Opens hips and chest.', dur: '45 sec/leg', diff: 'Beginner', vid: '4EjqvYvG6P8' }
+  ],
+  restorative: [
+    { name: 'Child\'s Pose', desc: 'Kneel and fold forward, resting forehead on the ground.', dur: '2 mins', diff: 'Beginner', vid: '2MJGg-dUKh0' },
+    { name: 'Corpse Pose (Savasana)', desc: 'Lie flat on your back, arms and legs relaxed.', dur: '5 mins', diff: 'Beginner', vid: '1bVIQO8Atsg' },
+    { name: 'Supported Bridge', desc: 'Lie on back, lift hips and place a block under sacrum.', dur: '3 mins', diff: 'Beginner', vid: 'NmtEEDn_N6Y' },
+    { name: 'Legs-Up-The-Wall', desc: 'Lie on back with legs resting vertically against a wall.', dur: '5 mins', diff: 'Beginner', vid: 'k3E10Wk8kXw' }
+  ],
+  release: [
+    { name: 'Cat-Cow', desc: 'On hands and knees, alternate arching and rounding your spine.', dur: '60 sec', diff: 'Beginner', vid: 'kqnua4rHVVA' },
+    { name: 'Thread the Needle', desc: 'From all fours, slide one arm under the other to stretch shoulder.', dur: '60 sec/side', diff: 'Intermediate', vid: 'LwE4pGj52mE' },
+    { name: 'Puppy Pose', desc: 'From all fours, walk hands forward and melt chest to floor.', dur: '90 sec', diff: 'Intermediate', vid: 'TzY9n9Z0G4w' },
+    { name: 'Seated Neck Release', desc: 'Sit tall, gently tilt ear to shoulder and hold.', dur: '45 sec/side', diff: 'Beginner', vid: '8kC6QO5jAqk' }
+  ],
+  yin: [
+    { name: 'Butterfly Pose', desc: 'Sit, bring soles of feet together, and fold forward gently.', dur: '3 mins', diff: 'Beginner', vid: 'W80Hk4GhqHk' },
+    { name: 'Dragon Pose', desc: 'Deep lunge holding position to open hips.', dur: '2 mins/leg', diff: 'Intermediate', vid: '3V1Oa4r2bWw' },
+    { name: 'Sleeping Swan', desc: 'Pigeon pose with chest folded forward over the front leg.', dur: '3 mins/leg', diff: 'Intermediate', vid: '01Qk6O1lI2A' },
+    { name: 'Sphinx Pose', desc: 'Lie on stomach, prop up on forearms, arching back gently.', dur: '3 mins', diff: 'Beginner', vid: '7Q3Z8k1G3Hk' }
+  ]
 };
 
 export default function LifestyleCoach() {
@@ -45,39 +65,46 @@ export default function LifestyleCoach() {
       return;
     }
 
+    const isFasting = profile && profile.fastingMode && profile.fastingMode.includes('Fasting');
+
+    let title, desc, foods, exercise, focus;
+
     if (recent.stress >= 7 || recent.mood <= 4) {
-      setAnalysis({
-        title: "De-Stress & Regulate",
-        desc: "Your recent check-in indicates high tension. Focus on nervous system regulation and calming nutrition.",
-        foods: ["Chamomile Tea", "Magnesium-rich spinach", "Ashwagandha", "Dark Chocolate"],
-        exercise: "Restorative Yoga (15-30 mins)",
-        focus: "calm"
-      });
+      title = "De-Stress & Regulate";
+      desc = "Your recent check-in indicates high tension. Focus on nervous system regulation and calming nutrition.";
+      foods = isFasting ? ["Chamomile Tea", "Spinach Salad", "Telba (Flaxseed)"] : ["Chamomile Tea", "Magnesium-rich spinach", "Dark Chocolate"];
+      exercise = "Restorative Yoga (15-30 mins)";
+      focus = "calm";
     } else if (recent.energy >= 7 && recent.sleep >= 6) {
-      setAnalysis({
-        title: "High Energy Flow",
-        desc: "You are well-rested and energized. This is a great time to push your cardiovascular fitness or hit the gym.",
-        foods: ["Complex carbs (Oats/Quinoa)", "Hydrating fruits (Watermelon/Berries)", "Lean protein"],
-        exercise: "Running or Heavy Gym Session",
-        focus: "energy"
-      });
+      title = "High Energy Flow";
+      desc = "You are well-rested and energized. This is a great time to push your cardiovascular fitness or hit the gym.";
+      foods = isFasting ? ["Red Teff (Iron)", "Misir Wot (Lentil Protein)", "Beso (Roasted Barley)"] : ["Complex carbs (Oats/Quinoa)", "Lean protein", "Hydrating fruits"];
+      exercise = "Running or Heavy Gym Session";
+      focus = "energy";
     } else if (recent.sleep <= 5 || recent.energy <= 4) {
-      setAnalysis({
-        title: "Active Recovery & Rest",
-        desc: "Your energy is low. Avoid intense workouts. Focus on gentle movement and deep nutrition for recovery.",
-        foods: ["Tart Cherry Juice (for sleep)", "Warm Turmeric Milk", "Bone Broth"],
-        exercise: "Light Yoga or simple breathing exercises",
-        focus: "sleep"
-      });
+      title = "Active Recovery & Rest";
+      desc = "Your energy is low. Avoid intense workouts. Focus on gentle movement and deep nutrition for recovery.";
+      foods = isFasting ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Tart Cherry Juice", "Bone Broth", "Turmeric Milk"];
+      exercise = "Light Yoga or simple breathing exercises";
+      focus = "sleep";
     } else {
-      setAnalysis({
-        title: "Balanced Maintenance",
-        desc: "You are in a stable state. Maintain your routine with a mix of cardio, flexibility, and balanced meals.",
-        foods: ["Mixed nuts", "Leafy greens", "Fatty fish (Omega-3s)"],
-        exercise: "Gym or a Moderate Run",
-        focus: "balance"
-      });
+      title = "Balanced Maintenance";
+      desc = "You are in a stable state. Maintain your routine with a mix of cardio, flexibility, and balanced meals.";
+      foods = isFasting ? ["Kik Alicha (Split Peas)", "Avocado", "Telba"] : ["Mixed nuts", "Leafy greens", "Fatty fish"];
+      exercise = "Gym or a Moderate Run";
+      focus = "balance";
     }
+
+    setAnalysis({ title, desc, foods, exercise, focus });
+  };
+
+  // Manual Vitals State
+  const [vitals, setVitals] = useState(() => JSON.parse(localStorage.getItem('nuracare_vitals') || '{"steps": 0, "hr": 0, "weight": 0, "water": 0}'));
+  
+  const updateVital = (key, val) => {
+    const newVitals = { ...vitals, [key]: val };
+    setVitals(newVitals);
+    localStorage.setItem('nuracare_vitals', JSON.stringify(newVitals));
   };
 
   // Routing
@@ -159,6 +186,50 @@ export default function LifestyleCoach() {
         />
 
       </div>
+
+      <div className="section-title" style={{ marginTop: 32 }}>❤️ Manual Vitals & Hydration</div>
+      <div className="dashboard-grid">
+        <div className="dash-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+            <Icons.Footprints size={18} color="var(--green-dark)" /> Steps
+          </div>
+          <input type="number" value={vitals.steps || ''} onChange={(e) => updateVital('steps', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+        </div>
+        
+        <div className="dash-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+            <Icons.HeartPulse size={18} color="#ef4444" /> Heart Rate (bpm)
+          </div>
+          <input type="number" value={vitals.hr || ''} onChange={(e) => updateVital('hr', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+        </div>
+
+        <div className="dash-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+            <Icons.Scale size={18} color="#6366f1" /> Weight (kg)
+          </div>
+          <input type="number" value={vitals.weight || ''} onChange={(e) => updateVital('weight', e.target.value)} placeholder="0.0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+        </div>
+
+        <div className="dash-card">
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, color: 'var(--text-muted)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Droplets size={18} color="#0ea5e9" /> Water</span>
+            <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
+          </div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {[1,2,3,4,5,6,7,8].map(glass => (
+              <div 
+                key={glass} 
+                onClick={() => updateVital('water', glass === vitals.water ? glass - 1 : glass)}
+                style={{ 
+                  width: 28, height: 36, borderRadius: '4px 4px 12px 12px', 
+                  background: glass <= vitals.water ? '#0ea5e9' : 'var(--bg)', 
+                  cursor: 'pointer', transition: 'all 0.2s'
+                }}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -193,28 +264,43 @@ function LiveTimer() {
     return () => clearInterval(interval);
   }, [isActive]);
 
+  const handleReset = () => {
+    setIsActive(false);
+    setTimer(0);
+  };
+
   return (
     <div style={{ background: 'rgba(255,255,255,0.7)', padding: 24, borderRadius: 24, border: '1px solid rgba(255,255,255,0.9)', boxShadow: '0 8px 24px rgba(34,197,94,0.04)', textAlign: 'center', marginBottom: 24 }}>
       <div style={{ fontSize: 48, fontWeight: 800, fontFamily: 'monospace', color: isActive ? 'var(--green-dark)' : 'var(--text)', marginBottom: 16 }}>
         {Math.floor(timer / 60)}:{(timer % 60).toString().padStart(2, '0')}
       </div>
-      <button 
-        onClick={() => setIsActive(!isActive)}
-        style={{ 
-          background: isActive ? '#ef4444' : 'var(--green)', 
-          color: 'white', 
-          border: 'none', 
-          padding: '12px 32px', 
-          borderRadius: 24, 
-          fontWeight: 600, 
-          fontSize: 16, 
-          cursor: 'pointer', 
-          transition: 'all 0.2s', 
-          boxShadow: `0 8px 24px ${isActive ? '#ef444466' : 'rgba(34,197,94,0.3)'}` 
-        }}
-      >
-        {isActive ? 'Stop Session' : 'Start Session'}
-      </button>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+        <button 
+          onClick={() => setIsActive(!isActive)}
+          style={{ 
+            background: isActive ? '#ef4444' : 'var(--green)', 
+            color: 'white', 
+            border: 'none', 
+            padding: '12px 32px', 
+            borderRadius: 24, 
+            fontWeight: 600, 
+            fontSize: 16, 
+            cursor: 'pointer', 
+            transition: 'all 0.2s', 
+            boxShadow: `0 8px 24px ${isActive ? '#ef444466' : 'rgba(34,197,94,0.3)'}` 
+          }}
+        >
+          {isActive ? 'Stop Session' : 'Start Session'}
+        </button>
+        {(!isActive && timer > 0) && (
+          <button 
+            onClick={handleReset}
+            style={{ background: 'transparent', color: '#ef4444', border: '2px solid #ef4444', padding: '12px 24px', borderRadius: 24, fontWeight: 600, fontSize: 16, cursor: 'pointer', transition: 'all 0.2s' }}
+          >
+            Reset
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -222,6 +308,21 @@ function LiveTimer() {
 /* --- RUNNING --- */
 function RunningDashboard({ onBack }) {
   const [distance, setDistance] = useState('');
+  const [history, setHistory] = useState([]);
+
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem('nuracare_runs') || '[]');
+    setHistory(data);
+  }, []);
+
+  const handleSaveRun = () => {
+    if (!distance) return;
+    const newRun = { id: Date.now(), distance, date: new Date().toLocaleDateString() };
+    const updated = [newRun, ...history];
+    setHistory(updated);
+    localStorage.setItem('nuracare_runs', JSON.stringify(updated));
+    setDistance('');
+  };
   
   return (
     <div className="page active">
@@ -240,11 +341,23 @@ function RunningDashboard({ onBack }) {
             onChange={(e) => setDistance(e.target.value)}
             style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: '1.5px solid var(--border)', fontSize: 20, fontWeight: 600, outline: 'none' }}
           />
-          <button style={{ marginTop: 24, background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 16, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={handleSaveRun} style={{ marginTop: 24, background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 16, fontWeight: 600, cursor: 'pointer' }}>
             Save Run
           </button>
         </div>
       </div>
+
+      {history.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ marginBottom: 16 }}>Recent Runs</h3>
+          {history.map(r => (
+            <div key={r.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, marginBottom: 12, border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ fontWeight: 600 }}>{r.date}</span>
+              <span style={{ color: 'var(--green-dark)', fontWeight: 700 }}>{r.distance} km</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -253,7 +366,24 @@ function RunningDashboard({ onBack }) {
 function GymDashboard({ onBack, recent }) {
   const [exercise, setExercise] = useState('');
   const [reps, setReps] = useState('');
+  const [loggedSets, setLoggedSets] = useState([]);
   
+  const handleAddSet = () => {
+    if (!exercise || !reps) return;
+    setLoggedSets([...loggedSets, { id: Date.now(), exercise, reps }]);
+    setExercise('');
+    setReps('');
+  };
+
+  const handleSaveWorkout = () => {
+    if (loggedSets.length === 0) return;
+    const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
+    workouts.push({ id: Date.now(), date: new Date().toLocaleDateString(), type: 'gym', sets: loggedSets });
+    localStorage.setItem('nuracare_workouts', JSON.stringify(workouts));
+    setLoggedSets([]);
+    alert('Workout saved successfully!');
+  };
+
   // Dynamic Workout Generator
   const generateWorkout = () => {
     if (!recent) return { title: "Full Body Foundation", exercises: [EXERCISE_DB.legs[0], EXERCISE_DB.push[3], EXERCISE_DB.pull[1], EXERCISE_DB.core[0]] };
@@ -330,9 +460,24 @@ function GymDashboard({ onBack, recent }) {
             <input type="text" placeholder="e.g. 10x 60kg" value={reps} onChange={(e)=>setReps(e.target.value)} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1.5px solid var(--border)', fontSize: 15 }} />
           </div>
         </div>
-        <button style={{ marginTop: 24, width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={handleAddSet} style={{ marginTop: 24, width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
           Add Set to Workout
         </button>
+
+        {loggedSets.length > 0 && (
+          <div style={{ marginTop: 24 }}>
+            <h4 style={{ marginBottom: 12 }}>Current Session</h4>
+            {loggedSets.map(s => (
+              <div key={s.id} style={{ display: 'flex', justifyContent: 'space-between', padding: 12, borderBottom: '1px solid var(--border)' }}>
+                <span>{s.exercise}</span>
+                <span style={{ fontWeight: 600 }}>{s.reps}</span>
+              </div>
+            ))}
+            <button onClick={handleSaveWorkout} style={{ marginTop: 16, width: '100%', background: 'var(--text)', color: 'white', border: 'none', padding: 12, borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
+              Finish & Save Workout
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -382,10 +527,22 @@ function YogaDashboard({ onBack, recent }) {
           <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: 18 }}>{flow.title}</h4>
           <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>{flow.desc}</p>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
             {flow.poses.map((pose, i) => (
-              <div key={i} style={{ background: 'var(--white)', padding: '12px 16px', borderRadius: 12, fontSize: 14, fontWeight: 600, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 8, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-                <Icons.Target size={16} color="var(--green-dark)" /> {pose}
+              <div key={i} style={{ background: 'var(--white)', padding: 16, borderRadius: 16, border: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{ background: 'var(--green-light)', padding: 12, borderRadius: 12 }}>
+                  <Icons.Play size={20} color="var(--green-dark)" />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <h5 style={{ margin: 0, fontSize: 16 }}>{pose.name}</h5>
+                    <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{pose.dur}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{pose.desc}</p>
+                  <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 8, fontSize: 13, color: 'var(--green-dark)', textDecoration: 'none', fontWeight: 600 }}>
+                    Watch Tutorial →
+                  </a>
+                </div>
               </div>
             ))}
           </div>

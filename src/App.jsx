@@ -13,6 +13,7 @@ import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
 import { getCheckins } from './wellnessEngine';
+import { getDiscoveryFeed, getAvailableTags } from './discoveryEngine';
 import { supabase } from './supabase';
 
 export const showToast = (message, type = 'success') => {
@@ -568,7 +569,6 @@ export default function App() {
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.Stethoscope} label="Checkups" active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.ClipboardList} label="Records" active={activePage === 'records'} onClick={() => { setActivePage('records'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
@@ -618,11 +618,9 @@ export default function App() {
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
-        {activePage === 'coach' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
-        {activePage === 'discovery' && <Discovery tab={discoveryTab} setTab={setDiscoveryTab} t={t} />}
-        {activePage === 'records' && <Records profile={profile} />}
-        {activePage === 'lifestyle' && <LifestyleCoach />}
+        {activePage === 'discovery' && <Discovery t={t} />}
+        {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkin' && <CheckinPage profile={profile} />}
         {activePage === 'profile' && (
           <div className="page active">
@@ -649,11 +647,45 @@ export default function App() {
             <div className="profile-meds">
               {Array.isArray(profile.medications) && profile.medications.length > 0 ? profile.medications.map((m, i) => <span key={i} className="profile-tag" style={{marginRight: 6}}>{m}</span>) : (profile.medications || 'None reported')}
             </div>
+
+            <div className="section-title" style={{ marginTop: 32 }}>Health Records</div>
+            <div>
+              {(!profile.records || profile.records.length === 0) ? (
+                <div className="empty-state">
+                  <Icons.ClipboardList size={52} className="empty-icon" />
+                  <p>No records yet.</p>
+                  <p className="empty-sub">Complete a symptom check to see your history here.</p>
+                </div>
+              ) : [...profile.records].reverse().map(r => (
+                <ExpandableRecordCard key={r.id} r={r} />
+              ))}
+            </div>
+
             <div className="section-title">{t("update_medications")}</div>
             <div className="form-group">
               <MedTagInput tags={profileMedsInput} setTags={setProfileMedsInput} placeholder="e.g. Metformin 500mg... Press Enter to add" />
             </div>
             <button className="btn-primary" onClick={() => { const p = {...profile, medications: profileMedsInput}; saveProfile(p); }}>{t("save_medications")}</button>
+
+            <div className="section-title" style={{marginTop: 32}}>Preferences</div>
+            <div className="dash-card">
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <input 
+                  type="checkbox" 
+                  checked={profile.fastingMode === 'Orthodox Christian Fasting'} 
+                  onChange={(e) => {
+                    const mode = e.target.checked ? 'Orthodox Christian Fasting' : 'None';
+                    saveProfile({ ...profile, fastingMode: mode });
+                    showToast(e.target.checked ? 'Fasting mode enabled' : 'Fasting mode disabled', 'success');
+                  }} 
+                  style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                />
+                <span style={{ fontWeight: 600 }}>Enable Fasting Mode (Tsom)</span>
+              </label>
+              <p style={{ margin: '8px 0 0 30px', fontSize: 13, color: 'var(--text-muted)' }}>
+                When enabled, NuraCare will adjust nutritional recommendations to be plant-based and suitable for fasting periods.
+              </p>
+            </div>
 
             <div className="section-title" style={{marginTop: 32}}>{t("medical_notes")}</div>
             <FileUploadStep 
@@ -730,6 +762,7 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedText, setExtractedText] = useState(existingNotes);
+  const [classificationResult, setClassificationResult] = useState(null);
 
   const handleFileChange = async (e) => {
     const selected = e.target.files[0];
@@ -756,10 +789,28 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
       }
       
       const limitedText = text.slice(0, 2000);
-      setExtractedText(limitedText);
+      
+      const res = await fetch('/api/classify-doc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: limitedText })
+      });
+      
+      if (!res.ok) throw new Error('Classification failed');
+      const data = await res.json();
+      
+      if (data.medical) {
+        setExtractedText(limitedText);
+        setClassificationResult(data.extracted);
+        showToast('Medical document identified successfully!', 'success');
+      } else {
+        setExtractedText('');
+        setFile(null);
+        showToast('Not a medical document: ' + (data.reason || 'Please upload lab results or prescriptions.'), 'error');
+      }
     } catch (err) {
       console.error('File extraction failed:', err);
-      showToast('Could not read file. Please try another.', 'error');
+      showToast('Could not analyze file. Please try another.', 'error');
     } finally {
       setIsProcessing(false);
     }
@@ -777,11 +828,21 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
       ) : (
         <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 16, padding: 16 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}>
-              <Icons.FileText size={16} color="var(--green)" /> {file ? file.name : 'Saved Medical Notes'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14, color: 'var(--green-dark)' }}>
+              <Icons.FileCheck size={16} color="var(--green)" /> {file ? file.name : 'Saved Medical Notes'}
             </div>
-            <button onClick={() => { setFile(null); setExtractedText(''); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Icons.X size={16}/></button>
+            <button onClick={() => { setFile(null); setExtractedText(''); setClassificationResult(null); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><Icons.X size={16}/></button>
           </div>
+          
+          {classificationResult && (
+            <div style={{ marginBottom: 12, padding: 12, background: 'var(--green-light)', borderRadius: 8, fontSize: 13 }}>
+              <strong>Detected Entities:</strong>
+              {classificationResult.conditions?.length > 0 && <div>• Conditions: {classificationResult.conditions.join(', ')}</div>}
+              {classificationResult.medications?.length > 0 && <div>• Medications: {classificationResult.medications.join(', ')}</div>}
+              {classificationResult.metrics?.length > 0 && <div>• Metrics: {classificationResult.metrics.join(', ')}</div>}
+            </div>
+          )}
+          
           <div style={{ fontSize: 13, color: 'var(--text-muted)', maxHeight: 100, overflow: 'auto', background: '#fff', padding: 12, borderRadius: 8, border: '1px solid var(--border)' }}>
             {extractedText}
           </div>
@@ -931,7 +992,7 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
       <div className="quick-actions">
         <button className="quick-btn" onClick={() => setActivePage('chat')}><Icons.MessageCircle size={18} color="var(--green)"/> Check Symptoms</button>
         <button className="quick-btn" onClick={() => setActivePage('discovery')}><Icons.Compass size={18} color="var(--green)"/> Explore Tips</button>
-        <button className="quick-btn" onClick={() => setActivePage('records')}><Icons.ClipboardList size={18} color="var(--green)"/> View Records</button>
+        <button className="quick-btn" onClick={() => setActivePage('wellness')}><Icons.Activity size={18} color="var(--green)"/> Wellness Score</button>
       </div>
     </div>
   );
@@ -1083,14 +1144,25 @@ function AvgStat({ icon, label, value }) {
 /* ─────────────────────────────────────────
    AI-POWERED CHAT (Vercel AI SDK)
 ───────────────────────────────────────── */
+export function stripThinkTags(content) {
+  return content.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim();
+}
+
 export function stripJsonBlock(content) {
-  return content.replace(/```json[\s\S]*?```/g, '').trim();
+  let text = stripThinkTags(content);
+  text = text.replace(/```json[\s\S]*?```/gi, '');
+  text = text.replace(/\{[^{}]*"urgency"[\s\S]*\}\s*$/i, '');
+  return text.trim();
 }
 
 export function parseUrgencyFromContent(content) {
+  let text = stripThinkTags(content);
   try {
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+    const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/i);
     if (jsonMatch) return JSON.parse(jsonMatch[1]);
+    
+    const rawMatch = text.match(/\{[^{}]*"urgency"[\s\S]*\}\s*$/i);
+    if (rawMatch) return JSON.parse(rawMatch[0]);
   } catch (e) {}
   return null;
 }
@@ -1225,17 +1297,21 @@ WELLNESS CONTEXT:${checkinContext}
 
   const generateSmartTitle = async (firstUserMsg, firstAiSummary, sessionId) => {
     try {
+      const cur = sessions.find(s => s.id === sessionId);
+      if (cur) saveSession({ ...cur, name: "✨ Naming...", isSmartName: true });
+      
       const isDev = import.meta.env.DEV;
       let title = '';
       if (isDev) {
-        const prompt = `Generate a 3-5 word chat title for this health conversation. User: "${firstUserMsg}". Topic: "${firstAiSummary}". Format: Title Case, no quotes, no punctuation.`;
+        const prompt = `Generate a concise 2-4 word chat title for this health conversation. User: "${firstUserMsg}". Topic: "${firstAiSummary}". Format: Title Case, no quotes, no punctuation.`;
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
+          body: JSON.stringify({ model: 'qwen-2.5-32b', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
         });
         const data = await res.json();
         title = data.choices?.[0]?.message?.content?.trim()?.replace(/["']/g, '');
+        title = stripThinkTags(title || '');
       } else {
         const res = await fetch('/api/title', {
           method: 'POST',
@@ -1247,13 +1323,15 @@ WELLNESS CONTEXT:${checkinContext}
       }
       
       if (title) {
-        const cur = sessions.find(s => s.id === sessionId);
-        if (cur) {
-          saveSession({ ...cur, name: title, isSmartName: true });
+        const cur2 = sessions.find(s => s.id === sessionId) || cur;
+        if (cur2) {
+          saveSession({ ...cur2, name: title, isSmartName: true });
         }
       }
     } catch (e) {
       console.error('Smart title failed:', e);
+      const cur3 = sessions.find(s => s.id === sessionId);
+      if (cur3) saveSession({ ...cur3, name: getSessionName(cur3.messages), isSmartName: false });
     }
   };
 
@@ -1268,13 +1346,13 @@ WELLNESS CONTEXT:${checkinContext}
       const name = existingSession?.isSmartName ? existingSession.name : getSessionName(messages);
       
       const hasUserMessage = messages.some(m => m.role === 'user');
-      if (hasUserMessage || existingSession) {
-        saveSession({
-          id: currentSessionId,
-          name: existingSession?.isSmartName ? existingSession.name : name,
-          messages
-        });
-      }
+      if (!hasUserMessage) return; // Never save empty sessions
+      
+      saveSession({
+        id: currentSessionId,
+        name: existingSession?.isSmartName ? existingSession.name : name,
+        messages
+      });
     } catch (e) {
       console.error('Error auto-saving session', e);
     }
@@ -1384,7 +1462,7 @@ Only include the JSON once — after you know symptom + duration + severity.${la
         res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: groqMessages, temperature: 0.75, max_tokens: 1024, stream: true })
+          body: JSON.stringify({ model: 'deepseek-r1-distill-llama-70b', messages: groqMessages, temperature: 0.6, max_tokens: 1500, stream: true })
         });
       } else {
         // Production: use /api/chat (server-side key, no CORS issues)
@@ -1626,38 +1704,44 @@ Only include the JSON once — after you know symptom + duration + severity.${la
 
 
 function Checkups({ profile, setActivePage }) {
-  const records = [...(profile.records || [])].reverse();
+  const plannerItems = [
+    { name: 'Annual Physical Check', freq: 'Yearly', desc: 'Comprehensive metabolic panel, blood pressure, and general health review.', icon: <Icons.Activity size={24}/> },
+    { name: 'Dental Cleaning', freq: 'Every 6 months', desc: 'Preventive cleaning and exam.', icon: <Icons.Smile size={24}/> },
+    { name: 'Eye Exam', freq: 'Every 1-2 years', desc: 'Vision check and eye health screening.', icon: <Icons.Eye size={24}/> },
+    { name: 'Skin Cancer Screening', freq: 'Yearly', desc: 'Full body dermatology check.', icon: <Icons.Sun size={24}/> },
+    { name: 'Vaccination Review', freq: 'Yearly', desc: 'Flu shot and other recommended boosters.', icon: <Icons.Shield size={24}/> },
+  ];
+
   return (
     <div className="page active">
       <div className="page-header">
-        <div><h1 className="page-title">Checkups</h1><p className="page-subtitle">Your recent health check summaries</p></div>
+        <div><h1 className="page-title">Preventive Health</h1><p className="page-subtitle">Your routine checkup planner</p></div>
       </div>
-      <div>
-        {records.length === 0 ? (
-          <div className="empty-state">
-            <Icons.Stethoscope size={52} className="empty-icon" />
-            <p>No checkups yet.</p>
-            <p className="empty-sub">Start a symptom check to get your first summary.</p>
-            <button className="btn-primary" onClick={() => setActivePage('chat')}>Start Checkup</button>
-          </div>
-        ) : records.map(r => (
-          <div key={r.id} className="checkup-card">
-            <div className="checkup-header">
-              <span className="checkup-title">Symptom Check</span>
-              <span className={`urgency-badge-sm urgency-${r.urgency}`}>{r.urgency.toUpperCase()}</span>
+      
+      <div className="dash-card card-large" style={{ background: 'var(--green-light)', border: 'none', marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green-dark)' }}>
+          <Icons.ShieldCheck size={20} /> Stay Ahead of Illness
+        </h3>
+        <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.5 }}>
+          Preventive care helps catch problems early when they are most treatable. Use this planner to track your routine visits.
+        </p>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+        {plannerItems.map((item, i) => (
+          <div key={i} style={{ background: 'var(--white)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+            <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, color: 'var(--text)' }}>
+              {item.icon}
             </div>
-            <div className="checkup-meta">Recorded on {r.dateStr}</div>
-            <p style={{fontSize: 14, marginBottom: 12}}><strong>Summary:</strong> {r.summary}</p>
-            <div className="checkup-tips">
-              {r.natural && r.natural.length > 0
-                ? r.natural.map((tip, i) => <li key={i}>{tip}</li>)
-                : (
-                  <>
-                    <li>Continue monitoring symptoms</li>
-                    <li>Stay hydrated and rest</li>
-                    {r.urgency === 'high' && <li><strong>Action required:</strong> Consult a doctor</li>}
-                  </>
-                )}
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{item.name}</h4>
+                <span style={{ fontSize: 12, background: 'var(--green-light)', color: 'var(--green-dark)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.freq}</span>
+              </div>
+              <p style={{ margin: '4px 0 12px 0', fontSize: 13, color: 'var(--text-muted)' }}>{item.desc}</p>
+              <button style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Log Visit
+              </button>
             </div>
           </div>
         ))}
@@ -1666,25 +1750,69 @@ function Checkups({ profile, setActivePage }) {
   );
 }
 
-function Discovery({ tab, setTab }) {
+function Discovery({ t }) {
+  const [filters, setFilters] = useState([]);
+  const [feed, setFeed] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+
+  useEffect(() => {
+    setAvailableTags(getAvailableTags());
+  }, []);
+
+  useEffect(() => {
+    setFeed(getDiscoveryFeed(filters));
+  }, [filters]);
+
+  const toggleFilter = (tag) => {
+    if (filters.includes(tag)) {
+      setFilters(filters.filter(f => f !== tag));
+    } else {
+      setFilters([...filters, tag]);
+    }
+  };
+
   return (
     <div className="page active">
       <div className="page-header">
-        <div><h1 className="page-title">Discovery</h1><p className="page-subtitle">Natural health knowledge for everyday life</p></div>
+        <div><h1 className="page-title">Discovery Feed</h1><p className="page-subtitle">Your personalized, dynamic health knowledge</p></div>
       </div>
-      <div className="discovery-tabs">
-        <button className={`disc-tab ${tab === 'herbs' ? 'active' : ''}`} onClick={() => setTab('herbs')}>Herbs</button>
-        <button className={`disc-tab ${tab === 'fruits' ? 'active' : ''}`} onClick={() => setTab('fruits')}>Fruits</button>
-        <button className={`disc-tab ${tab === 'tips' ? 'active' : ''}`} onClick={() => setTab('tips')}>Health Tips</button>
+      
+      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        {availableTags.map(tag => (
+          <button 
+            key={tag} 
+            onClick={() => toggleFilter(tag)}
+            style={{ 
+              padding: '6px 12px', 
+              borderRadius: 20, 
+              border: `1.5px solid ${filters.includes(tag) ? 'var(--green-dark)' : 'var(--border)'}`,
+              background: filters.includes(tag) ? 'var(--green-light)' : 'transparent',
+              color: filters.includes(tag) ? 'var(--green-dark)' : 'var(--text-muted)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer'
+            }}>
+            #{tag}
+          </button>
+        ))}
       </div>
-      <div className="discovery-grid">
-        {discoveryData[tab].map(item => (
-          <div key={item.name} className="disc-card">
-            <img src={item.image} alt={item.name} className="disc-card-img" />
-            <div className="disc-card-content">
-              <div className="disc-card-name">{item.name}</div>
-              <div className="disc-card-benefit">{item.benefit}</div>
-              <div className="disc-card-tag">{tab.toUpperCase()}</div>
+
+      <div className="discovery-grid" style={{ gridTemplateColumns: '1fr', gap: 20 }}>
+        {feed.map((item, i) => (
+          <div key={i} className="dash-card card-large" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <img src={item.image} alt={item.name} style={{ width: '100%', height: 200, objectFit: 'cover', borderRadius: 12 }} />
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: '0 0 8px 0', fontSize: 18 }}>{item.name}</h3>
+                <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.category.toUpperCase()}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.benefit}</p>
+              
+              {item.vid && (
+                <a href={`https://youtube.com/watch?v=${item.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 12, fontSize: 14, color: '#ef4444', textDecoration: 'none', fontWeight: 600 }}>
+                  <Icons.Youtube size={18} /> Watch Video
+                </a>
+              )}
             </div>
           </div>
         ))}
@@ -1693,38 +1821,33 @@ function Discovery({ tab, setTab }) {
   );
 }
 
-function Records({ profile }) {
-  const records = [...(profile.records || [])].reverse();
+function ExpandableRecordCard({ r }) {
+  const [expanded, setExpanded] = useState(false);
   const statusMap = { low: 'Improving', mid: 'Monitoring', high: 'Needs Attention' };
+  
   return (
-    <div className="page active">
-      <div className="page-header">
-        <div><h1 className="page-title">Records</h1><p className="page-subtitle">Your personal health history</p></div>
+    <div className="record-card" onClick={() => setExpanded(!expanded)} style={{ cursor: 'pointer', transition: 'all 0.3s' }}>
+      <div className="record-card-header">
+        <span className="record-date"><Icons.Calendar size={13} style={{marginRight:5,verticalAlign:'text-bottom'}}/>{r.dateStr}</span>
+        <span className={`urgency-badge-sm urgency-${r.urgency}`}>{r.urgency.toUpperCase()}</span>
       </div>
-      <div>
-        {records.length === 0 ? (
-          <div className="empty-state">
-            <Icons.ClipboardList size={52} className="empty-icon" />
-            <p>No records yet.</p>
-            <p className="empty-sub">Complete a symptom check to see your history here.</p>
-          </div>
-        ) : records.map(r => (
-          <div key={r.id} className="record-card">
-            <div className="record-card-header">
-              <span className="record-date"><Icons.Calendar size={13} style={{marginRight:5,verticalAlign:'text-bottom'}}/>{r.dateStr}</span>
-              <span className={`urgency-badge-sm urgency-${r.urgency}`}>{r.urgency.toUpperCase()}</span>
-            </div>
-            <div className="record-symptom">{r.summary}</div>
-            <div className="record-meta-row">
-              <span className="record-status-pill">
-                {r.urgency === 'low' ? <Icons.TrendingUp size={12}/> : r.urgency === 'mid' ? <Icons.Activity size={12}/> : <Icons.AlertTriangle size={12}/>}
-                {statusMap[r.urgency] || 'Logged'}
-              </span>
-              {r.action && <span className="record-action-hint">{r.action.slice(0, 60)}…</span>}
-            </div>
-          </div>
-        ))}
+      <div className="record-symptom">{r.summary}</div>
+      <div className="record-meta-row">
+        <span className="record-status-pill">
+          {r.urgency === 'low' ? <Icons.TrendingUp size={12}/> : r.urgency === 'mid' ? <Icons.Activity size={12}/> : <Icons.AlertTriangle size={12}/>}
+          {statusMap[r.urgency] || 'Logged'}
+        </span>
+        {!expanded && r.action && <span className="record-action-hint">{r.action.slice(0, 40)}… <Icons.ChevronDown size={14} style={{verticalAlign: 'middle'}}/></span>}
+        {expanded && <Icons.ChevronUp size={14} style={{ color: 'var(--text-muted)' }}/>}
       </div>
+      {expanded && (
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 14, color: 'var(--text-muted)' }}>
+          <div style={{ marginBottom: 8 }}><strong>Action Plan:</strong> {r.action}</div>
+          {r.natural && r.natural.length > 0 && (
+            <div><strong>Natural Remedies:</strong> {r.natural.join(', ')}</div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
