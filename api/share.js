@@ -22,7 +22,15 @@ export default async function handler(req, res) {
 
     // Verify ownership
     const { data: session, error: dbError } = await supabase.from('sessions').select('id, share_token').eq('id', sessionId).eq('user_id', user.id).single();
-    if (dbError) return res.status(500).json({ error: `Database error: ${dbError.message}` });
+    if (dbError) {
+      if (dbError.code === 'PGRST116') {
+        // No rows returned, let's fetch ALL sessions for this user to debug
+        const { data: allSessions } = await supabase.from('sessions').select('id').eq('user_id', user.id);
+        const availableIds = allSessions ? allSessions.map(s => s.id) : [];
+        return res.status(404).json({ error: `Session not found. Requested: ${sessionId}. Available: ${availableIds.join(', ')}` });
+      }
+      return res.status(500).json({ error: `Database error: ${dbError.message}` });
+    }
     if (!session) return res.status(404).json({ error: 'Session not found' });
 
     // Generate token if it doesn't exist
