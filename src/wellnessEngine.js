@@ -1,6 +1,7 @@
 // src/wellnessEngine.js
 
 const STORAGE_KEY = 'nuracare_wellness_checkins';
+const WEARABLE_STORAGE_KEY = 'nuracare_wearable_readings';
 
 export function getCheckins() {
   try {
@@ -10,6 +11,30 @@ export function getCheckins() {
     console.error("Failed to parse wellness check-ins", e);
     return [];
   }
+}
+
+export function getLatestWearableReadings() {
+  try {
+    const data = localStorage.getItem(WEARABLE_STORAGE_KEY);
+    return data ? JSON.parse(data) : {};
+  } catch (e) {
+    console.error("Failed to parse wearable readings", e);
+    return {};
+  }
+}
+
+export function saveWearableReading(readings) {
+  const current = getLatestWearableReadings();
+  const updated = {
+    ...current,
+    ...readings,
+    lastSynced: Date.now()
+  };
+  localStorage.setItem(WEARABLE_STORAGE_KEY, JSON.stringify(updated));
+  
+  // Dispatch event so UI updates
+  window.dispatchEvent(new Event('wearable-synced'));
+  return updated;
 }
 
 // Save a new check-in (overwrites existing for the same date)
@@ -104,6 +129,8 @@ export function computeWellnessScore(checkin) {
 
 // Compute 5-Core Wellness Score (0-100)
 export function compute5CoreWellness(checkin, profile = {}) {
+  const wearables = getLatestWearableReadings();
+  
   if (!checkin) {
     return {
       total: 0,
@@ -114,14 +141,29 @@ export function compute5CoreWellness(checkin, profile = {}) {
   }
 
   // 1. Physical Vitality
+  // Baseline from check-in
   let physical = Math.round((checkin.energy * 10 + (checkin.activity === 'Active' ? 10 : checkin.activity === 'Moderate' ? 5 : 0)) / 1.1);
+  // Boost from wearable steps if available (e.g., 10,000 steps = +10 pts)
+  if (wearables.steps) {
+    physical += Math.min(20, Math.round(wearables.steps / 500));
+  }
 
   // 2. Mental Resilience
   const invStress = 10 - checkin.stress;
   let mental = Math.round((checkin.mood * 5 + invStress * 5));
+  // Deduct slightly if resting heart rate is unusually high (mock logic)
+  if (wearables.heart_rate && wearables.heart_rate > 90) {
+    mental -= 5;
+  }
 
   // 3. Recovery & Sleep
   let recovery = Math.round((checkin.sleep * 10));
+  // Adjust with wearable sleep data
+  if (wearables.sleep_min) {
+    const sleepHours = wearables.sleep_min / 60;
+    const wearableSleepScore = Math.min(100, Math.max(0, (sleepHours / 8) * 100));
+    recovery = Math.round((recovery + wearableSleepScore) / 2);
+  }
 
   // 4. Nutrition & Hydration
   let nutrition = checkin.hydration ? Math.round(checkin.hydration * 10) : 80;

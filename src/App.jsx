@@ -12,6 +12,7 @@ import { useSupabaseProfile, useSupabaseSessions } from './useSupabase';
 import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
+import WearableHub from './WearableHub';
 import { getCheckins, compute5CoreWellness, getRecoveryRecommendations } from './wellnessEngine';
 import { getDiscoveryFeed, getAvailableTags } from './discoveryEngine';
 import { supabase } from './supabase';
@@ -622,6 +623,7 @@ export default function App() {
         {activePage === 'discovery' && <Discovery t={t} />}
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkin' && <CheckinPage profile={profile} />}
+        {activePage === 'devices' && <WearableHub onBack={() => setActivePage('profile')} showToast={showToast} />}
         {activePage === 'profile' && (
           <div className="page active">
             <div className="page-header">
@@ -676,10 +678,10 @@ export default function App() {
                   </div>
                   <div>
                     <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Wearables & Health Apps</h4>
-                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Sync data from Apple Health, Google Fit, or Garmin.</p>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Sync data from Apple Health, Google Fit, Fitbit, or Garmin.</p>
                   </div>
                 </div>
-                <button className="btn-outline-sm" onClick={() => showToast('Wearable integration coming soon!', 'success')}>Connect</button>
+                <button className="btn-outline-sm" onClick={() => setActivePage('devices')}>Manage Devices</button>
               </div>
             </div>
 

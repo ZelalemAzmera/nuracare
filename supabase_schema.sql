@@ -63,3 +63,36 @@ CREATE POLICY "Users can update their own sessions."
 CREATE POLICY "Users can delete their own sessions."
   ON public.sessions FOR DELETE
   USING (auth.uid() = user_id);
+
+-- Wearable Readings
+CREATE TABLE IF NOT EXISTS public.wearable_readings (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  source      TEXT NOT NULL,          -- 'manual', 'google_fit', 'apple_health', 'garmin', 'fitbit'
+  reading_date DATE NOT NULL,
+  steps       INTEGER,
+  heart_rate  INTEGER,
+  hrv         NUMERIC,                -- Heart Rate Variability in ms
+  spo2        NUMERIC,                -- Blood oxygen %
+  weight_kg   NUMERIC,
+  systolic_bp INTEGER,
+  diastolic_bp INTEGER,
+  sleep_min   INTEGER,                -- Minutes of sleep from wearable
+  calories    INTEGER,
+  raw_payload JSONB,                  -- Full raw API response stored for future use
+  synced_at   TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE public.wearable_readings ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own readings."
+  ON public.wearable_readings FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own readings."
+  ON public.wearable_readings FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Add connected devices to profiles
+ALTER TABLE public.profiles
+  ADD COLUMN IF NOT EXISTS connected_devices JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS google_fit_token  TEXT,
+  ADD COLUMN IF NOT EXISTS google_fit_expiry TIMESTAMP WITH TIME ZONE;
