@@ -667,6 +667,22 @@ export default function App() {
             </div>
             <button className="btn-primary" onClick={() => { const p = {...profile, medications: profileMedsInput}; saveProfile(p); }}>{t("save_medications")}</button>
 
+            <div className="section-title" style={{marginTop: 32}}>Connected Devices</div>
+            <div className="dash-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 40, height: 40, borderRadius: 12, background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icons.Watch size={20} color="var(--green-dark)" />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Wearables & Health Apps</h4>
+                    <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>Sync data from Apple Health, Google Fit, or Garmin.</p>
+                  </div>
+                </div>
+                <button className="btn-outline-sm" onClick={() => showToast('Wearable integration coming soon!', 'success')}>Connect</button>
+              </div>
+            </div>
+
             <div className="section-title" style={{marginTop: 32}}>Preferences</div>
             <div className="dash-card">
               <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>

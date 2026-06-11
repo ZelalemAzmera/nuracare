@@ -68,13 +68,7 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
     return (
       <div className="onboarding-overlay" style={{ position: 'fixed', zIndex: 9999, background: 'rgba(250, 250, 250, 0.98)' }}>
         <div className="full-page-form">
-          <div className="form-content-box" style={{
-            background: 'rgba(255, 255, 255, 1)', 
-            border: '1px solid rgba(229, 231, 235, 1)', 
-            borderRadius: '32px', 
-            padding: '44px 40px', 
-            boxShadow: '0 24px 64px rgba(34,197,94,0.15)'
-          }}>
+          <div className="form-content-box checkin-form-box">
             <div className="step-header" style={{ marginBottom: 32 }}>
               {step > 1 ? (
                 <button className="btn-back" onClick={() => setStep(step - 1)}><Icons.ArrowLeft size={18}/></button>

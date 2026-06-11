@@ -95,6 +95,18 @@ body::before {
   width: 100%; max-width: 500px;
   background: transparent;
 }
+.checkin-form-box {
+  background: rgba(255, 255, 255, 1);
+  border: 1px solid rgba(229, 231, 235, 1);
+  border-radius: 32px;
+  padding: 44px 40px;
+  box-shadow: 0 24px 64px rgba(34,197,94,0.15);
+}
+@media (max-width: 600px) {
+  .checkin-form-box {
+    padding: 24px 20px;
+  }
+}
 .onboarding-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
 .logo-icon { font-size: 36px; }
 .logo-text { font-family: var(--font-head); font-size: 28px; font-weight: 700; color: var(--text); }

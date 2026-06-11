@@ -188,7 +188,7 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
       </div>
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Manual Vitals & Hydration</div>
-      <div className="dashboard-grid">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <div className="dash-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
             <Icons.Footprints size={18} color="var(--green-dark)" /> Steps
