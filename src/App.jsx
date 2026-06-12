@@ -13,6 +13,7 @@ import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
 import WearableHub from './WearableHub';
+import { PrivacyPolicy, TermsOfService, MedicalDisclaimer } from './LegalPages';
 import { getCheckins, compute5CoreWellness, getRecoveryRecommendations } from './wellnessEngine';
 import { getDiscoveryFeed, getAvailableTags } from './discoveryEngine';
 import { supabase } from './supabase';
@@ -454,6 +455,11 @@ export default function App() {
               </div>
             </div>
           </div>
+          <div style={{ textAlign: 'center', padding: '20px', fontSize: '13px', color: 'var(--text-muted)' }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); }} style={{ margin: '0 10px', color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); }} style={{ margin: '0 10px', color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('disclaimer'); }} style={{ margin: '0 10px', color: 'var(--text-muted)', textDecoration: 'none' }}>Medical Disclaimer</a>
+          </div>
         </div>
       );
     }
@@ -614,6 +620,11 @@ export default function App() {
             </a>
           </div>
           <NavItem icon={Icons.User} label="Profile" active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
+          <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('disclaimer'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Medical Disclaimer</a>
+          </div>
         </div>
       </aside>
 
@@ -632,6 +643,9 @@ export default function App() {
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkin' && <CheckinPage profile={profile} />}
         {activePage === 'devices' && <WearableHub onBack={() => setActivePage('profile')} showToast={showToast} profile={profile} />}
+        {activePage === 'privacy' && <PrivacyPolicy onBack={() => setActivePage('home')} />}
+        {activePage === 'terms' && <TermsOfService onBack={() => setActivePage('home')} />}
+        {activePage === 'disclaimer' && <MedicalDisclaimer onBack={() => setActivePage('home')} />}
         {activePage === 'profile' && (
           <div className="page active">
             <div className="page-header">
