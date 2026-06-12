@@ -147,6 +147,16 @@ export function compute5CoreWellness(checkin, profile = {}) {
   if (wearables.steps) {
     physical += Math.min(20, Math.round(wearables.steps / 500));
   }
+  
+  // Boost from gym workouts (last 7 days)
+  try {
+    const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
+    const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const recentWorkouts = workouts.filter(w => w.id > weekAgo);
+    if (recentWorkouts.length > 0) {
+      physical += Math.min(20, recentWorkouts.length * 5); // +5 per workout, max 20
+    }
+  } catch (e) {}
 
   // 2. Mental Resilience
   const invStress = 10 - checkin.stress;
@@ -166,7 +176,11 @@ export function compute5CoreWellness(checkin, profile = {}) {
   }
 
   // 4. Nutrition & Hydration
-  let nutrition = checkin.hydration ? Math.round(checkin.hydration * 10) : 80;
+  let nutrition = 80;
+  if (checkin.portion === 'Heavy (Overate)') nutrition -= 30;
+  if (checkin.portion === 'Light') nutrition -= 10;
+  if (checkin.mealStyle === 'Communal (Gebeta)') nutrition += 5; // Slight boost for social eating benefits
+  if (checkin.hydration) nutrition = Math.round(nutrition * 0.5 + checkin.hydration * 5);
 
   // 5. Preventive Maintenance
   let preventive = profile.records && profile.records.length > 0 ? 90 : 60;

@@ -17,6 +17,9 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
   const [mood, setMood] = useState(5);
   const [activity, setActivity] = useState('Light');
 
+  const [mealStyle, setMealStyle] = useState('Individual Plate');
+  const [portion, setPortion] = useState('Normal');
+
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
@@ -50,7 +53,9 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
       sleepHours,
       wakeFeeling,
       tension,
-      activity
+      activity,
+      mealStyle,
+      portion
     };
     const saved = saveCheckin(entry);
     setIsSubmitted(true);
@@ -75,7 +80,7 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
               ) : (
                 <div style={{width: 18}}></div> 
               )}
-              <span className="step-indicator" style={{background: 'var(--green-light)', color: 'var(--green-dark)', fontWeight: 600}}>{step} of 4</span>
+              <span className="step-indicator" style={{background: 'var(--green-light)', color: 'var(--green-dark)', fontWeight: 600}}>{step} of 5</span>
             </div>
 
             {/* STEP 1: SLEEP */}
@@ -184,6 +189,57 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                         padding: '12px 14px', borderRadius: 20, border: '1.5px solid var(--green)',
                         background: activity === opt ? 'var(--green)' : 'transparent',
                         color: activity === opt ? 'white' : 'var(--green-dark)',
+                        fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: 13
+                      }}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button className="btn-primary" style={{ marginTop: 40 }} onClick={() => setStep(5)}>Next Step</button>
+              </div>
+            )}
+
+            {/* STEP 5: NUTRITION & GEBETA */}
+            {step === 5 && (
+              <div className="onboarding-step active">
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+                  <div style={{ padding: 18, background: 'var(--green-light)', borderRadius: '50%' }}><Icons.Utensils size={34} color="var(--green-dark)" /></div>
+                </div>
+                <h2 className="step-title" style={{ textAlign: 'center', color: 'var(--text)' }}>Nutrition & Meals</h2>
+                
+                <div style={{ marginBottom: 32 }}>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 12, color: 'var(--text)' }}>How did you eat your main meals?</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 10 }}>
+                    {['Individual Plate', 'Communal (Gebeta)'].map(opt => (
+                      <button key={opt} onClick={() => setMealStyle(opt)} style={{
+                        padding: '14px', borderRadius: 16, border: '1.5px solid var(--green)',
+                        background: mealStyle === opt ? 'var(--green)' : 'transparent',
+                        color: mealStyle === opt ? 'white' : 'var(--green-dark)',
+                        fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: 14
+                      }}>
+                        {opt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {mealStyle === 'Communal (Gebeta)' && (
+                  <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, marginBottom: 24, border: '1px solid #e2e8f0', fontSize: 13, color: 'var(--text-muted)' }}>
+                    <Icons.Info size={16} style={{ marginBottom: 8, color: '#3b82f6' }} />
+                    <p style={{ margin: 0 }}><strong>Gebeta Tip:</strong> When sharing a plate, imagine dividing it into slices like a pie. If there are 4 people, your portion is roughly 1/4 of the injera and toppings directly in front of you. Try not to reach across!</p>
+                  </div>
+                )}
+
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 12, color: 'var(--text)' }}>Estimated Portion Size</label>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {['Light', 'Normal', 'Heavy (Overate)'].map(opt => (
+                      <button key={opt} onClick={() => setPortion(opt)} style={{
+                        padding: '12px 18px', borderRadius: 24, border: '1.5px solid var(--green)',
+                        background: portion === opt ? 'var(--green)' : 'transparent',
+                        color: portion === opt ? 'white' : 'var(--green-dark)',
                         fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: 13
                       }}>
                         {opt}

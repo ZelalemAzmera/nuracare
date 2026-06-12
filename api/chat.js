@@ -27,6 +27,7 @@ USER PROFILE:
 - Age: ${profile?.age ? profile.age + ' years old' : 'unknown'}
 - Known conditions: ${profile?.conditions?.length ? profile.conditions.join(', ') : 'none reported'}
 - Current medications: ${profile?.medications || 'none reported'}
+- Diet/Fasting Mode: ${profile?.fastingMode && profile.fastingMode.includes('Orthodox') ? 'Currently strictly adhering to Ethiopian Orthodox Tsom (fasting). Do NOT recommend any animal products (meat, dairy, eggs) or alcohol. Recommend vegan Ethiopian alternatives like Shiro, Misir, or fresh vegetables.' : 'Standard diet (no fasting reported).'}
 
 PAST HEALTH RECORDS (last 5 sessions):
 ${recentRecords}

@@ -16,6 +16,10 @@ import WearableHub from './WearableHub';
 import { PrivacyPolicy, TermsOfService, MedicalDisclaimer } from './LegalPages';
 import { getCheckins, compute5CoreWellness, getRecoveryRecommendations } from './wellnessEngine';
 import { getDiscoveryFeed, getAvailableTags } from './discoveryEngine';
+import { TSOM_TYPES } from './ethiopianCalendar';
+import MedicalRecords, { ExpandableRecordCard } from './MedicalRecords';
+import SubscriptionPage from './SubscriptionPage';
+import EnterpriseDashboard from './EnterpriseDashboard';
 import { supabase } from './supabase';
 
 export const showToast = (message, type = 'success') => {
@@ -275,6 +279,25 @@ export default function App() {
   const [activePage, setActivePage] = useState(() => localStorage.getItem('nuracare_activePage') || 'home');
   
   useEffect(() => {
+    // Handle Payment Redirects
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('payment') === 'success') {
+      showToast('Payment successful! Welcome to Premium.', 'success');
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
+      // Give local mock premium access immediately
+      if (profile) {
+        const p = { ...profile, is_premium: true };
+        setProfile(p);
+        localStorage.setItem('nuracare_profile', JSON.stringify(p));
+      }
+    } else if (params.get('payment') === 'cancel') {
+      showToast('Payment was cancelled.', 'error');
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, [profile]);
+
+  useEffect(() => {
     localStorage.setItem('nuracare_activePage', activePage);
   }, [activePage]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -295,6 +318,7 @@ export default function App() {
   const [obAge, setObAge] = useState('');
   const [obConditions, setObConditions] = useState([]);
   const [obOtherCondition, setObOtherCondition] = useState('');
+  const [obFasting, setObFasting] = useState(TSOM_TYPES.NONE);
   const [obMeds, setObMeds] = useState([]);
 
   // Profile Meds Edit
@@ -345,7 +369,7 @@ export default function App() {
     setProfile(null);
     setOnboardingStep(0);
     setActivePage('home');
-    setObName(''); setObAge(''); setObConditions([]); setObOtherCondition(''); setObMeds([]);
+    setObName(''); setObAge(''); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
     signOut();
   };
 
@@ -377,6 +401,7 @@ export default function App() {
       age: obAge,
       conditions: allConditions,
       medications: obMeds,
+      fastingMode: obFasting,
       medicalNotes: medicalNotes || '',
       records: []
     };
@@ -531,7 +556,22 @@ export default function App() {
                     />
                   </div>
                 )}
-                <button className="btn-primary" onClick={() => setOnboardingStep(3)}>Continue</button>
+                
+                <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 12, color: 'var(--text)' }}>Dietary Context</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={obFasting === TSOM_TYPES.ORTHODOX} 
+                    onChange={(e) => setObFasting(e.target.checked ? TSOM_TYPES.ORTHODOX : TSOM_TYPES.NONE)} 
+                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: 600, display: 'block' }}>Follow Orthodox Christian Fasting (Tsom)</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nura will adapt recipes for fasting periods.</span>
+                  </div>
+                </label>
+
+                <button className="btn-primary" onClick={() => setOnboardingStep(3)} style={{ marginTop: 24 }}>Continue</button>
               </div>
             )}
             {onboardingStep === 3 && (
@@ -582,9 +622,11 @@ export default function App() {
           <NavItem icon={Icons.Home} label={t("home")} active={activePage === 'home'} onClick={() => {setActivePage('home'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.CalendarCheck} label="Daily Check-in" active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
+          <NavItem icon={Icons.ClipboardList} label="Medical Records" active={activePage === 'records'} onClick={() => { setActivePage('records'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Stethoscope} label="Checkups" active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Briefcase} label="B2B Portal" active={activePage === 'enterprise'} onClick={() => { setActivePage('enterprise'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
@@ -620,6 +662,7 @@ export default function App() {
             </a>
           </div>
           <NavItem icon={Icons.User} label="Profile" active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Star} label="Upgrade to Premium" active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
@@ -638,6 +681,7 @@ export default function App() {
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
+        {activePage === 'records' && <MedicalRecords profile={profile} />}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery t={t} />}
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
@@ -646,6 +690,8 @@ export default function App() {
         {activePage === 'privacy' && <PrivacyPolicy onBack={() => setActivePage('home')} />}
         {activePage === 'terms' && <TermsOfService onBack={() => setActivePage('home')} />}
         {activePage === 'disclaimer' && <MedicalDisclaimer onBack={() => setActivePage('home')} />}
+        {activePage === 'upgrade' && <SubscriptionPage profile={profile} onBack={() => setActivePage('home')} />}
+        {activePage === 'enterprise' && <EnterpriseDashboard onBack={() => setActivePage('home')} />}
         {activePage === 'profile' && (
           <div className="page active">
             <div className="page-header">
@@ -673,16 +719,17 @@ export default function App() {
             </div>
 
             <div className="section-title" style={{ marginTop: 32 }}>Health Records</div>
-            <div>
-              {(!profile.records || profile.records.length === 0) ? (
-                <div className="empty-state">
-                  <Icons.ClipboardList size={52} className="empty-icon" />
-                  <p>No records yet.</p>
-                  <p className="empty-sub">Complete a symptom check to see your history here.</p>
+            <div className="dash-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ padding: 12, background: 'var(--green-light)', borderRadius: 12, color: 'var(--green-dark)' }}>
+                  <Icons.ClipboardList size={24} />
                 </div>
-              ) : [...profile.records].reverse().map(r => (
-                <ExpandableRecordCard key={r.id} r={r} />
-              ))}
+                <div>
+                  <h4 style={{ margin: 0, fontSize: 16 }}>Your Historical Vault</h4>
+                  <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{profile.records?.length || 0} symptom logs and files.</p>
+                </div>
+              </div>
+              <button className="btn-outline-sm" onClick={() => setActivePage('records')}>View Records</button>
             </div>
 
             <div className="section-title">{t("update_medications")}</div>
@@ -712,9 +759,9 @@ export default function App() {
               <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
                 <input 
                   type="checkbox" 
-                  checked={profile.fastingMode === 'Orthodox Christian Fasting'} 
+                  checked={profile.fastingMode === TSOM_TYPES.ORTHODOX} 
                   onChange={(e) => {
-                    const mode = e.target.checked ? 'Orthodox Christian Fasting' : 'None';
+                    const mode = e.target.checked ? TSOM_TYPES.ORTHODOX : TSOM_TYPES.NONE;
                     saveProfile({ ...profile, fastingMode: mode });
                     showToast(e.target.checked ? 'Fasting mode enabled' : 'Fasting mode disabled', 'success');
                   }} 
@@ -823,7 +870,34 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
           text += content.items.map(s => s.str).join(' ') + '\\n';
         }
       } else if (selected.type.startsWith('image/')) {
-        text = `[Image Uploaded: ${selected.name}]`;
+        const base64Image = await new Promise((resolve) => {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+              const canvas = document.createElement('canvas');
+              const MAX_WIDTH = 1000;
+              const scaleSize = MAX_WIDTH / img.width;
+              canvas.width = Math.min(MAX_WIDTH, img.width);
+              canvas.height = img.height * Math.min(1, scaleSize);
+              const ctx = canvas.getContext('2d');
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+              resolve(canvas.toDataURL('image/jpeg', 0.7)); 
+            };
+            img.src = event.target.result;
+          };
+          reader.readAsDataURL(selected);
+        });
+
+        const ocrRes = await fetch('/api/ocr', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ image: base64Image })
+        });
+        
+        if (!ocrRes.ok) throw new Error('OCR failed');
+        const ocrData = await ocrRes.json();
+        text = ocrData.text || `[Image Uploaded: ${selected.name}]`;
       } else {
         text = await selected.text();
       }
@@ -1852,14 +1926,19 @@ function Discovery({ t }) {
   const [filters, setFilters] = useState([]);
   const [feed, setFeed] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
+  const [activeTab, setActiveTab] = useState('all'); // 'all' or 'local'
 
   useEffect(() => {
     setAvailableTags(getAvailableTags());
   }, []);
 
   useEffect(() => {
-    setFeed(getDiscoveryFeed(filters));
-  }, [filters]);
+    let baseFeed = getDiscoveryFeed(filters);
+    if (activeTab === 'local') {
+      baseFeed = baseFeed.filter(i => i.tags && i.tags.includes('ethiopian'));
+    }
+    setFeed(baseFeed);
+  }, [filters, activeTab]);
 
   const toggleFilter = (tag) => {
     if (filters.includes(tag)) {
@@ -1873,6 +1952,21 @@ function Discovery({ t }) {
     <div className="page active">
       <div className="page-header">
         <div><h1 className="page-title">Discovery Feed</h1><p className="page-subtitle">Your personalized, dynamic health knowledge</p></div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, borderBottom: '1px solid var(--border)' }}>
+        <button 
+          onClick={() => setActiveTab('all')} 
+          style={{ background: 'transparent', border: 'none', padding: '0 0 12px 0', fontSize: 16, fontWeight: 600, color: activeTab === 'all' ? 'var(--green-dark)' : 'var(--text-muted)', borderBottom: activeTab === 'all' ? '3px solid var(--green)' : '3px solid transparent', cursor: 'pointer' }}
+        >
+          Explore All
+        </button>
+        <button 
+          onClick={() => setActiveTab('local')} 
+          style={{ background: 'transparent', border: 'none', padding: '0 0 12px 0', fontSize: 16, fontWeight: 600, color: activeTab === 'local' ? 'var(--green-dark)' : 'var(--text-muted)', borderBottom: activeTab === 'local' ? '3px solid var(--green)' : '3px solid transparent', cursor: 'pointer' }}
+        >
+          Local Superfoods
+        </button>
       </div>
       
       <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -1895,7 +1989,7 @@ function Discovery({ t }) {
         ))}
       </div>
 
-      <div className="section-title">Articles & Guides</div>
+      <div className="section-title">{activeTab === 'local' ? 'Nutritional Breakdown' : 'Articles & Guides'}</div>
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {feed.filter(i => !i.vid).map((item, i) => (
           <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden' }}>
@@ -1906,12 +2000,18 @@ function Discovery({ t }) {
                 <span style={{ fontSize: 11, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.category.toUpperCase()}</span>
               </div>
               <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>{item.benefit}</p>
+              
+              {activeTab === 'local' && item.tags.includes('ethiopian') && (
+                <div style={{ marginTop: 12, padding: 12, background: 'var(--green-light)', borderRadius: 8, fontSize: 12, color: 'var(--green-dark)' }}>
+                  <strong>Nutritional Highlight:</strong> Often rich in essential minerals, fiber, or natural anti-microbial properties unique to the highland geography. 
+                </div>
+              )}
             </div>
           </div>
         ))}
       </div>
 
-      <div className="section-title" style={{ marginTop: 40 }}>Watch & Learn</div>
+      {feed.filter(i => !!i.vid).length > 0 && <div className="section-title" style={{ marginTop: 40 }}>Watch & Learn</div>}
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {feed.filter(i => !!i.vid).map((item, i) => (
           <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden', background: '#fafafa' }}>
@@ -1935,36 +2035,7 @@ function Discovery({ t }) {
   );
 }
 
-function ExpandableRecordCard({ r }) {
-  const [expanded, setExpanded] = useState(false);
-  const statusMap = { low: 'Improving', mid: 'Monitoring', high: 'Needs Attention' };
-  
-  return (
-    <div className="record-card" onClick={() => setExpanded(!expanded)} style={{ cursor: 'pointer', transition: 'all 0.3s' }}>
-      <div className="record-card-header">
-        <span className="record-date"><Icons.Calendar size={13} style={{marginRight:5,verticalAlign:'text-bottom'}}/>{r.dateStr}</span>
-        <span className={`urgency-badge-sm urgency-${r.urgency}`}>{r.urgency.toUpperCase()}</span>
-      </div>
-      <div className="record-symptom">{r.summary}</div>
-      <div className="record-meta-row">
-        <span className="record-status-pill">
-          {r.urgency === 'low' ? <Icons.TrendingUp size={12}/> : r.urgency === 'mid' ? <Icons.Activity size={12}/> : <Icons.AlertTriangle size={12}/>}
-          {statusMap[r.urgency] || 'Logged'}
-        </span>
-        {!expanded && r.action && <span className="record-action-hint">{r.action.slice(0, 40)}… <Icons.ChevronDown size={14} style={{verticalAlign: 'middle'}}/></span>}
-        {expanded && <Icons.ChevronUp size={14} style={{ color: 'var(--text-muted)' }}/>}
-      </div>
-      {expanded && (
-        <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 14, color: 'var(--text-muted)' }}>
-          <div style={{ marginBottom: 8 }}><strong>Action Plan:</strong> {r.action}</div>
-          {r.natural && r.natural.length > 0 && (
-            <div><strong>Natural Remedies:</strong> {r.natural.join(', ')}</div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
+
 
 function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
 import { getCheckins } from './wellnessEngine';
+import { TSOM_TYPES, isFastingToday, getCurrentFastName } from './ethiopianCalendar';
 
 const EXERCISE_DB = {
   legs: ['Barbell Squats', 'Bulgarian Split Squats', 'Leg Press', 'Romanian Deadlifts', 'Calf Raises', 'Lunges', 'Leg Extensions', 'Hamstring Curls'],
@@ -65,32 +66,33 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
       return;
     }
 
-    const isFasting = profile && profile.fastingMode && profile.fastingMode.includes('Fasting');
+    const isTsomProfile = profile && profile.fastingMode === TSOM_TYPES.ORTHODOX;
+    const isFastingDay = isTsomProfile && isFastingToday(profile.fastingMode);
 
     let title, desc, foods, exercise, focus;
 
     if (recent.stress >= 7 || recent.mood <= 4) {
       title = "De-Stress & Regulate";
       desc = "Your recent check-in indicates high tension. Focus on nervous system regulation and calming nutrition.";
-      foods = isFasting ? ["Chamomile Tea", "Spinach Salad", "Telba (Flaxseed)"] : ["Chamomile Tea", "Magnesium-rich spinach", "Dark Chocolate"];
+      foods = isFastingDay ? ["Chamomile Tea", "Spinach Salad", "Telba (Flaxseed)"] : ["Chamomile Tea", "Magnesium-rich spinach", "Dark Chocolate"];
       exercise = "Restorative Yoga (15-30 mins)";
       focus = "calm";
     } else if (recent.energy >= 7 && recent.sleep >= 6) {
       title = "High Energy Flow";
       desc = "You are well-rested and energized. This is a great time to push your cardiovascular fitness or hit the gym.";
-      foods = isFasting ? ["Red Teff (Iron)", "Misir Wot (Lentil Protein)", "Beso (Roasted Barley)"] : ["Complex carbs (Oats/Quinoa)", "Lean protein", "Hydrating fruits"];
+      foods = isFastingDay ? ["Red Teff (Iron)", "Misir Wot (Lentil Protein)", "Beso (Roasted Barley)"] : ["Complex carbs (Oats/Quinoa)", "Lean protein", "Hydrating fruits"];
       exercise = "Running or Heavy Gym Session";
       focus = "energy";
     } else if (recent.sleep <= 5 || recent.energy <= 4) {
       title = "Active Recovery & Rest";
       desc = "Your energy is low. Avoid intense workouts. Focus on gentle movement and deep nutrition for recovery.";
-      foods = isFasting ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Tart Cherry Juice", "Bone Broth", "Turmeric Milk"];
+      foods = isFastingDay ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Tart Cherry Juice", "Bone Broth", "Turmeric Milk"];
       exercise = "Light Yoga or simple breathing exercises";
       focus = "sleep";
     } else {
       title = "Balanced Maintenance";
       desc = "You are in a stable state. Maintain your routine with a mix of cardio, flexibility, and balanced meals.";
-      foods = isFasting ? ["Kik Alicha (Split Peas)", "Avocado", "Telba"] : ["Mixed nuts", "Leafy greens", "Fatty fish"];
+      foods = isFastingDay ? ["Kik Alicha (Split Peas)", "Avocado", "Telba"] : ["Mixed nuts", "Leafy greens", "Fatty fish"];
       exercise = "Gym or a Moderate Run";
       focus = "balance";
     }
@@ -120,6 +122,16 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           <p className="page-subtitle">AI-driven habits, workouts, and natural remedies</p>
         </div>
       </div>
+
+      {profile && profile.fastingMode === TSOM_TYPES.ORTHODOX && isFastingToday(profile.fastingMode) && (
+        <div style={{ background: '#fef3c7', border: '1px solid #fcd34d', padding: 16, borderRadius: 16, marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Icons.Info size={24} color="#d97706" />
+          <div>
+            <h4 style={{ margin: 0, color: '#92400e', fontSize: 15 }}>{getCurrentFastName(profile.fastingMode)} Active</h4>
+            <p style={{ margin: '2px 0 0', fontSize: 13, color: '#b45309' }}>Nutrition recommendations have been adapted to high-protein vegan alternatives.</p>
+          </div>
+        </div>
+      )}
 
       {/* AI Suggestion Board */}
       <div className="section-title">✨ Personalized AI Insights</div>
@@ -367,6 +379,31 @@ function GymDashboard({ onBack, recent }) {
   const [exercise, setExercise] = useState('');
   const [reps, setReps] = useState('');
   const [loggedSets, setLoggedSets] = useState([]);
+  const [selectedMuscle, setSelectedMuscle] = useState('legs');
+  const [warning, setWarning] = useState('');
+
+  useEffect(() => {
+    // Recovery warning logic
+    const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
+    if (workouts.length >= 3) {
+      const recentWorkouts = workouts.slice(-3);
+      // simplified check: just check if all last 3 workouts had 'legs' or similar
+      // A more robust check:
+      let legCount = 0;
+      let pushCount = 0;
+      let pullCount = 0;
+      recentWorkouts.forEach(w => {
+        if (!w.sets) return;
+        if (w.sets.some(s => EXERCISE_DB.legs.includes(s.exercise))) legCount++;
+        if (w.sets.some(s => EXERCISE_DB.push.includes(s.exercise))) pushCount++;
+        if (w.sets.some(s => EXERCISE_DB.pull.includes(s.exercise))) pullCount++;
+      });
+      if (legCount >= 3 && selectedMuscle === 'legs') setWarning('You have trained legs 3 times recently. Consider resting them today.');
+      else if (pushCount >= 3 && selectedMuscle === 'push') setWarning('You have trained push muscles 3 times recently. Consider a pull or leg day.');
+      else if (pullCount >= 3 && selectedMuscle === 'pull') setWarning('You have trained pull muscles 3 times recently. Consider a push or leg day.');
+      else setWarning('');
+    }
+  }, [selectedMuscle]);
   
   const handleAddSet = () => {
     if (!exercise || !reps) return;
@@ -439,30 +476,68 @@ function GymDashboard({ onBack, recent }) {
       </div>
 
       <div className="dash-card" style={{ background: 'var(--white)', padding: 32 }}>
-        <h3 style={{ margin: '0 0 24px 0', fontSize: 18 }}>Log Set</h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-          <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Exercise Type</label>
-            <input 
-              type="text" 
-              list="exercise-list"
-              placeholder="e.g. Barbell Squats" 
-              value={exercise} 
-              onChange={(e)=>setExercise(e.target.value)} 
-              style={{ width: '100%', padding: 14, borderRadius: 12, border: '1.5px solid var(--border)', fontSize: 15 }} 
-            />
-            <datalist id="exercise-list">
-              {allExercises.map(ex => <option key={ex} value={ex} />)}
-            </datalist>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Tap-to-Log Workout</h3>
+        
+        {warning && (
+          <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
+            <Icons.AlertTriangle size={16} /> {warning}
           </div>
-          <div>
-            <label style={{ display: 'block', fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Reps x Weight</label>
-            <input type="text" placeholder="e.g. 10x 60kg" value={reps} onChange={(e)=>setReps(e.target.value)} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1.5px solid var(--border)', fontSize: 15 }} />
-          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, marginBottom: 16 }}>
+          {['legs', 'push', 'pull', 'core', 'recovery'].map(group => (
+            <button 
+              key={group} 
+              onClick={() => setSelectedMuscle(group)}
+              style={{ 
+                padding: '6px 12px', 
+                borderRadius: 20, 
+                border: selectedMuscle === group ? 'none' : '1px solid var(--border)',
+                background: selectedMuscle === group ? 'var(--green)' : 'transparent',
+                color: selectedMuscle === group ? '#fff' : 'var(--text-muted)',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap'
+              }}
+            >
+              {group.charAt(0).toUpperCase() + group.slice(1)}
+            </button>
+          ))}
         </div>
-        <button onClick={handleAddSet} style={{ marginTop: 24, width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
-          Add Set to Workout
-        </button>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8, marginBottom: 24 }}>
+          {EXERCISE_DB[selectedMuscle].map(ex => (
+            <button
+              key={ex}
+              onClick={() => setExercise(ex)}
+              style={{
+                padding: 12,
+                borderRadius: 12,
+                border: exercise === ex ? '2px solid var(--green)' : '1px solid var(--border)',
+                background: exercise === ex ? 'var(--green-light)' : 'var(--bg)',
+                color: exercise === ex ? 'var(--green-dark)' : 'var(--text)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                textAlign: 'center'
+              }}
+            >
+              {ex}
+            </button>
+          ))}
+        </div>
+
+        {exercise && (
+          <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--text-muted)' }}>Sets & Reps</label>
+              <input type="text" placeholder="e.g. 3x10 60kg" value={reps} onChange={(e)=>setReps(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }} />
+            </div>
+            <button onClick={handleAddSet} disabled={!reps} style={{ marginTop: 20, background: 'var(--green)', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 8, fontWeight: 600, cursor: reps ? 'pointer' : 'not-allowed', opacity: reps ? 1 : 0.5 }}>
+              Add
+            </button>
+          </div>
+        )}
 
         {loggedSets.length > 0 && (
           <div style={{ marginTop: 24 }}>
@@ -539,9 +614,14 @@ function YogaDashboard({ onBack, recent }) {
                     <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{pose.dur}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{pose.desc}</p>
-                  <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-block', marginTop: 8, fontSize: 13, color: 'var(--green-dark)', textDecoration: 'none', fontWeight: 600 }}>
-                    Watch Tutorial →
-                  </a>
+                  <div style={{ marginTop: 12 }}>
+                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      <img src={`https://img.youtube.com/vi/${pose.vid}/hqdefault.jpg`} alt="Video preview" style={{ width: '100%', height: 120, objectFit: 'cover', opacity: 0.9 }} />
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.9)', borderRadius: '50%', padding: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                        <Icons.Play size={20} color="#ef4444" fill="#ef4444" />
+                      </div>
+                    </a>
+                  </div>
                 </div>
               </div>
             ))}
