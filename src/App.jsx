@@ -622,11 +622,9 @@ export default function App() {
           <NavItem icon={Icons.Home} label={t("home")} active={activePage === 'home'} onClick={() => {setActivePage('home'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.CalendarCheck} label="Daily Check-in" active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
-          <NavItem icon={Icons.ClipboardList} label="Medical Records" active={activePage === 'records'} onClick={() => { setActivePage('records'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Stethoscope} label="Checkups" active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.Briefcase} label="B2B Portal" active={activePage === 'enterprise'} onClick={() => { setActivePage('enterprise'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
@@ -681,7 +679,7 @@ export default function App() {
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
-        {activePage === 'records' && <MedicalRecords profile={profile} />}
+        {activePage === 'records' && <MedicalRecords profile={profile} onBack={() => setActivePage('profile')} />}
         {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
         {activePage === 'discovery' && <Discovery t={t} />}
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
@@ -690,7 +688,7 @@ export default function App() {
         {activePage === 'privacy' && <PrivacyPolicy onBack={() => setActivePage('home')} />}
         {activePage === 'terms' && <TermsOfService onBack={() => setActivePage('home')} />}
         {activePage === 'disclaimer' && <MedicalDisclaimer onBack={() => setActivePage('home')} />}
-        {activePage === 'upgrade' && <SubscriptionPage profile={profile} onBack={() => setActivePage('home')} />}
+        {activePage === 'upgrade' && <SubscriptionPage profile={profile} onBack={() => setActivePage('home')} onNavigateEnterprise={() => setActivePage('enterprise')} />}
         {activePage === 'enterprise' && <EnterpriseDashboard onBack={() => setActivePage('home')} />}
         {activePage === 'profile' && (
           <div className="page active">

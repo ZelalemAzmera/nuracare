@@ -37,10 +37,15 @@ export default function MedicalRecords({ profile, onBack }) {
 
   return (
     <div className="page active">
-      <div className="page-header">
+      <div className="page-header" style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        {onBack && (
+          <button onClick={onBack} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0 }}>
+            <Icons.ArrowLeft size={24} />
+          </button>
+        )}
         <div>
-          <h1 className="page-title">Medical Records</h1>
-          <p className="page-subtitle">Your historical health vault</p>
+          <h1 className="page-title" style={{ margin: 0 }}>Medical Records</h1>
+          <p className="page-subtitle" style={{ margin: 0 }}>Your historical health vault</p>
         </div>
       </div>
 
