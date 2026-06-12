@@ -13,5 +13,20 @@
       "path": "/api/cron-sync",
       "schedule": "0 0 * * *"
     }
+  ],
+  "rewrites": [
+    { "source": "/api/fitbit-auth", "destination": "/api/fitbit?action=auth" },
+    { "source": "/api/fitbit-callback", "destination": "/api/fitbit?action=callback" },
+    { "source": "/api/fitbit-disconnect", "destination": "/api/fitbit?action=disconnect" },
+    { "source": "/api/fitbit-sync", "destination": "/api/fitbit?action=sync" },
+    { "source": "/api/oura-auth", "destination": "/api/oura?action=auth" },
+    { "source": "/api/oura-callback", "destination": "/api/oura?action=callback" },
+    { "source": "/api/oura-disconnect", "destination": "/api/oura?action=disconnect" },
+    { "source": "/api/oura-sync", "destination": "/api/oura?action=sync" },
+    { "source": "/api/chapa-checkout", "destination": "/api/payment?action=chapa-checkout" },
+    { "source": "/api/chapa-verify", "destination": "/api/payment?action=chapa-verify" },
+    { "source": "/api/stripe-checkout", "destination": "/api/payment?action=stripe-checkout" },
+    { "source": "/api/ocr", "destination": "/api/document?action=ocr" },
+    { "source": "/api/classify-doc", "destination": "/api/document?action=classify" }
   ]
 }
