@@ -15,6 +15,7 @@ export default function WearableHub({ onBack, showToast, profile }) {
   }, []);
 
   const isConnected = profile?.connected_devices?.fitbit === true;
+  const hasData = Object.keys(readings).length > 0;
 
   const handleFitbitConnect = async () => {
     if (!profile || !profile.id) {
