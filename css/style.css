@@ -849,3 +849,222 @@ body::before {
 .share-icon-copy { background: linear-gradient(135deg, #6b7280 0%, #374151 100%); }
 .share-icon-whatsapp { background: linear-gradient(135deg, #25D366 0%, #128C7E 100%); }
 .share-icon-email { background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); }
+
+/* ========================================================= */
+/* ===== OVERRIDES FOR RESPONSIVE & PREMIUM AESTHETICS ===== */
+/* ========================================================= */
+
+:root {
+  --sidebar-width: 260px;
+}
+
+/* Base Main App Layout */
+.main-app {
+  padding: 16px;
+  gap: 16px;
+  max-width: 1600px;
+  margin: 0 auto;
+}
+
+.content-area {
+  padding: 32px;
+  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 12px 40px rgba(34, 197, 94, 0.05), inset 0 0 0 1px rgba(255, 255, 255, 0.8);
+  border: none;
+}
+
+/* Premium Dashboard Cards */
+.dash-card {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.06), inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+  border-radius: 28px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dash-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 48px rgba(34, 197, 94, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 1);
+}
+
+/* Typography polish */
+.page-title, .hero-title {
+  letter-spacing: -0.5px;
+}
+.hero-title {
+  font-size: clamp(2.5rem, 5vw, 4rem);
+}
+.hero-subtitle {
+  font-size: clamp(1rem, 2vw, 1.25rem);
+  padding: 0 16px;
+}
+
+/* Discovery Cards */
+.disc-card {
+  border-radius: 28px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04), inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.disc-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(34, 197, 94, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+/* Buttons */
+.btn-primary {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 8px 20px rgba(34, 197, 94, 0.25), inset 0 2px 0 rgba(255, 255, 255, 0.2);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(34, 197, 94, 0.35), inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  filter: brightness(1.05);
+}
+
+/* Mobile Sidebar Fixes */
+@media (max-width: 900px) {
+  .main-app {
+    padding: 0;
+    flex-direction: column;
+    gap: 0;
+  }
+  
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 100;
+    transform: translateX(-100%);
+    margin-right: 0;
+    border-radius: 0 32px 32px 0;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(24px);
+    width: 280px;
+    box-shadow: 24px 0 64px rgba(0,0,0,0.1);
+  }
+  
+  .sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .sidebar-overlay.open {
+    display: block;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+  }
+  
+  .mobile-topbar {
+    display: flex;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+    border: none;
+  }
+  
+  .content-area {
+    margin-top: 0;
+    border-radius: 0;
+    padding: 24px 16px;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  
+  .dash-card {
+    grid-column: span 1 !important;
+  }
+
+  .discovery-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .page-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .date-badge {
+    align-self: flex-start;
+  }
+  
+  .tip-card-home {
+    flex-direction: column;
+    text-align: center;
+    padding: 24px;
+  }
+  
+  .tip-card-home .tip-icon-large {
+    margin: 0 auto 16px;
+  }
+  
+  .chat-container {
+    height: calc(100vh - 140px);
+    border-radius: 20px;
+  }
+  
+  .chat-bubble {
+    max-width: 90%;
+  }
+
+  .onboarding-bg-leaf {
+    background-size: 150%;
+  }
+  
+  .checkin-form-box, .form-content-box {
+    padding: 24px 20px;
+    border-radius: 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .discovery-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .quick-actions {
+    flex-direction: column;
+  }
+  
+  .hero-section {
+    padding: 40px 16px;
+  }
+  
+  .landing-features {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Extra Mobile Adjustments */
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: 16px;
+  }
+  .modal-container {
+    width: 100%;
+    margin: 16px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .quick-btn {
+    width: 100%;
+  }
+  .dashboard-grid {
+    gap: 12px;
+  }
+  .hero-title {
+    font-size: 2.2rem;
+  }
+}
