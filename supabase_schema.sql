@@ -93,6 +93,26 @@ CREATE POLICY "Users can insert own readings."
 
 -- Add connected devices to profiles
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS connected_devices JSONB DEFAULT '{}',
-  ADD COLUMN IF NOT EXISTS google_fit_token  TEXT,
-  ADD COLUMN IF NOT EXISTS google_fit_expiry TIMESTAMP WITH TIME ZONE;
+  ADD COLUMN IF NOT EXISTS connected_devices JSONB DEFAULT '{}';
+
+-- Wearable Tokens
+CREATE TABLE IF NOT EXISTS public.wearable_tokens (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id     UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL UNIQUE,
+  provider    TEXT NOT NULL,
+  access_token TEXT NOT NULL,
+  refresh_token TEXT,
+  expires_at  TIMESTAMP WITH TIME ZONE,
+  updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE public.wearable_tokens ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can read own tokens."
+  ON public.wearable_tokens FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own tokens."
+  ON public.wearable_tokens FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own tokens."
+  ON public.wearable_tokens FOR UPDATE USING (auth.uid() = user_id);

@@ -623,7 +623,7 @@ export default function App() {
         {activePage === 'discovery' && <Discovery t={t} />}
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkin' && <CheckinPage profile={profile} />}
-        {activePage === 'devices' && <WearableHub onBack={() => setActivePage('profile')} showToast={showToast} />}
+        {activePage === 'devices' && <WearableHub onBack={() => setActivePage('profile')} showToast={showToast} profile={profile} />}
         {activePage === 'profile' && (
           <div className="page active">
             <div className="page-header">

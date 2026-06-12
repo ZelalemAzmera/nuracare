@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
-import AppleHealthImport from './AppleHealthImport';
 import { getLatestWearableReadings } from './wellnessEngine';
 
-export default function WearableHub({ onBack, showToast }) {
-  const [showAppleImport, setShowAppleImport] = useState(false);
+export default function WearableHub({ onBack, showToast, profile }) {
   const [readings, setReadings] = useState({});
+  const [isConnecting, setIsConnecting] = useState(false);
 
   useEffect(() => {
     setReadings(getLatestWearableReadings());
@@ -16,6 +15,44 @@ export default function WearableHub({ onBack, showToast }) {
   }, []);
 
   const hasData = Object.keys(readings).length > 0;
+
+  const handleFitbitConnect = async () => {
+    if (!profile || !profile.id) {
+      showToast('You must be logged in to connect devices.', 'error');
+      return;
+    }
+    
+    setIsConnecting(true);
+    try {
+      // Direct the user to our Fitbit auth endpoint
+      window.location.href = `/api/fitbit-auth?userId=${profile.id}`;
+    } catch (err) {
+      console.error(err);
+      showToast('Error connecting to Fitbit: ' + err.message, 'error');
+      setIsConnecting(false);
+    }
+  };
+
+  const handleManualSync = async () => {
+    setIsConnecting(true);
+    try {
+      const res = await fetch('/api/fitbit-sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Sync failed');
+      
+      showToast('Fitbit data synced successfully!', 'success');
+      setReadings(getLatestWearableReadings()); // Refresh local view
+    } catch (err) {
+      console.error(err);
+      showToast('Error syncing Fitbit: ' + err.message, 'error');
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   return (
     <div className="page active" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -29,100 +66,45 @@ export default function WearableHub({ onBack, showToast }) {
         </div>
       </div>
 
-      <div className="section-title">Device Integrations</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20 }}>
+      <div className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 16, marginTop: 24, background: 'linear-gradient(135deg, var(--card-bg) 0%, rgba(14, 165, 233, 0.05) 100%)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(14, 165, 233, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Icons.Activity size={28} color="#0ea5e9" />
+          </div>
+          <div>
+            <h3 style={{ margin: '0 0 4px', fontSize: 18, color: 'var(--text)' }}>Fitbit Integration</h3>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
+              Connect your Fitbit account to automatically sync your daily steps, heart rate, and sleep data.
+            </p>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            className="btn-primary" 
+            onClick={handleFitbitConnect} 
+            disabled={isConnecting}
+            style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#00B0B9', color: 'white' }}
+          >
+            {isConnecting ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Link size={20} />}
+            {isConnecting ? 'Connecting...' : 'Connect Fitbit'}
+          </button>
+          
+          <button 
+            className="btn-secondary" 
+            onClick={handleManualSync} 
+            disabled={isConnecting}
+            style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            <Icons.RefreshCw size={20} className={isConnecting ? 'animate-spin' : ''} />
+            Sync Now
+          </button>
+        </div>
         
-        {/* Apple Health Card */}
-        <div className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: 'var(--green-light)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icons.Apple size={24} color="var(--green-dark)" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Apple Health</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: readings.source === 'apple_health' ? 'var(--green-dark)' : 'var(--text-muted)' }}>
-                  {readings.source === 'apple_health' ? (
-                    <><span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--green)' }}></span> Connected</>
-                  ) : 'Not connected'}
-                </div>
-              </div>
-            </div>
-          </div>
-          <button className="btn-outline-sm" onClick={() => setShowAppleImport(!showAppleImport)} style={{ width: '100%' }}>
-            {showAppleImport ? 'Cancel Import' : 'Import XML Data'}
-          </button>
-        </div>
-
-        {/* Google Fit Card */}
-        <div className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#fef08a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icons.Activity size={24} color="#ca8a04" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Google Fit</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
-                  Not connected
-                </div>
-              </div>
-            </div>
-          </div>
-          <button className="btn-outline-sm" onClick={() => showToast('Google Fit OAuth integration is planned for Phase 2.', 'success')} style={{ width: '100%' }}>
-            Connect Google Fit
-          </button>
-        </div>
-
-        {/* Fitbit Card */}
-        <div className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#bfdbfe', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icons.Watch size={24} color="#2563eb" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Fitbit</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
-                  Not connected
-                </div>
-              </div>
-            </div>
-          </div>
-          <button className="btn-outline-sm" onClick={() => showToast('Fitbit webhook integration is planned for Phase 3.', 'success')} style={{ width: '100%' }}>
-            Connect Fitbit
-          </button>
-        </div>
-
-        {/* Garmin Card */}
-        <div className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 48, height: 48, borderRadius: 12, background: '#e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Icons.Compass size={24} color="#475569" />
-              </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>Garmin</h3>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text-muted)' }}>
-                  Not connected
-                </div>
-              </div>
-            </div>
-          </div>
-          <button className="btn-outline-sm" onClick={() => showToast('Garmin webhook integration is planned for Phase 3.', 'success')} style={{ width: '100%' }}>
-            Connect Garmin
-          </button>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, opacity: 0.6, marginTop: 8 }}>
+            <span style={{ fontSize: 12, fontWeight: 500 }}>More integrations (Apple Health, Garmin) coming soon</span>
         </div>
       </div>
-
-      {showAppleImport && (
-        <div style={{ marginTop: 24 }}>
-          <AppleHealthImport onImportComplete={(data) => {
-            setShowAppleImport(false);
-            showToast('Apple Health data successfully synced!', 'success');
-          }} />
-        </div>
-      )}
 
       {hasData && (
         <>
