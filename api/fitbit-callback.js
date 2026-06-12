@@ -19,19 +19,16 @@ export default async function handler(req, res) {
   const protocol = host.includes('localhost') ? 'http' : 'https';
   const redirectUri = `${protocol}://${host}/api/fitbit-callback`;
 
-  // Base64 encode client_id:client_secret for the Basic Auth header
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
-
   try {
-    // 1. Exchange auth code for access token
-    const tokenResponse = await fetch('https://api.fitbit.com/oauth2/token', {
+    // 1. Exchange auth code for access token with Google
+    const tokenResponse = await fetch('https://oauth2.googleapis.com/token', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${basicAuth}`,
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: new URLSearchParams({
         client_id: clientId,
+        client_secret: clientSecret,
         grant_type: 'authorization_code',
         redirect_uri: redirectUri,
         code: code
@@ -41,17 +38,14 @@ export default async function handler(req, res) {
     const tokenData = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      console.error('Fitbit Token Error:', tokenData);
+      console.error('Google Token Error:', tokenData);
       return res.redirect(`/?error=fitbit_token_exchange_failed`);
     }
 
     // 2. Save tokens to Supabase
     const supabaseUrl = process.env.VITE_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; // Need admin key to bypass RLS in the backend
-    
-    // Fallback to anon key if service role is not available in env
-    const clientKey = supabaseKey || process.env.VITE_SUPABASE_ANON_KEY;
-    const supabase = createClient(supabaseUrl, clientKey);
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Calculate expiration timestamp
     const expiresAt = new Date();
