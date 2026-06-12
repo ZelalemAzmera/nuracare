@@ -65,19 +65,21 @@ export default async function handler(req, res) {
       return res.redirect(`/?error=database_save_failed&details=${encodeURIComponent(dbError.message || 'db_error')}`);
     }
 
-    // 3. Fetch existing profile and update connected devices
+    // 3. Fetch existing profile and update connected devices & syncing
     const { data: profile } = await supabase
       .from('profiles')
-      .select('connected_devices')
+      .select('connected_devices, syncing_devices')
       .eq('id', userId)
       .single();
 
     const existingDevices = profile?.connected_devices || {};
+    const existingSyncing = profile?.syncing_devices || {};
     
     await supabase
       .from('profiles')
       .update({
-        connected_devices: { ...existingDevices, oura: true }
+        connected_devices: { ...existingDevices, oura: true },
+        syncing_devices: { ...existingSyncing, oura: true }
       })
       .eq('id', userId);
 

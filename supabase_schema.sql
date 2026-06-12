@@ -91,9 +91,10 @@ CREATE POLICY "Users can read own readings."
 CREATE POLICY "Users can insert own readings."
   ON public.wearable_readings FOR INSERT WITH CHECK (auth.uid() = user_id);
 
--- Add connected devices to profiles
+-- Add connected devices and syncing preferences to profiles
 ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS connected_devices JSONB DEFAULT '{}';
+  ADD COLUMN IF NOT EXISTS connected_devices JSONB DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS syncing_devices JSONB DEFAULT '{}';
 
 -- Wearable Tokens
 CREATE TABLE IF NOT EXISTS public.wearable_tokens (

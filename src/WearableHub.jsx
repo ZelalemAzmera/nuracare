@@ -7,6 +7,9 @@ export default function WearableHub({ onBack, showToast, profile }) {
   const [isConnectingFitbit, setIsConnectingFitbit] = useState(false);
   const [isConnectingOura, setIsConnectingOura] = useState(false);
 
+  const [isFitbitSyncing, setIsFitbitSyncing] = useState(false);
+  const [isOuraSyncing, setIsOuraSyncing] = useState(false);
+
   useEffect(() => {
     setReadings(getLatestWearableReadings());
 
@@ -17,7 +20,29 @@ export default function WearableHub({ onBack, showToast, profile }) {
 
   const isFitbitConnected = profile?.connected_devices?.fitbit === true;
   const isOuraConnected = profile?.connected_devices?.oura === true;
+  const isFitbitSyncActive = profile?.syncing_devices?.fitbit === true;
+  const isOuraSyncActive = profile?.syncing_devices?.oura === true;
   const hasData = Object.keys(readings).length > 0;
+
+  // Background polling effect
+  useEffect(() => {
+    let intervalId;
+    if (isFitbitSyncActive || isOuraSyncActive) {
+      intervalId = setInterval(() => {
+        if (isFitbitSyncActive) {
+          fetch('/api/fitbit-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id, background: true }) })
+            .then(res => { if(res.ok) { setReadings(getLatestWearableReadings()); }})
+            .catch(err => console.error('Background fitbit sync error:', err));
+        }
+        if (isOuraSyncActive) {
+          fetch('/api/oura-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id, background: true }) })
+            .then(res => { if(res.ok) { setReadings(getLatestWearableReadings()); }})
+            .catch(err => console.error('Background oura sync error:', err));
+        }
+      }, 5 * 60 * 1000); // 5 minutes
+    }
+    return () => { if (intervalId) clearInterval(intervalId); };
+  }, [isFitbitSyncActive, isOuraSyncActive, profile?.id]);
 
   const handleFitbitConnect = async () => {
     if (!profile || !profile.id) return showToast('You must be logged in.', 'error');
@@ -36,15 +61,24 @@ export default function WearableHub({ onBack, showToast, profile }) {
     } catch (err) { showToast('Error: ' + err.message, 'error'); setIsConnectingFitbit(false); }
   };
 
-  const handleFitbitSync = async () => {
-    setIsConnectingFitbit(true);
+  const handleFitbitToggleSync = async () => {
+    setIsFitbitSyncing(true);
+    const newState = !isFitbitSyncActive;
     try {
-      const res = await fetch('/api/fitbit-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id }) });
-      if (!res.ok) throw new Error('Sync failed');
-      showToast('Fitbit data synced successfully!', 'success');
-      setReadings(getLatestWearableReadings()); 
+      const res = await fetch('/api/sync-toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id, provider: 'fitbit', enableSync: newState }) });
+      if (!res.ok) throw new Error('Failed to toggle sync');
+      
+      showToast(newState ? 'Fitbit continuous sync started' : 'Fitbit continuous sync stopped', 'success');
+      
+      // If we just turned it on, do an immediate sync
+      if (newState) {
+        await fetch('/api/fitbit-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id }) });
+        setReadings(getLatestWearableReadings());
+      }
+      
+      window.location.reload(); // Reload to update profile state globally
     } catch (err) { showToast('Error: ' + err.message, 'error'); } 
-    finally { setIsConnectingFitbit(false); }
+    finally { setIsFitbitSyncing(false); }
   };
 
   const handleOuraConnect = async () => {
@@ -64,15 +98,24 @@ export default function WearableHub({ onBack, showToast, profile }) {
     } catch (err) { showToast('Error: ' + err.message, 'error'); setIsConnectingOura(false); }
   };
 
-  const handleOuraSync = async () => {
-    setIsConnectingOura(true);
+  const handleOuraToggleSync = async () => {
+    setIsOuraSyncing(true);
+    const newState = !isOuraSyncActive;
     try {
-      const res = await fetch('/api/oura-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id }) });
-      if (!res.ok) throw new Error('Sync failed');
-      showToast('Oura data synced successfully!', 'success');
-      setReadings(getLatestWearableReadings()); 
+      const res = await fetch('/api/sync-toggle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id, provider: 'oura', enableSync: newState }) });
+      if (!res.ok) throw new Error('Failed to toggle sync');
+      
+      showToast(newState ? 'Oura continuous sync started' : 'Oura continuous sync stopped', 'success');
+      
+      // If we just turned it on, do an immediate sync
+      if (newState) {
+        await fetch('/api/oura-sync', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: profile.id }) });
+        setReadings(getLatestWearableReadings());
+      }
+
+      window.location.reload(); // Reload to update profile state globally
     } catch (err) { showToast('Error: ' + err.message, 'error'); } 
-    finally { setIsConnectingOura(false); }
+    finally { setIsOuraSyncing(false); }
   };
 
   return (
@@ -109,13 +152,16 @@ export default function WearableHub({ onBack, showToast, profile }) {
                   {isConnectingFitbit ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Link size={20} />} Connect
               </button>
             ) : (
-              <button className="btn-secondary" onClick={handleFitbitDisconnect} disabled={isConnectingFitbit} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}>
-                  {isConnectingFitbit ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Unlink size={20} />} Disconnect
-              </button>
+              <>
+                <button className="btn-secondary" onClick={handleFitbitDisconnect} disabled={isConnectingFitbit || isFitbitSyncing} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}>
+                    {isConnectingFitbit ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Unlink size={20} />} Disconnect
+                </button>
+                <button className={isFitbitSyncActive ? "btn-secondary" : "btn-primary"} onClick={handleFitbitToggleSync} disabled={isFitbitSyncing} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: isFitbitSyncActive ? '#f8fafc' : '#10b981', color: isFitbitSyncActive ? '#64748b' : 'white', border: isFitbitSyncActive ? '1px solid #e2e8f0' : 'none' }}>
+                  {isFitbitSyncing ? <Icons.Loader2 size={20} className="animate-spin" /> : (isFitbitSyncActive ? <Icons.PauseCircle size={20} /> : <Icons.PlayCircle size={20} />)} 
+                  {isFitbitSyncActive ? 'Stop Syncing' : 'Start Syncing'}
+                </button>
+              </>
             )}
-            <button className="btn-secondary" onClick={handleFitbitSync} disabled={!isFitbitConnected || isConnectingFitbit} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: isFitbitConnected ? 1 : 0.5 }}>
-              <Icons.RefreshCw size={20} className={isConnectingFitbit ? 'animate-spin' : ''} /> Sync Now
-            </button>
           </div>
         </div>
 
@@ -140,13 +186,16 @@ export default function WearableHub({ onBack, showToast, profile }) {
                   {isConnectingOura ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Link size={20} />} Connect
               </button>
             ) : (
-              <button className="btn-secondary" onClick={handleOuraDisconnect} disabled={isConnectingOura} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}>
-                  {isConnectingOura ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Unlink size={20} />} Disconnect
-              </button>
+              <>
+                <button className="btn-secondary" onClick={handleOuraDisconnect} disabled={isConnectingOura || isOuraSyncing} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}>
+                    {isConnectingOura ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Unlink size={20} />} Disconnect
+                </button>
+                <button className={isOuraSyncActive ? "btn-secondary" : "btn-primary"} onClick={handleOuraToggleSync} disabled={isOuraSyncing} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: isOuraSyncActive ? '#f8fafc' : '#10b981', color: isOuraSyncActive ? '#64748b' : 'white', border: isOuraSyncActive ? '1px solid #e2e8f0' : 'none' }}>
+                  {isOuraSyncing ? <Icons.Loader2 size={20} className="animate-spin" /> : (isOuraSyncActive ? <Icons.PauseCircle size={20} /> : <Icons.PlayCircle size={20} />)} 
+                  {isOuraSyncActive ? 'Stop Syncing' : 'Start Syncing'}
+                </button>
+              </>
             )}
-            <button className="btn-secondary" onClick={handleOuraSync} disabled={!isOuraConnected || isConnectingOura} style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: isOuraConnected ? 1 : 0.5 }}>
-              <Icons.RefreshCw size={20} className={isConnectingOura ? 'animate-spin' : ''} /> Sync Now
-            </button>
           </div>
         </div>
       </div>
