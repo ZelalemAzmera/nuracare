@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     if (!tokenResponse.ok) {
       console.error('Google Token Error:', tokenData);
-      return res.redirect(`/?error=fitbit_token_exchange_failed`);
+      return res.redirect(`/?error=fitbit_token_exchange_failed&details=${encodeURIComponent(tokenData.error_description || tokenData.error || 'unknown_error')}`);
     }
 
     // 2. Save tokens to Supabase

@@ -14,7 +14,7 @@ export default function WearableHub({ onBack, showToast, profile }) {
     return () => window.removeEventListener('wearable-synced', handleSync);
   }, []);
 
-  const hasData = Object.keys(readings).length > 0;
+  const isConnected = profile?.connected_devices?.fitbit === true;
 
   const handleFitbitConnect = async () => {
     if (!profile || !profile.id) {
@@ -24,11 +24,30 @@ export default function WearableHub({ onBack, showToast, profile }) {
     
     setIsConnecting(true);
     try {
-      // Direct the user to our Fitbit auth endpoint
       window.location.href = `/api/fitbit-auth?userId=${profile.id}`;
     } catch (err) {
       console.error(err);
       showToast('Error connecting to Fitbit: ' + err.message, 'error');
+      setIsConnecting(false);
+    }
+  };
+
+  const handleFitbitDisconnect = async () => {
+    setIsConnecting(true);
+    try {
+      const res = await fetch('/api/fitbit-disconnect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: profile.id })
+      });
+      if (!res.ok) throw new Error('Failed to disconnect');
+      
+      showToast('Fitbit disconnected successfully', 'success');
+      // A small hack to force reload so profile state updates
+      window.location.reload(); 
+    } catch (err) {
+      console.error(err);
+      showToast('Error disconnecting: ' + err.message, 'error');
       setIsConnecting(false);
     }
   };
@@ -44,11 +63,11 @@ export default function WearableHub({ onBack, showToast, profile }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Sync failed');
       
-      showToast('Fitbit data synced successfully!', 'success');
+      showToast('Health data synced successfully!', 'success');
       setReadings(getLatestWearableReadings()); // Refresh local view
     } catch (err) {
       console.error(err);
-      showToast('Error syncing Fitbit: ' + err.message, 'error');
+      showToast('Error syncing device: ' + err.message, 'error');
     } finally {
       setIsConnecting(false);
     }
@@ -71,30 +90,47 @@ export default function WearableHub({ onBack, showToast, profile }) {
           <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(14, 165, 233, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Icons.Activity size={28} color="#0ea5e9" />
           </div>
-          <div>
-            <h3 style={{ margin: '0 0 4px', fontSize: 18, color: 'var(--text)' }}>Fitbit Integration</h3>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <h3 style={{ margin: '0 0 4px', fontSize: 18, color: 'var(--text)' }}>Fitbit / Google Health</h3>
+                {isConnected && (
+                    <span style={{ background: '#10b981', color: 'white', fontSize: 12, padding: '2px 8px', borderRadius: 12, fontWeight: 600 }}>Connected</span>
+                )}
+            </div>
             <p style={{ margin: 0, fontSize: 14, color: 'var(--text-muted)' }}>
-              Connect your Fitbit account to automatically sync your daily steps, heart rate, and sleep data.
+              Connect your account to automatically sync your daily steps, heart rate, and sleep data.
             </p>
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 12 }}>
-          <button 
-            className="btn-primary" 
-            onClick={handleFitbitConnect} 
-            disabled={isConnecting}
-            style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#00B0B9', color: 'white' }}
-          >
-            {isConnecting ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Link size={20} />}
-            {isConnecting ? 'Connecting...' : 'Connect Fitbit'}
-          </button>
+          {!isConnected ? (
+            <button 
+                className="btn-primary" 
+                onClick={handleFitbitConnect} 
+                disabled={isConnecting}
+                style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#0ea5e9', color: 'white' }}
+            >
+                {isConnecting ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Link size={20} />}
+                {isConnecting ? 'Connecting...' : 'Connect Account'}
+            </button>
+          ) : (
+            <button 
+                className="btn-secondary" 
+                onClick={handleFitbitDisconnect} 
+                disabled={isConnecting}
+                style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2' }}
+            >
+                {isConnecting ? <Icons.Loader2 size={20} className="animate-spin" /> : <Icons.Unlink size={20} />}
+                Disconnect
+            </button>
+          )}
           
           <button 
             className="btn-secondary" 
             onClick={handleManualSync} 
-            disabled={isConnecting}
-            style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            disabled={!isConnected || isConnecting}
+            style={{ flex: 1, padding: '14px', fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: isConnected ? 1 : 0.5 }}
           >
             <Icons.RefreshCw size={20} className={isConnecting ? 'animate-spin' : ''} />
             Sync Now

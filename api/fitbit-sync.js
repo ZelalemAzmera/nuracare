@@ -36,46 +36,82 @@ export default async function handler(req, res) {
        console.log('Token might be expired. Trying anyway...');
     }
 
-    // 2. Fetch data from Fitbit APIs
-    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-    
+    // 2. Fetch data from Google Fitness API
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startTimeMillis = startOfDay.getTime();
+    const endTimeMillis = now.getTime();
+
     const headers = {
       'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json'
+      'Content-Type': 'application/json'
     };
 
-    // Fetch Steps
-    const activityRes = await fetch(`https://api.fitbit.com/1/user/-/activities/date/${today}.json`, { headers });
-    const activityData = activityRes.ok ? await activityRes.json() : {};
-    
-    // Fetch Sleep
-    const sleepRes = await fetch(`https://api.fitbit.com/1.2/user/-/sleep/date/${today}.json`, { headers });
+    // We use the dataset:aggregate endpoint for steps and heart rate
+    const aggregateBody = {
+      aggregateBy: [
+        { dataTypeName: 'com.google.step_count.delta' },
+        { dataTypeName: 'com.google.heart_rate.bpm' }
+      ],
+      bucketByTime: { durationMillis: endTimeMillis - startTimeMillis },
+      startTimeMillis,
+      endTimeMillis
+    };
+
+    const aggregateRes = await fetch('https://www.googleapis.com/fitness/v1/users/me/dataset:aggregate', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(aggregateBody)
+    });
+
+    const aggregateData = aggregateRes.ok ? await aggregateRes.json() : {};
+
+    // Sleep requires querying sessions
+    const sleepRes = await fetch(`https://www.googleapis.com/fitness/v1/users/me/sessions?startTime=${new Date(startTimeMillis - 86400000).toISOString()}&endTime=${now.toISOString()}&activityType=72`, {
+      headers
+    });
     const sleepData = sleepRes.ok ? await sleepRes.json() : {};
 
-    // Fetch Heart Rate
-    const hrRes = await fetch(`https://api.fitbit.com/1/user/-/activities/heart/date/${today}/1d.json`, { headers });
-    const hrData = hrRes.ok ? await hrRes.json() : {};
-
     // 3. Parse Data
-    const steps = activityData.summary?.steps || null;
-    const calories = activityData.summary?.caloriesOut || null;
-    const sleepMin = sleepData.summary?.totalMinutesAsleep || null;
-    
+    let steps = 0;
     let restingHr = null;
-    if (hrData['activities-heart'] && hrData['activities-heart'].length > 0) {
-        restingHr = hrData['activities-heart'][0].value?.restingHeartRate || null;
+    let sleepMin = 0;
+
+    if (aggregateData.bucket && aggregateData.bucket.length > 0) {
+        const bucket = aggregateData.bucket[0];
+        
+        // Steps
+        const stepDataset = bucket.dataset.find(d => d.dataSourceId.includes('step_count.delta'));
+        if (stepDataset && stepDataset.point.length > 0) {
+            steps = stepDataset.point.reduce((acc, p) => acc + (p.value[0].intVal || 0), 0);
+        }
+
+        // Heart Rate
+        const hrDataset = bucket.dataset.find(d => d.dataSourceId.includes('heart_rate.bpm'));
+        if (hrDataset && hrDataset.point.length > 0) {
+            // Get an average or the first value
+            restingHr = Math.round(hrDataset.point[0].value[0].fpVal || 0);
+        }
     }
+
+    // Parse sleep sessions (activityType 72)
+    if (sleepData.session && sleepData.session.length > 0) {
+        const totalSleepMillis = sleepData.session.reduce((acc, s) => acc + (parseInt(s.endTimeMillis) - parseInt(s.startTimeMillis)), 0);
+        sleepMin = Math.round(totalSleepMillis / 60000);
+    }
+
+    const today = now.toISOString().split('T')[0];
 
     // 4. Save to wearable_readings table
     const reading = {
       user_id: userId,
       source: 'fitbit',
       reading_date: today,
-      steps: steps,
-      calories: calories,
-      sleep_min: sleepMin,
-      heart_rate: restingHr,
-      raw_payload: { activityData, sleepData, hrData }
+      steps: steps > 0 ? steps : null,
+      calories: null, // Omitted for simplicity, requires calories.expended scope
+      sleep_min: sleepMin > 0 ? sleepMin : null,
+      heart_rate: restingHr > 0 ? restingHr : null,
+      raw_payload: { aggregateData, sleepData }
     };
 
     const { error: dbError } = await supabase
