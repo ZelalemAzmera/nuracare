@@ -59,11 +59,11 @@ export default async function handler(req, res) {
         access_token: tokenData.access_token,
         refresh_token: tokenData.refresh_token,
         expires_at: expiresAt.toISOString()
-      }, { onConflict: 'user_id' });
+      }, { onConflict: 'user_id, provider' });
 
     if (dbError) {
       console.error('Database Error:', dbError);
-      return res.redirect(`/?error=database_save_failed`);
+      return res.redirect(`/?error=database_save_failed&details=${encodeURIComponent(dbError.message || 'db_error')}`);
     }
 
     // 3. Update profile to show connected
