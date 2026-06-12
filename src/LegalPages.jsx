@@ -11,7 +11,7 @@ export function PrivacyPolicy({ onBack }) {
           <p className="page-subtitle">How we protect and use your data</p>
         </div>
       </div>
-      <div className="dash-card" style={{ padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)' }}>
+      <div className="dash-card" style={{ display: 'block', padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)' }}>
         <h3 style={{ marginTop: 0 }}>1. Introduction</h3>
         <p>Welcome to NuraCare. Your privacy and trust are our top priorities. This policy explains what information we collect, how it is used, and your rights regarding your personal data.</p>
         
@@ -55,7 +55,7 @@ export function TermsOfService({ onBack }) {
           <p className="page-subtitle">Rules and guidelines for using NuraCare</p>
         </div>
       </div>
-      <div className="dash-card" style={{ padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)' }}>
+      <div className="dash-card" style={{ display: 'block', padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)' }}>
         <h3 style={{ marginTop: 0 }}>1. Acceptance of Terms</h3>
         <p>By accessing or using NuraCare, you agree to be bound by these Terms of Service. If you do not agree, please do not use the application.</p>
 
@@ -92,7 +92,7 @@ export function MedicalDisclaimer({ onBack }) {
           <p className="page-subtitle" style={{ color: '#dc2626' }}>Please read this important notice carefully</p>
         </div>
       </div>
-      <div className="dash-card" style={{ padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)', border: '2px solid #fca5a5' }}>
+      <div className="dash-card" style={{ display: 'block', padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)', border: '2px solid #fca5a5' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: '#dc2626' }}>
           <Icons.AlertTriangle size={32} />
           <h2 style={{ margin: 0 }}>Not Medical Advice</h2>
