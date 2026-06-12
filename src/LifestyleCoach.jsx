@@ -86,7 +86,7 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
     } else if (recent.sleep <= 5 || recent.energy <= 4) {
       title = "Active Recovery & Rest";
       desc = "Your energy is low. Avoid intense workouts. Focus on gentle movement and deep nutrition for recovery.";
-      foods = isFastingDay ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Tart Cherry Juice", "Bone Broth", "Turmeric Milk"];
+      foods = isFastingDay ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Telba (Flaxseed Drink)", "Bone Broth", "Turmeric Milk"];
       exercise = "Light Yoga or simple breathing exercises";
       focus = "sleep";
     } else {
@@ -102,11 +102,20 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
   // Manual Vitals State
   const [vitals, setVitals] = useState(() => JSON.parse(localStorage.getItem('nuracare_vitals') || '{"steps": 0, "hr": 0, "weight": 0, "water": 0}'));
+  const [vitalsHistory, setVitalsHistory] = useState(() => JSON.parse(localStorage.getItem('nuracare_vitals_history') || '[]'));
   
   const updateVital = (key, val) => {
     const newVitals = { ...vitals, [key]: val };
     setVitals(newVitals);
     localStorage.setItem('nuracare_vitals', JSON.stringify(newVitals));
+  };
+
+  const handleSaveVitals = () => {
+    const newRecord = { ...vitals, date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+    const newHistory = [newRecord, ...vitalsHistory];
+    setVitalsHistory(newHistory);
+    localStorage.setItem('nuracare_vitals_history', JSON.stringify(newHistory));
+    alert('Vitals saved to history!');
   };
 
   // Routing
@@ -199,49 +208,87 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
       </div>
 
-      <div className="section-title" style={{ marginTop: 32 }}>❤️ Manual Vitals & Hydration</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-        <div className="dash-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
-            <Icons.Footprints size={18} color="var(--green-dark)" /> Steps
-          </div>
-          <input type="number" value={vitals.steps || ''} onChange={(e) => updateVital('steps', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
-        </div>
+      <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
+      
+      <div className="dash-card" style={{ background: 'var(--white)', padding: 32, marginBottom: 20 }}>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 18, textAlign: 'center' }}>Sync Your Vitals</h3>
+        <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically import heart rate, steps, and weight from your smart device.</p>
         
-        <div className="dash-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
-            <Icons.HeartPulse size={18} color="#ef4444" /> Heart Rate (bpm)
-          </div>
-          <input type="number" value={vitals.hr || ''} onChange={(e) => updateVital('hr', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
-        </div>
+        <button onClick={() => alert("Syncing wearable...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
+          <Icons.Watch size={20} /> Sync Wearable Device
+        </button>
 
-        <div className="dash-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
-            <Icons.Scale size={18} color="#6366f1" /> Weight (kg)
-          </div>
-          <input type="number" value={vitals.weight || ''} onChange={(e) => updateVital('weight', e.target.value)} placeholder="0.0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
-        </div>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 32 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>No wearable device? Log Manually:</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+                <Icons.Footprints size={18} color="var(--green-dark)" /> Steps
+              </div>
+              <input type="number" value={vitals.steps || ''} onChange={(e) => updateVital('steps', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+            </div>
+            
+            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+                <Icons.HeartPulse size={18} color="#ef4444" /> Heart Rate (bpm)
+              </div>
+              <input type="number" value={vitals.hr || ''} onChange={(e) => updateVital('hr', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+            </div>
 
-        <div className="dash-card">
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, color: 'var(--text-muted)' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Droplets size={18} color="#0ea5e9" /> Water</span>
-            <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
+                <Icons.Scale size={18} color="#6366f1" /> Weight (kg)
+              </div>
+              <input type="number" value={vitals.weight || ''} onChange={(e) => updateVital('weight', e.target.value)} placeholder="0.0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+            </div>
+
+            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, color: 'var(--text-muted)' }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Droplets size={18} color="#0ea5e9" /> Water</span>
+                <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {[1,2,3,4,5,6,7,8].map(glass => (
+                  <div 
+                    key={glass} 
+                    onClick={() => updateVital('water', glass === vitals.water ? glass - 1 : glass)}
+                    style={{ 
+                      width: 28, height: 36, borderRadius: '4px 4px 12px 12px', 
+                      background: glass <= vitals.water ? '#0ea5e9' : 'var(--white)', 
+                      cursor: 'pointer', transition: 'all 0.2s', border: '1px solid var(--border)'
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-            {[1,2,3,4,5,6,7,8].map(glass => (
-              <div 
-                key={glass} 
-                onClick={() => updateVital('water', glass === vitals.water ? glass - 1 : glass)}
-                style={{ 
-                  width: 28, height: 36, borderRadius: '4px 4px 12px 12px', 
-                  background: glass <= vitals.water ? '#0ea5e9' : 'var(--bg)', 
-                  cursor: 'pointer', transition: 'all 0.2s'
-                }}
-              />
+          <button onClick={handleSaveVitals} style={{ width: '100%', marginTop: 24, background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 16, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <Icons.Save size={18} /> Save Manual Vitals
+          </button>
+        </div>
+      </div>
+
+      {vitalsHistory.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ marginBottom: 16 }}>Vitals History</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: 16 }}>
+            {vitalsHistory.map((v, i) => (
+              <div key={i} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--green-dark)', display: 'flex', justifyContent: 'space-between' }}>
+                  <span>{v.date}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{v.time}</span>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 13 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Steps:</span> <span>{v.steps || 0}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>HR:</span> <span>{v.hr || 0} bpm</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Weight:</span> <span>{v.weight || 0} kg</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span style={{ color: 'var(--text-muted)' }}>Water:</span> <span>{v.water || 0}/8</span></div>
+                </div>
+              </div>
             ))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -345,17 +392,28 @@ function RunningDashboard({ onBack }) {
           <LiveTimer />
         </div>
         <div className="dash-card" style={{ gridColumn: 'span 3', background: 'var(--white)', padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-          <label style={{ fontSize: 15, fontWeight: 600, marginBottom: 12 }}>Distance Logged (km)</label>
-          <input 
-            type="number" 
-            placeholder="e.g. 5.2" 
-            value={distance} 
-            onChange={(e) => setDistance(e.target.value)}
-            style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: '1.5px solid var(--border)', fontSize: 20, fontWeight: 600, outline: 'none' }}
-          />
-          <button onClick={handleSaveRun} style={{ marginTop: 24, background: 'var(--green)', color: 'white', border: 'none', padding: 16, borderRadius: 16, fontWeight: 600, cursor: 'pointer' }}>
-            Save Run
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18, textAlign: 'center' }}>Sync Your Activity</h3>
+          <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically import your runs from your smartwatch or fitness tracker.</p>
+          
+          <button onClick={() => alert("Syncing wearable data...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+            <Icons.Watch size={20} /> Sync Wearable Device
           </button>
+
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+            <label style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)', display: 'block' }}>No wearable device? Enter manually:</label>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <input 
+                type="number" 
+                placeholder="Distance (km)" 
+                value={distance} 
+                onChange={(e) => setDistance(e.target.value)}
+                style={{ flex: 2, padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 16, fontWeight: 600, outline: 'none' }}
+              />
+              <button onClick={handleSaveRun} style={{ flex: 1, background: 'var(--green)', color: 'white', border: 'none', padding: 12, borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
+                Save
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -381,10 +439,12 @@ function GymDashboard({ onBack, recent }) {
   const [loggedSets, setLoggedSets] = useState([]);
   const [selectedMuscle, setSelectedMuscle] = useState('legs');
   const [warning, setWarning] = useState('');
+  const [workoutHistory, setWorkoutHistory] = useState([]);
 
   useEffect(() => {
     // Recovery warning logic
     const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
+    setWorkoutHistory(workouts.filter(w => w.type === 'gym').reverse());
     if (workouts.length >= 3) {
       const recentWorkouts = workouts.slice(-3);
       // simplified check: just check if all last 3 workouts had 'legs' or similar
@@ -415,8 +475,10 @@ function GymDashboard({ onBack, recent }) {
   const handleSaveWorkout = () => {
     if (loggedSets.length === 0) return;
     const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
-    workouts.push({ id: Date.now(), date: new Date().toLocaleDateString(), type: 'gym', sets: loggedSets });
+    const newWorkout = { id: Date.now(), date: new Date().toLocaleDateString(), type: 'gym', sets: loggedSets };
+    workouts.push(newWorkout);
     localStorage.setItem('nuracare_workouts', JSON.stringify(workouts));
+    setWorkoutHistory([newWorkout, ...workoutHistory]);
     setLoggedSets([]);
     alert('Workout saved successfully!');
   };
@@ -476,7 +538,15 @@ function GymDashboard({ onBack, recent }) {
       </div>
 
       <div className="dash-card" style={{ background: 'var(--white)', padding: 32 }}>
-        <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Tap-to-Log Workout</h3>
+        <h3 style={{ margin: '0 0 8px 0', fontSize: 18, textAlign: 'center' }}>Sync Workout Data</h3>
+        <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically pull sets and reps from your wearable device.</p>
+        
+        <button onClick={() => alert("Syncing workout from wearable...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
+          <Icons.Watch size={20} /> Sync Wearable Device
+        </button>
+
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 32 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>No wearable device? Log Manually:</h3>
         
         {warning && (
           <div style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#b91c1c', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: 13, display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -509,7 +579,7 @@ function GymDashboard({ onBack, recent }) {
           {EXERCISE_DB[selectedMuscle].map(ex => (
             <button
               key={ex}
-              onClick={() => setExercise(ex)}
+              onClick={() => setExercise(exercise === ex ? '' : ex)}
               style={{
                 padding: 12,
                 borderRadius: 12,
@@ -554,6 +624,23 @@ function GymDashboard({ onBack, recent }) {
           </div>
         )}
       </div>
+
+      {workoutHistory.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <h3 style={{ marginBottom: 16 }}>Recent Workouts</h3>
+          {workoutHistory.map(w => (
+            <div key={w.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, marginBottom: 12, border: '1px solid var(--border)' }}>
+              <div style={{ fontWeight: 600, marginBottom: 8, color: 'var(--green-dark)' }}>{w.date}</div>
+              {w.sets.map((s, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14, color: 'var(--text-muted)' }}>
+                  <span>{s.exercise}</span>
+                  <span>{s.reps}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -614,12 +701,15 @@ function YogaDashboard({ onBack, recent }) {
                     <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{pose.dur}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{pose.desc}</p>
-                  <div style={{ marginTop: 12 }}>
-                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
-                      <img src={`https://img.youtube.com/vi/${pose.vid}/hqdefault.jpg`} alt="Video preview" style={{ width: '100%', height: 120, objectFit: 'cover', opacity: 0.9 }} />
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.9)', borderRadius: '50%', padding: 8, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                        <Icons.Play size={20} color="#ef4444" fill="#ef4444" />
+                  <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', width: 120 }}>
+                      <img src={`https://img.youtube.com/vi/${pose.vid}/hqdefault.jpg`} alt="Video preview" style={{ width: '100%', height: 68, objectFit: 'cover', opacity: 0.9, display: 'block' }} />
+                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.9)', borderRadius: '50%', padding: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                        <Icons.Play size={16} color="#ef4444" fill="#ef4444" />
                       </div>
+                    </a>
+                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#ef4444', textDecoration: 'none', fontWeight: 600, border: '1.5px solid #ef4444', padding: '6px 16px', borderRadius: 20 }}>
+                      <Icons.Youtube size={16} /> Watch Tutorial
                     </a>
                   </div>
                 </div>

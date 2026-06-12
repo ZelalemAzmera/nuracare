@@ -680,7 +680,7 @@ export default function App() {
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'records' && <MedicalRecords profile={profile} onBack={() => setActivePage('profile')} />}
-        {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} />}
+        {activePage === 'checkups' && <Checkups profile={profile} setActivePage={setActivePage} showToast={showToast} />}
         {activePage === 'discovery' && <Discovery t={t} />}
         {activePage === 'lifestyle' && <LifestyleCoach profile={profile} checkins={profile.records || []} t={t} />}
         {activePage === 'checkin' && <CheckinPage profile={profile} />}
@@ -1021,11 +1021,14 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
   const lastRec = records.length > 0 ? records[records.length - 1] : null;
   const tip = getDailyTip();
 
+  const hour = new Date().getHours();
+  const greetingKey = hour < 12 ? "greeting_morning" : hour < 18 ? "greeting_afternoon" : "greeting_evening";
+
   return (
     <div className="page active">
       <div className="page-header">
         <div>
-          <h1 className="page-title">{t("greeting")}{profile.name ? `, ${profile.name}` : ''}</h1>
+          <h1 className="page-title">{t(greetingKey)}{profile.name ? `, ${profile.name}` : ''}</h1>
           <p className="page-subtitle">{t("wellness_overview")}</p>
           {profile.location && (
             <div style={{marginTop: 8, fontSize: 13, color: 'var(--text-muted)', display: 'flex', alignItems: 'center'}}>
@@ -1438,7 +1441,9 @@ WELLNESS CONTEXT:${checkinContext}
 - Always provide natural remedies and lifestyle tips first before recommending a doctor, unless the urgency is high.`
       };
 
-      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. How did you sleep last night? How are your stress and energy levels today?` };
+      const hour = new Date().getHours();
+      const timeContext = hour < 12 ? "How did you sleep last night?" : hour < 18 ? "How has your day been so far?" : "How are your energy levels this evening?";
+      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. ${timeContext}` };
       
       const cur = sessions.find(s => s.id === currentSessionId);
       if (cur && cur.messages && cur.messages.length > 0) {
@@ -1871,7 +1876,43 @@ Only include the JSON once — after you know symptom + duration + severity.${la
 
 
 
-function Checkups({ profile, setActivePage }) {
+function Checkups({ profile, setActivePage, showToast = alert }) {
+  const [history, setHistory] = useState([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [activeItem, setActiveItem] = useState(null);
+  const [notes, setNotes] = useState('');
+  const [nextVisit, setNextVisit] = useState('');
+
+  useEffect(() => {
+    const data = JSON.parse(localStorage.getItem('nuracare_checkup_history') || '[]');
+    setHistory(data);
+  }, []);
+
+  const handleSaveVisit = () => {
+    if (!activeItem) return;
+    const newVisit = { 
+      id: Date.now(), 
+      name: activeItem.name, 
+      date: new Date().toLocaleDateString(),
+      notes,
+      nextVisit
+    };
+    const updated = [newVisit, ...history];
+    setHistory(updated);
+    localStorage.setItem('nuracare_checkup_history', JSON.stringify(updated));
+    setModalOpen(false);
+    setNotes('');
+    setNextVisit('');
+    showToast(`${activeItem.name} logged successfully!`, 'success');
+  };
+
+  const openModal = (item) => {
+    setActiveItem(item);
+    setNotes('');
+    setNextVisit('');
+    setModalOpen(true);
+  };
+
   const plannerItems = [
     { name: 'Annual Physical Check', freq: 'Yearly', desc: 'Comprehensive metabolic panel, blood pressure, and general health review.', icon: <Icons.Activity size={24}/> },
     { name: 'Dental Cleaning', freq: 'Every 6 months', desc: 'Preventive cleaning and exam.', icon: <Icons.Smile size={24}/> },
@@ -1881,7 +1922,7 @@ function Checkups({ profile, setActivePage }) {
   ];
 
   return (
-    <div className="page active">
+    <div className="page active" style={{ position: 'relative' }}>
       <div className="page-header">
         <div><h1 className="page-title">Preventive Health</h1><p className="page-subtitle">Your routine checkup planner</p></div>
       </div>
@@ -1895,7 +1936,7 @@ function Checkups({ profile, setActivePage }) {
         </p>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 32 }}>
         {plannerItems.map((item, i) => (
           <div key={i} style={{ background: 'var(--white)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
             <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, color: 'var(--text)' }}>
@@ -1908,7 +1949,7 @@ function Checkups({ profile, setActivePage }) {
               </div>
               <p style={{ margin: '4px 0 12px 0', fontSize: 13, color: 'var(--text-muted)' }}>{item.desc}</p>
               <button 
-                onClick={() => showToast(`${item.name} logged successfully!`, 'success')}
+                onClick={() => openModal(item)}
                 style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
                 Log Visit
               </button>
@@ -1916,6 +1957,53 @@ function Checkups({ profile, setActivePage }) {
           </div>
         ))}
       </div>
+
+      {history.length > 0 && (
+        <div>
+          <h3 style={{ marginBottom: 16 }}>Visit History</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+            {history.map(visit => (
+              <div key={visit.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <span style={{ fontWeight: 600 }}>{visit.name}</span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{visit.date}</span>
+                </div>
+                {visit.notes && <p style={{ margin: '0 0 8px 0', fontSize: 14, color: 'var(--text)' }}><strong>Notes:</strong> {visit.notes}</p>}
+                {visit.nextVisit && <p style={{ margin: 0, fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}><Icons.Calendar size={14} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> Next Visit: {visit.nextVisit}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {modalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--white)', padding: 32, borderRadius: 24, width: '90%', maxWidth: 400, boxShadow: '0 24px 48px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Log {activeItem?.name}</h3>
+            
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Visit Notes</label>
+            <textarea 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)} 
+              placeholder="Any notes from the doctor?" 
+              style={{ width: '100%', height: 100, padding: 12, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 20, resize: 'none', fontFamily: 'inherit' }}
+            />
+            
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Remind me next visit (Optional)</label>
+            <input 
+              type="date" 
+              value={nextVisit} 
+              onChange={e => setNextVisit(e.target.value)} 
+              style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 24, fontFamily: 'inherit' }}
+            />
+            
+            <div style={{ display: 'flex', gap: 12 }}>
+              <button onClick={() => setModalOpen(false)} style={{ flex: 1, padding: '12px', background: 'var(--bg)', border: 'none', borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+              <button onClick={handleSaveVisit} style={{ flex: 1, padding: '12px', background: 'var(--green)', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>Save Record</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -2013,12 +2101,12 @@ function Discovery({ t }) {
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {feed.filter(i => !!i.vid).map((item, i) => (
           <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden', background: '#fafafa' }}>
-            <div style={{ position: 'relative' }}>
+            <a href={item.vid} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block' }}>
               <img src={item.image} alt={item.name} style={{ width: '100%', height: 180, objectFit: 'cover', opacity: 0.8 }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=400&q=80'}} />
               <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 12 }}>
                 <Icons.Play size={24} color="#fff" fill="#fff" />
               </div>
-            </div>
+            </a>
             <div style={{ padding: 16 }}>
               <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>{item.name}</h3>
               <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.4 }}>{item.benefit}</p>
