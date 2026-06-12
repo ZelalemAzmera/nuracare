@@ -271,9 +271,17 @@ export default function App() {
   const { t, lang, setLang } = useTranslation();
   
   const [onboardingStep, setOnboardingStep] = useState(0);
-  const [activePage, setActivePage] = useState('home');
+  const [activePage, setActivePage] = useState(() => localStorage.getItem('nuracare_activePage') || 'home');
+  
+  useEffect(() => {
+    localStorage.setItem('nuracare_activePage', activePage);
+  }, [activePage]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [discoveryTab, setDiscoveryTab] = useState('herbs');
+  const [discoveryTab, setDiscoveryTab] = useState(() => localStorage.getItem('nuracare_discoveryTab') || 'herbs');
+  
+  useEffect(() => {
+    localStorage.setItem('nuracare_discoveryTab', discoveryTab);
+  }, [discoveryTab]);
   
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [shareSession, setShareSession] = useState(null);
