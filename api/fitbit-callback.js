@@ -66,11 +66,19 @@ export default async function handler(req, res) {
       return res.redirect(`/?error=database_save_failed&details=${encodeURIComponent(dbError.message || 'db_error')}`);
     }
 
-    // 3. Update profile to show connected
+    // 3. Fetch existing profile and update connected devices
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('connected_devices')
+      .eq('id', userId)
+      .single();
+
+    const existingDevices = profile?.connected_devices || {};
+    
     await supabase
       .from('profiles')
       .update({
-        connected_devices: { fitbit: true }
+        connected_devices: { ...existingDevices, fitbit: true }
       })
       .eq('id', userId);
 

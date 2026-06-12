@@ -65,13 +65,19 @@ export default async function handler(req, res) {
       return res.redirect(`/?error=database_save_failed&details=${encodeURIComponent(dbError.message || 'db_error')}`);
     }
 
-    // 3. Update profile to show connected
+    // 3. Fetch existing profile and update connected devices
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('connected_devices')
+      .eq('id', userId)
+      .single();
+
+    const existingDevices = profile?.connected_devices || {};
+    
     await supabase
       .from('profiles')
       .update({
-        connected_devices: { oura: true } // Assuming JSONB allows adding keys like this via RPC or direct update, but typically update replaces or we need to merge.
-        // For simplicity and matching the Fitbit logic, we are just passing an object. Supabase merges JSONB if using certain methods, but we should be careful. 
-        // A safer way is to fetch current or let user do it in frontend, but we'll stick to the current logic.
+        connected_devices: { ...existingDevices, oura: true }
       })
       .eq('id', userId);
 

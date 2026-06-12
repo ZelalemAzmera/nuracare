@@ -98,12 +98,13 @@ ALTER TABLE public.profiles
 -- Wearable Tokens
 CREATE TABLE IF NOT EXISTS public.wearable_tokens (
   id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id     UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL UNIQUE,
+  user_id     UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
   provider    TEXT NOT NULL,
   access_token TEXT NOT NULL,
   refresh_token TEXT,
   expires_at  TIMESTAMP WITH TIME ZONE,
-  updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now()
+  updated_at  TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  UNIQUE(user_id, provider)
 );
 
 ALTER TABLE public.wearable_tokens ENABLE ROW LEVEL SECURITY;

@@ -22,11 +22,19 @@ export default async function handler(req, res) {
       .eq('user_id', userId)
       .eq('provider', 'fitbit');
 
-    // 2. Update profile
+    // 2. Fetch existing profile and update connected devices
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('connected_devices')
+      .eq('id', userId)
+      .single();
+
+    const existingDevices = profile?.connected_devices || {};
+
     await supabase
       .from('profiles')
       .update({
-        connected_devices: { fitbit: false }
+        connected_devices: { ...existingDevices, fitbit: false }
       })
       .eq('id', userId);
 
