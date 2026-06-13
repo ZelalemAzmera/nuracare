@@ -553,6 +553,8 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
             </button>
           </div>
         )}
+          </div>
+        </div>
       </div>
 
       {workoutHistory.length > 0 && (
@@ -571,7 +573,6 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
           ))}
         </div>
       )}
-      </div>
     </div>
   );
 }
