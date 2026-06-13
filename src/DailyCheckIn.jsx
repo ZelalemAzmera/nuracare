@@ -20,6 +20,7 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
   const [mealStyle, setMealStyle] = useState('Individual Plate');
   const [portion, setPortion] = useState('Normal');
 
+  const [plannedActivity, setPlannedActivity] = useState('Rest Day (Suggested)');
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
@@ -35,9 +36,19 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
     if (todayCheckin) {
       setIsSubmitted(true);
     } else {
-      setStep(1); // Auto-start the popup if not submitted
+      if (localStorage.getItem('nuracare_welcome_done')) {
+        setStep(1); // Auto-start the popup if not submitted and user is not brand new
+      }
     }
   }, [forceShow]);
+
+  useEffect(() => {
+    const handleFirst = () => {
+      setStep(1);
+    };
+    window.addEventListener('trigger-first-checkin', handleFirst);
+    return () => window.removeEventListener('trigger-first-checkin', handleFirst);
+  }, []);
 
   const handleSubmit = () => {
     let sleepScore = Math.min(10, Math.max(1, sleepHours));
@@ -94,16 +105,16 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                 <div style={{ marginTop: 32, marginBottom: 24 }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>How many hours did you sleep?</label>
                   
-                  <div style={{ background: 'var(--green-light)', padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--green)' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <Icons.Watch size={24} color="var(--green-dark)" />
-                      <div>
-                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
-                        <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Synced via Apple Health</div>
+                    <div style={{ background: 'var(--green-light)', padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--green)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <Icons.Watch size={24} color="var(--green-dark)" />
+                        <div>
+                          <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
+                          <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Synced via Fitbit/Google Health</div>
+                        </div>
                       </div>
+                      <button onClick={() => { const val = prompt('Enter sleep hours:', sleepHours); if (val && !isNaN(val)) setSleepHours(Number(val)); }} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
                     </div>
-                    <button style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
-                  </div>
                 </div>
 
                 <div>
@@ -195,11 +206,11 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Icons.Activity size={24} color="var(--green-dark)" />
                       <div>
-                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>Rest Day (Suggested)</div>
-                        <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Based on your Garmin HRV score</div>
+                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>{plannedActivity}</div>
+                        <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Based on your wearable data</div>
                       </div>
                     </div>
-                    <button style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
+                    <button onClick={() => { const val = prompt('Enter planned activity (e.g., Cardio, Rest, Lifting):', plannedActivity); if(val) setPlannedActivity(val); }} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
                   </div>
                 </div>
 

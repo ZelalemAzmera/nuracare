@@ -726,7 +726,6 @@ export default function App() {
           </select>
           <NavItem icon={Icons.User} label={t("profile")} active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Star} label={t("upgrade_premium")} active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.LogOut} label={t("log_out") || "Log Out"} active={false} onClick={() => { handleLogout(); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
@@ -1115,6 +1114,17 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
 
   const hour = new Date().getHours();
   const greetingKey = hour < 12 ? "greeting_morning" : hour < 18 ? "greeting_afternoon" : "greeting_evening";
+
+  useEffect(() => {
+    if ((!profile.records || profile.records.length === 0) && !localStorage.getItem('nuracare_welcome_done')) {
+      const t = setTimeout(() => {
+        showToast("Welcome to NuraCare! Let's start with your first daily check-in.", "success");
+        localStorage.setItem('nuracare_welcome_done', 'true');
+        window.dispatchEvent(new Event('trigger-first-checkin'));
+      }, 4000);
+      return () => clearTimeout(t);
+    }
+  }, [profile]);
 
   return (
     <div className="page active">
