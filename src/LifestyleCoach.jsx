@@ -760,10 +760,9 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
           </div>
         </div>
       </div>
-    </div>
 
-      {workoutHistory.length > 0 && (
-        <div style={{ marginTop: 32 }}>
+    {workoutHistory.length > 0 && (
+      <div style={{ marginTop: 32 }}>
           <h3 style={{ marginBottom: 16 }}>Recent Workouts</h3>
           {workoutHistory.map(w => (
             <div key={w.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, marginBottom: 12, border: '1px solid var(--border)' }}>
