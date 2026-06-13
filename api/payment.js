@@ -10,7 +10,7 @@ async function handleChapaCheckout(req, res) {
   const CHAPA_SECRET = process.env.CHAPA_SECRET_KEY;
   const mockUrl = `/?payment=success&mock=chapa`;
   
-  if (!CHAPA_SECRET || CHAPA_SECRET.includes('your_secret_key')) {
+  if (!CHAPA_SECRET || String(CHAPA_SECRET).includes('your_secret_key')) {
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
 
@@ -63,7 +63,7 @@ async function handleChapaVerify(req, res) {
     return res.status(400).json({ error: 'Missing tx_ref' });
   }
 
-  if (!CHAPA_SECRET) {
+  if (!CHAPA_SECRET || String(CHAPA_SECRET).includes('your_secret_key')) {
     console.log(`[Chapa Verify Simulation] Verified tx_ref: ${tx_ref}`);
     return res.status(200).json({ status: 'success', message: 'Simulated verification' });
   }
@@ -108,7 +108,7 @@ async function handleStripeCheckout(req, res) {
   const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
   const mockUrl = `/?payment=success&mock=stripe`;
 
-  if (!STRIPE_SECRET || STRIPE_SECRET.includes('your_secret_key')) {
+  if (!STRIPE_SECRET || String(STRIPE_SECRET).includes('your_secret_key')) {
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
 
