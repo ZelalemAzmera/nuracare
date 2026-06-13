@@ -641,6 +641,7 @@ function GymDashboard({ onBack, recent }) {
           ))}
         </div>
       )}
+      </div>
     </div>
   );
 }
