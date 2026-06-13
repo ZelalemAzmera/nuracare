@@ -231,90 +231,100 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
       <div className="dash-card" style={{ background: 'var(--white)', padding: 24, marginBottom: 20 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 32, alignItems: 'start' }}>
-          <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 16, border: '1px solid var(--border)', textAlign: 'center' }}>
-            <h3 style={{ margin: '0 0 8px 0', fontSize: 18 }}>Sync Vitals</h3>
-            <p style={{ margin: '0 0 20px 0', fontSize: 13, color: 'var(--text-muted)' }}>Auto-import from Bluetooth smartwatch</p>
-            <button disabled={syncingVitals} onClick={handleSyncVitals} style={{ width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 14, borderRadius: 12, fontWeight: 700, cursor: syncingVitals ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-              {syncingVitals ? <Icons.Loader className="spin" size={18} /> : <Icons.Bluetooth size={18} />} 
-              {syncingVitals ? 'Syncing...' : 'Connect Wearable'}
-            </button>
-          </div>
-          <div>
-            <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>Or Log Manually:</h3>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              
-              <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Footprints size={14} color="var(--green-dark)" /> Steps</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <button onClick={() => updateVital('steps', Math.max(0, (Number(vitals.steps) || 0) - 500))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
-                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.steps || 0}</span>
-                  <button onClick={() => updateVital('steps', (Number(vitals.steps) || 0) + 500)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.HeartPulse size={14} color="#ef4444" /> HR (bpm)</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <button onClick={() => updateVital('hr', Math.max(0, (Number(vitals.hr) || 0) - 1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
-                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.hr || 0}</span>
-                  <button onClick={() => updateVital('hr', (Number(vitals.hr) || 0) + 1)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Scale size={14} color="#6366f1" /> Weight (kg)</div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <button onClick={() => updateVital('weight', Math.max(0, (Number(vitals.weight) || 0) - 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
-                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.weight || '0.0'}</span>
-                  <button onClick={() => updateVital('weight', ((Number(vitals.weight) || 0) + 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
-                </div>
-              </div>
-
-              <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icons.Droplets size={14} color="#0ea5e9" /> Water</span>
-                  <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
-                </div>
-                <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                  {[1,2,3,4,5,6,7,8].map(glass => (
-                    <div key={glass} onClick={() => updateVital('water', glass === vitals.water ? glass - 1 : glass)} style={{ width: 14, height: 20, borderRadius: '2px 2px 6px 6px', background: glass <= vitals.water ? '#0ea5e9' : 'var(--white)', cursor: 'pointer', border: '1px solid var(--border)' }} />
-                  ))}
-                </div>
-              </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 32, alignItems: 'stretch' }}>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+            <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 16, border: '1px solid var(--border)', textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 18 }}>Sync Vitals</h3>
+              <p style={{ margin: '0 0 20px 0', fontSize: 13, color: 'var(--text-muted)' }}>Auto-import from Bluetooth smartwatch</p>
+              <button disabled={syncingVitals} onClick={handleSyncVitals} style={{ width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 14, borderRadius: 12, fontWeight: 700, cursor: syncingVitals ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {syncingVitals ? <Icons.Loader className="spin" size={18} /> : <Icons.Bluetooth size={18} />} 
+                {syncingVitals ? 'Syncing...' : 'Connect Wearable'}
+              </button>
             </div>
-            <button onClick={handleSaveVitals} style={{ width: '100%', marginTop: 16, background: 'var(--green)', color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 12px rgba(10,183,121,0.2)' }}>
-              <Icons.Save size={18} /> Save Vitals
-            </button>
+            
+            <div>
+              <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>Or Log Manually:</h3>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Footprints size={14} color="var(--green-dark)" /> Steps</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button onClick={() => updateVital('steps', Math.max(0, (Number(vitals.steps) || 0) - 500))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                    <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.steps || 0}</span>
+                    <button onClick={() => updateVital('steps', (Number(vitals.steps) || 0) + 500)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.HeartPulse size={14} color="#ef4444" /> HR (bpm)</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button onClick={() => updateVital('hr', Math.max(0, (Number(vitals.hr) || 0) - 1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                    <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.hr || 0}</span>
+                    <button onClick={() => updateVital('hr', (Number(vitals.hr) || 0) + 1)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Scale size={14} color="#6366f1" /> Weight (kg)</div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <button onClick={() => updateVital('weight', Math.max(0, (Number(vitals.weight) || 0) - 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                    <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.weight || '0.0'}</span>
+                    <button onClick={() => updateVital('weight', ((Number(vitals.weight) || 0) + 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icons.Droplets size={14} color="#0ea5e9" /> Water</span>
+                    <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                    {[1,2,3,4,5,6,7,8].map(glass => (
+                      <div key={glass} onClick={() => updateVital('water', glass === vitals.water ? glass - 1 : glass)} style={{ width: 14, height: 20, borderRadius: '2px 2px 6px 6px', background: glass <= vitals.water ? '#0ea5e9' : 'var(--white)', cursor: 'pointer', border: '1px solid var(--border)' }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <button onClick={handleSaveVitals} style={{ width: '100%', marginTop: 16, background: 'var(--green)', color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 12px rgba(10,183,121,0.2)' }}>
+                <Icons.Save size={18} /> Save Vitals
+              </button>
+            </div>
           </div>
+
+          <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>Recent History</h3>
+            {vitalsHistory.length > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {vitalsHistory.slice(0, 4).map((record, i) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                      <div style={{ width: 10, height: 10, borderRadius: 5, background: i === 0 ? 'var(--green)' : 'var(--border)' }} />
+                      {i !== vitalsHistory.slice(0, 4).length - 1 && <div style={{ width: 2, height: 30, background: 'var(--border)' }} />}
+                    </div>
+                    <div style={{ flex: 1, paddingBottom: i !== vitalsHistory.slice(0, 4).length - 1 ? 16 : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{record.date === new Date().toLocaleDateString() ? 'Today' : record.date}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{record.time}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: 12, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
+                        <span>{record.steps} steps</span>
+                        <span>{record.hr} bpm</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ padding: '48px 0', textAlign: 'center', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <Icons.Activity size={32} color="var(--border)" />
+                <div style={{ fontSize: 14 }}>No vitals logged recently.</div>
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
-
-      {vitalsHistory.length > 0 && (
-        <div style={{ background: 'var(--white)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: 16 }}>Timeline</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {vitalsHistory.slice(0, 3).map((record, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: 5, background: i === 0 ? 'var(--green)' : 'var(--border)' }} />
-                  {i !== vitalsHistory.slice(0, 3).length - 1 && <div style={{ width: 2, height: 30, background: 'var(--border)' }} />}
-                </div>
-                <div style={{ flex: 1, paddingBottom: i !== vitalsHistory.slice(0, 3).length - 1 ? 16 : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{record.date === new Date().toLocaleDateString() ? 'Today' : record.date}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{record.time}</div>
-                  </div>
-                  <div style={{ display: 'flex', gap: 12, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
-                    <span>{record.steps} steps</span>
-                    <span>{record.hr} bpm</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
