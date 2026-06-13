@@ -1510,7 +1510,7 @@ WELLNESS CONTEXT:${checkinContext}
         const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}` },
-          body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
+          body: JSON.stringify({ model: 'llama-3.1-8b-instant', messages: [{ role: 'user', content: prompt }], temperature: 0.3, max_tokens: 20 })
         });
         const data = await res.json();
         title = data.choices?.[0]?.message?.content?.trim()?.replace(/["']/g, '');
@@ -1630,7 +1630,8 @@ TONE: Warm, human, 2-4 sentences max. Use user name occasionally.
 
 RED FLAGS (always HIGH urgency): chest pain, difficulty breathing, stroke, severe bleeding, loss of consciousness.
 NEVER classify mental/emotional health (sadness, anxiety, depression, unhappiness) as low urgency — minimum is "mid".
-CRITICAL NAME RULE: The user's name is spelled EXACTLY as written in the profile. Address them letter-for-letter with zero modifications. Never shorten or alter it. Example — if name is "${profile?.name}", always write "${profile?.name}".
+CRITICAL NAME RULE: The user's name is spelled EXACTLY as written in the profile. Address them letter-for-letter with zero modifications.
+CRITICAL GREETING RULE: ALWAYS start your response with "Hi ${profile?.name?.split(' ')[0] || 'there'}, " — NEVER skip this or alter the letters.
 
 WHEN YOU HAVE ENOUGH INFO, append this JSON at the END of your message:
 \`\`\`json

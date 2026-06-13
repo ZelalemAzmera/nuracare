@@ -22,7 +22,7 @@ Format: Title Case, no quotes, no punctuation.`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({ 
-        model: 'llama-3.3-70b-versatile', 
+        model: 'llama-3.1-8b-instant', 
         messages: [{ role: 'user', content: prompt }], 
         temperature: 0.3, 
         max_tokens: 20, 
@@ -40,7 +40,7 @@ Format: Title Case, no quotes, no punctuation.`;
     title = title.replace(/<think>[\s\S]*?(<\/think>|$)/gi, '').trim();
 
     return new Response(JSON.stringify({ title }), {
-      headers: { 'Content-Type': 'application/json' }
+      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
     });
   } catch (err) {
     console.error('Title API error:', err);
