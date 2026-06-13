@@ -77,7 +77,13 @@ WHEN YOU HAVE ENOUGH INFO, append this JSON at the END of your message:
 \`\`\`json
 {"urgency":"low|mid|high","summary":"one-line description","naturalRemedies":["remedy 1","remedy 2","remedy 3"],"action":"what to do next"}
 \`\`\`
-You MUST wrap your JSON in triple-backtick json fences. NEVER output raw JSON without fences. Only include the JSON once — after you know symptom + duration + severity.${lang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
+You MUST wrap your JSON in triple-backtick json fences. NEVER output raw JSON without fences. Only include the JSON once — after you know symptom + duration + severity.${
+  (profile?.langPref === 'Amharic' || lang === 'am') 
+    ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' 
+    : profile?.langPref === 'Oromiffa' 
+    ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AFAAN OROMOO. All greetings, medical assessments, remedies, and instructions must be in Oromiffa (Afaan Oromoo).' 
+    : ''
+}`;
 }
 
 async function sendDiscordAlert(urgencyData, profile) {

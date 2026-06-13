@@ -21,6 +21,7 @@ import MedicalRecords, { ExpandableRecordCard } from './MedicalRecords';
 import SubscriptionPage from './SubscriptionPage';
 import EnterpriseDashboard from './EnterpriseDashboard';
 import { supabase } from './supabase';
+import { fetchNearbyHospitals, fetchLocationWithSecurity } from './liveApis';
 
 export const showToast = (message, type = 'success') => {
   window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message, type } }));
@@ -317,6 +318,7 @@ export default function App() {
   const [obName, setObName] = useState('');
   const [obAge, setObAge] = useState('');
   const [obCulturalHeritage, setObCulturalHeritage] = useState('Global');
+  const [obLang, setObLang] = useState('English');
   const [obConditions, setObConditions] = useState([]);
   const [obOtherCondition, setObOtherCondition] = useState('');
   const [obFasting, setObFasting] = useState(TSOM_TYPES.NONE);
@@ -344,22 +346,17 @@ export default function App() {
   useEffect(() => {
     if (!profile || profile.location) return;
     
-    fetch('https://ipapi.co/json/')
-      .then(r => r.json())
-      .then(data => {
-        if (data.country_code) {
-          const p = {
-            ...profile,
-            location: {
-              country: data.country_name,
-              code: data.country_code,
-              city: data.city,
-              timezone: data.timezone,
-              currency: data.currency
-            }
-          };
-          setProfile(p);
+    fetchLocationWithSecurity()
+      .then(loc => {
+        if (!loc) return;
+        if (loc.isVpn) {
+          showToast("We noticed you are using a VPN or secure proxy. To make sure we show accurate local medical centers, weather patterns, and currency options, your real-time GPS location will be used during setup.", "warning");
         }
+        const p = {
+          ...profile,
+          location: loc
+        };
+        setProfile(p);
       })
       .catch(() => {});
   }, [profile, setProfile]);
@@ -403,6 +400,7 @@ export default function App() {
       name: obName,
       age: obAge,
       culturalHeritage: obCulturalHeritage,
+      langPref: obLang,
       conditions: allConditions,
       medications: obMeds,
       fastingMode: obFasting,
@@ -515,11 +513,31 @@ export default function App() {
                   <input type="number" value={obAge} onChange={e => setObAge(e.target.value)} placeholder="e.g. 28" />
                 </div>
                 <div className="form-group">
-                  <label>Cultural Heritage / Birthplace</label>
+                  <label>Location Born (Heritage/Cultural Identity)</label>
                   <select value={obCulturalHeritage} onChange={e => setObCulturalHeritage(e.target.value)} style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}}>
                     <option value="Global">Global / Other</option>
                     <option value="Ethiopia">Ethiopia</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label>Language & Presentation Preference (Optional)</label>
+                  <select value={obLang} onChange={e => setObLang(e.target.value)} style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}}>
+                    <option value="English">English</option>
+                    <option value="Amharic">Amharic (አማርኛ)</option>
+                    <option value="Oromiffa">Oromiffa (Afaan Oromoo)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Location Right Now (Physical Tracker)</label>
+                  <button onClick={() => {
+                    if (navigator.geolocation) {
+                      navigator.geolocation.getCurrentPosition(pos => {
+                        showToast(`GPS Location Pinned! (${pos.coords.latitude.toFixed(2)}, ${pos.coords.longitude.toFixed(2)})`, "success");
+                      }, err => showToast("GPS Permission Denied. Using IP fallback.", "error"));
+                    }
+                  }} className="btn-outline-sm" style={{width: '100%', padding: '12px', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, background: 'var(--bg)', borderRadius: 12, border: '1px solid var(--border)', cursor: 'pointer', fontWeight: 600}}>
+                    <Icons.MapPin size={18} color="var(--green)" /> Pin My Location
+                  </button>
                 </div>
                 <button className="btn-primary" onClick={() => { if(obName) setOnboardingStep(2); else showToast("Please enter your name", "error"); }}>Continue</button>
               </div>
@@ -568,46 +586,50 @@ export default function App() {
                   </div>
                 )}
                 
-                <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 12, color: 'var(--text)' }}>Dietary & Fasting Context</h3>
-                
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
-                  <input 
-                    type="radio" 
-                    checked={obFasting === TSOM_TYPES.NONE} 
-                    onChange={() => setObFasting(TSOM_TYPES.NONE)} 
-                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
-                  />
-                  <div>
-                    <span style={{ fontWeight: 600, display: 'block' }}>Standard Diet</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No regular fasting restrictions.</span>
-                  </div>
-                </label>
+                {obCulturalHeritage === 'Ethiopia' && (
+                  <>
+                    <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 12, color: 'var(--text)' }}>Track Religious Fasting Calendars?</h3>
+                    
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
+                      <input 
+                        type="radio" 
+                        checked={obFasting === TSOM_TYPES.NONE} 
+                        onChange={() => setObFasting(TSOM_TYPES.NONE)} 
+                        style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                      />
+                      <div>
+                        <span style={{ fontWeight: 600, display: 'block' }}>None</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Track balanced global nutrition macros.</span>
+                      </div>
+                    </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
-                  <input 
-                    type="radio" 
-                    checked={obFasting === TSOM_TYPES.ORTHODOX} 
-                    onChange={() => setObFasting(TSOM_TYPES.ORTHODOX)} 
-                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
-                  />
-                  <div>
-                    <span style={{ fontWeight: 600, display: 'block' }}>Orthodox Christian Fasting (Tsom)</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nura will adapt recipes to be plant-based during fasting periods.</span>
-                  </div>
-                </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
+                      <input 
+                        type="radio" 
+                        checked={obFasting === TSOM_TYPES.ORTHODOX} 
+                        onChange={() => setObFasting(TSOM_TYPES.ORTHODOX)} 
+                        style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                      />
+                      <div>
+                        <span style={{ fontWeight: 600, display: 'block' }}>Orthodox Christian (Tsom)</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Automatically active based on Bahire Hasab.</span>
+                      </div>
+                    </label>
 
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12 }}>
-                  <input 
-                    type="radio" 
-                    checked={obFasting === TSOM_TYPES.ISLAMIC} 
-                    onChange={() => setObFasting(TSOM_TYPES.ISLAMIC)} 
-                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
-                  />
-                  <div>
-                    <span style={{ fontWeight: 600, display: 'block' }}>Islamic Fasting (Ramadan)</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Shifts hydration & exercise tracking to post-Iftar evening hours.</span>
-                  </div>
-                </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12 }}>
+                      <input 
+                        type="radio" 
+                        checked={obFasting === TSOM_TYPES.ISLAMIC} 
+                        onChange={() => setObFasting(TSOM_TYPES.ISLAMIC)} 
+                        style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                      />
+                      <div>
+                        <span style={{ fontWeight: 600, display: 'block' }}>Islamic Fasting</span>
+                        <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Ramadan & Voluntary Fasts (Lunar tracked).</span>
+                      </div>
+                    </label>
+                  </>
+                )}
 
                 <button className="btn-primary" onClick={() => setOnboardingStep(3)} style={{ marginTop: 24 }}>Continue</button>
               </div>
@@ -1428,9 +1450,21 @@ export function UrgencyCard({ data }) {
         <div className="result-section" style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
           <div className="result-section-label" style={{ color: '#dc2626' }}>🚨 Immediate Medical Attention Recommended</div>
           <p style={{ color: '#991b1b', fontSize: '14px', marginBottom: '12px' }}>Your symptoms indicate a potentially serious condition. Please seek medical help immediately.</p>
-          <a href="https://www.google.com/maps/search/hospitals+near+me/" target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ background: '#dc2626', display: 'flex', justifyContent: 'center', textDecoration: 'none' }}>
-            <Icons.MapPin size={18} style={{marginRight: 8}} /> Find Nearest Hospital
-          </a>
+          {data._hospitals && data._hospitals.length > 0 ? (
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 13, color: '#991b1b', marginBottom: 8 }}>Nearest facilities to your current location:</p>
+              {data._hospitals.map((h, i) => (
+                <a key={i} href={h.directionsUrl} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'white', borderRadius: 8, marginBottom: 6, textDecoration: 'none', color: '#991b1b', border: '1px solid #fecaca', fontSize: 14 }}>
+                  <span style={{ fontWeight: 600 }}>{h.name}</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#dc2626' }}><Icons.MapPin size={14}/> {h.distance}</span>
+                </a>
+              ))}
+            </div>
+          ) : (
+            <a href="https://www.google.com/maps/search/hospitals+near+me/" target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ background: '#dc2626', display: 'flex', justifyContent: 'center', textDecoration: 'none' }}>
+              <Icons.MapPin size={18} style={{marginRight: 8}} /> Find Nearest Hospital
+            </a>
+          )}
         </div>
       )}
 
@@ -1793,6 +1827,26 @@ Only include the JSON once — after you know symptom + duration + severity.${la
       // After streaming complete — save urgency record
       const urgencyData = parseUrgencyFromContent(accumulated);
       if (urgencyData?.urgency) {
+        // If HIGH urgency, fetch real nearby hospitals and inject into the urgency data
+        if (urgencyData.urgency === 'high') {
+          try {
+            const pos = await new Promise((resolve, reject) => {
+              if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                  p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
+                  () => reject('no gps')
+                );
+              } else reject('no gps');
+            });
+            const hospitals = await fetchNearbyHospitals(pos.lat, pos.lon);
+            if (hospitals.length > 0) {
+              urgencyData._hospitals = hospitals;
+              // Re-render the last message with hospital data embedded
+              setMessages(prev => prev.map(m => m.id === streamId ? { ...m, content: accumulated, _urgencyHospitals: hospitals } : m));
+            }
+          } catch { /* GPS denied or failed, UrgencyCard falls back to generic link */ }
+        }
+
         saveProfile({ ...profile, records: [...(profile.records || []), {
           id: Date.now(), dateStr: formatDate(new Date()),
           summary: urgencyData.summary || 'Health check',
@@ -1933,6 +1987,9 @@ Only include the JSON once — after you know symptom + duration + severity.${la
             {messages.filter(m => m.role !== 'system').map((m) => {
               if (m.role === 'assistant') {
                 const urgencyData = parseUrgencyFromContent(m.content || '');
+                if (urgencyData && m._urgencyHospitals) {
+                  urgencyData._hospitals = m._urgencyHospitals;
+                }
                 const displayText = stripJsonBlock(m.content || '');
                 return (
                   <div key={m.id}>

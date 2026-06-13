@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
 import { getCheckins } from './wellnessEngine';
 import { TSOM_TYPES, isFastingToday, getCurrentFastName } from './ethiopianCalendar';
+import { fetchNearbyGyms, fetchFoodNutrition } from './liveApis';
 
 const EXERCISE_DB = {
   legs: ['Barbell Squats', 'Bulgarian Split Squats', 'Leg Press', 'Romanian Deadlifts', 'Calf Raises', 'Lunges', 'Leg Extensions', 'Hamstring Curls'],
@@ -661,23 +662,7 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
       </div>
 
       {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
-        <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, border: '1px solid var(--border)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Map size={20} color="var(--green-dark)" /> Gym & Studio Finder</h3>
-          <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Using your location ({profile?.location?.city || 'Unknown'}), we found these functional fitness centers nearby:</p>
-          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-            {[
-              { name: 'Planet Fitness', dist: '0.8 mi', type: 'Commercial Gym' },
-              { name: 'CorePower Yoga', dist: '1.2 mi', type: 'Yoga Studio' },
-              { name: 'CrossFit Silver Spring', dist: '2.5 mi', type: 'Functional Training' }
-            ].map(gym => (
-              <div key={gym.name} style={{ minWidth: 200, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{gym.type} • {gym.dist}</div>
-                <button style={{ width: '100%', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Directions</button>
-              </div>
-            ))}
-          </div>
-        </div>
+        <LiveGymFinder profile={profile} />
       )}
 
       <div className="dash-card" style={{ background: 'var(--white)', padding: 24, display: 'flex', flexDirection: 'column' }}>
@@ -905,10 +890,76 @@ function OverviewCard({ title, desc, icon, onClick }) {
   );
 }
 
+/* --- LIVE GYM FINDER --- */
+function LiveGymFinder({ profile }) {
+  const [gyms, setGyms] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setLoading(true);
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async pos => {
+          try {
+            const results = await fetchNearbyGyms(pos.coords.latitude, pos.coords.longitude);
+            setGyms(results);
+          } catch { setError('Failed to fetch gyms.'); }
+          setLoading(false);
+        },
+        () => { setError('GPS permission denied.'); setLoading(false); }
+      );
+    } else {
+      setError('Geolocation not supported.'); setLoading(false);
+    }
+  }, []);
+
+  return (
+    <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, border: '1px solid var(--border)' }}>
+      <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Map size={20} color="var(--green-dark)" /> Gym & Studio Finder</h3>
+      <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Live results from OpenStreetMap near {profile?.location?.city || 'your location'}:</p>
+      {loading && <p style={{ color: 'var(--text-muted)', fontSize: 14 }}><Icons.Loader className="spin" size={16} style={{ marginRight: 8 }} />Searching nearby fitness centers...</p>}
+      {error && <p style={{ color: '#dc2626', fontSize: 14 }}>{error}</p>}
+      {!loading && gyms.length === 0 && !error && <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No fitness facilities found nearby. Try expanding your search radius.</p>}
+      <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+        {gyms.map((gym, i) => (
+          <div key={i} style={{ minWidth: 210, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+            <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
+            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{gym.type}</div>
+            <div style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, marginBottom: 12 }}>{gym.distance}</div>
+            <a href={gym.directionsUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100%', textAlign: 'center', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13, textDecoration: 'none' }}>Directions</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* --- NUTRITION DASHBOARD --- */
 function NutritionDashboard({ onBack, profile }) {
   const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
-  
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [logged, setLogged] = useState(() => JSON.parse(localStorage.getItem('nuracare_nutrition_log') || '[]'));
+
+  const handleSearch = async () => {
+    if (!searchQuery.trim()) return;
+    setSearching(true);
+    const data = await fetchFoodNutrition(searchQuery);
+    setResults(data);
+    setSearching(false);
+  };
+
+  const logFood = (food) => {
+    const entry = { ...food, date: new Date().toLocaleDateString(), time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+    const updated = [entry, ...logged];
+    setLogged(updated);
+    localStorage.setItem('nuracare_nutrition_log', JSON.stringify(updated));
+    setResults([]);
+    setSearchQuery('');
+  };
+
   return (
     <div className="page active">
       <DashHeader title="Nutrition Tracker" onBack={onBack} icon={<div style={{background: 'var(--green-light)', padding: 10, borderRadius: 12}}><Icons.Utensils size={24} color="var(--green-dark)"/></div>} />
@@ -940,31 +991,53 @@ function NutritionDashboard({ onBack, profile }) {
             <Icons.Database size={24} color="var(--green-dark)" />
             <h3 style={{ margin: 0 }}>Global Macro Tracker</h3>
           </div>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Connected to USDA FoodData Central. Log exact grams/ounces to accurately track your macronutrients.</p>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Powered by OpenFoodFacts — the world's largest open food database. Search real products and log exact macronutrients.</p>
           
           <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <input type="text" placeholder="Search USDA Database (e.g. 'Chicken Breast')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
-            <button style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Search</button>
+            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Search foods (e.g. 'Chicken Breast', 'Oats')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
+            <button onClick={handleSearch} disabled={searching} style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>{searching ? 'Searching...' : 'Search'}</button>
           </div>
           
-          <div style={{ display: 'flex', gap: 16 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Quantity</label>
-              <input type="number" placeholder="100" style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }} />
+          {results.length > 0 && (
+            <div style={{ marginBottom: 24 }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: 15 }}>Results (per 100g)</h4>
+              {results.map((food, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'var(--bg)', borderRadius: 12, marginBottom: 8, border: '1px solid var(--border)' }}>
+                  {food.image && <img src={food.image} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{food.name}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{food.brand} • {food.serving}</div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12 }}>
+                      <span style={{ color: '#dc2626', fontWeight: 600 }}>{food.calories} kcal</span>
+                      <span>P: {food.protein}g</span>
+                      <span>C: {food.carbs}g</span>
+                      <span>F: {food.fat}g</span>
+                    </div>
+                  </div>
+                  <button onClick={() => logFood(food)} style={{ background: 'var(--green)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Log</button>
+                </div>
+              ))}
             </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Unit</label>
-              <select style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }}>
-                <option>Grams (g)</option>
-                <option>Ounces (oz)</option>
-                <option>Cups</option>
-              </select>
+          )}
+        </div>
+      )}
+
+      {logged.length > 0 && (
+        <div className="dash-card" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 16 }}>Today's Log</h3>
+          {logged.slice(0, 10).map((entry, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid var(--border)', fontSize: 14 }}>
+              <span>{entry.name} <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>({entry.time})</span></span>
+              <span style={{ fontWeight: 600 }}>{entry.calories} kcal</span>
             </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontWeight: 700, fontSize: 15, color: 'var(--green-dark)' }}>
+            <span>Total</span>
+            <span>{logged.reduce((sum, e) => sum + (e.calories || 0), 0)} kcal</span>
           </div>
-          
-          <button style={{ width: '100%', padding: 16, background: 'var(--green)', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, marginTop: 24, cursor: 'pointer' }}>Log Macros</button>
         </div>
       )}
     </div>
   );
 }
+
