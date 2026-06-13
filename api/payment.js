@@ -6,15 +6,17 @@ async function handleChapaCheckout(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email, name, amount } = req.body;
+  const { email, name, amount, planName } = req.body;
   const CHAPA_SECRET = process.env.CHAPA_SECRET_KEY;
-  const mockUrl = `/?payment=success&mock=chapa`;
+  const mockUrl = `/?payment=success&mock=chapa&plan=${planName}`;
   
   if (!CHAPA_SECRET || String(CHAPA_SECRET).includes('your_secret_key')) {
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
 
   const tx_ref = `NURA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
+  const finalAmount = amount || 300;
+  const finalPlanName = planName || 'Premium';
 
   try {
     const chapaRes = await fetch('https://api.chapa.co/v1/transaction/initialize', {
@@ -24,7 +26,7 @@ async function handleChapaCheckout(req, res) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        amount: amount || 300,
+        amount: finalAmount,
         currency: 'ETB',
         email: email || 'user@nuracare.com',
         first_name: name || 'User',
@@ -32,8 +34,8 @@ async function handleChapaCheckout(req, res) {
         callback_url: `https://${req.headers.host}/api/chapa-verify?tx_ref=${tx_ref}`,
         return_url: `https://${req.headers.host}/?payment=success`,
         customization: {
-          title: 'NuraCare Premium',
-          description: 'Unlock advanced health tracking and unlimited AI coaching.'
+          title: `NuraCare ${finalPlanName}`,
+          description: `Unlock ${finalPlanName} health tracking and features.`
         }
       })
     });
@@ -42,11 +44,11 @@ async function handleChapaCheckout(req, res) {
     if (data.status === 'success') {
       return res.status(200).json({ checkoutUrl: data.data.checkout_url });
     } else {
+      console.error('Chapa API Error:', data);
       throw new Error(data.message || 'Chapa initialization failed');
     }
   } catch (err) {
     console.error('Chapa Checkout Error:', err);
-    // Fallback to mock on error (e.g. invalid key)
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
 }
@@ -104,13 +106,16 @@ async function handleStripeCheckout(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { email } = req.body;
+  const { email, planName } = req.body;
   const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
-  const mockUrl = `/?payment=success&mock=stripe`;
+  const mockUrl = `/?payment=success&mock=stripe&plan=${planName}`;
 
   if (!STRIPE_SECRET || String(STRIPE_SECRET).includes('your_secret_key')) {
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
+
+  const finalPlanName = planName || 'Premium';
+  const unitAmount = finalPlanName.toLowerCase() === 'pro' ? 300 : 500; // $3 for Pro, $5 for Premium
 
   try {
     const stripe = new Stripe(STRIPE_SECRET);
@@ -122,10 +127,10 @@ async function handleStripeCheckout(req, res) {
           price_data: {
             currency: 'usd',
             product_data: {
-              name: 'NuraCare Premium',
-              description: 'Unlock advanced health tracking and unlimited AI coaching.'
+              name: `NuraCare ${finalPlanName}`,
+              description: `Unlock ${finalPlanName} health tracking and features.`
             },
-            unit_amount: 500, // $5.00
+            unit_amount: unitAmount,
             recurring: {
               interval: 'month'
             }
@@ -141,7 +146,6 @@ async function handleStripeCheckout(req, res) {
     return res.status(200).json({ checkoutUrl: session.url });
   } catch (err) {
     console.error('Stripe Checkout Error:', err);
-    // Fallback to mock on error (e.g. invalid key)
     return res.status(200).json({ checkoutUrl: mockUrl });
   }
 }

@@ -16,7 +16,8 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
         body: JSON.stringify({ 
           email: profile?.email || 'user@nuracare.com', 
           name: profile?.name || 'User',
-          amount: amount
+          amount: amount,
+          planName: paymentModal.plan
         })
       });
       
