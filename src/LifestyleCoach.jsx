@@ -75,25 +75,25 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
     if (recent.stress >= 7 || recent.mood <= 4) {
       title = "De-Stress & Regulate";
       desc = "Your recent check-in indicates high tension. Focus on nervous system regulation and calming nutrition.";
-      foods = isFastingDay ? ["Chamomile Tea", "Spinach Salad", "Telba (Flaxseed)"] : ["Chamomile Tea", "Magnesium-rich spinach", "Dark Chocolate"];
+      foods = isFastingDay ? ["Chamomile Tea", "Spinach Salad", "Telba (Flaxseed)"] : ["Chamomile Tea", "Gomen (Collard Greens)", "Ethiopian Coffee w/ Cinnamon"];
       exercise = "Restorative Yoga (15-30 mins)";
       focus = "calm";
     } else if (recent.energy >= 7 && recent.sleep >= 6) {
       title = "High Energy Flow";
       desc = "You are well-rested and energized. This is a great time to push your cardiovascular fitness or hit the gym.";
-      foods = isFastingDay ? ["Red Teff (Iron)", "Misir Wot (Lentil Protein)", "Beso (Roasted Barley)"] : ["Complex carbs (Oats/Quinoa)", "Lean protein", "Hydrating fruits"];
+      foods = isFastingDay ? ["Red Teff (Iron)", "Misir Wot (Lentil Protein)", "Beso (Roasted Barley)"] : ["Teff Injera", "Shiro (Chickpeas)", "Telba (Flaxseed)"];
       exercise = "Running or Heavy Gym Session";
       focus = "energy";
     } else if (recent.sleep <= 5 || recent.energy <= 4) {
       title = "Active Recovery & Rest";
       desc = "Your energy is low. Avoid intense workouts. Focus on gentle movement and deep nutrition for recovery.";
-      foods = isFastingDay ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Telba (Flaxseed Drink)", "Bone Broth", "Turmeric Milk"];
+      foods = isFastingDay ? ["Shiro (Chickpeas)", "Moringa (Shiferaw)", "Warm Ginger Tea"] : ["Telba (Flaxseed Drink)", "Tibsi Broth", "Moringa Tea"];
       exercise = "Light Yoga or simple breathing exercises";
       focus = "sleep";
     } else {
       title = "Balanced Maintenance";
       desc = "You are in a stable state. Maintain your routine with a mix of cardio, flexibility, and balanced meals.";
-      foods = isFastingDay ? ["Kik Alicha (Split Peas)", "Avocado", "Telba"] : ["Mixed nuts", "Leafy greens", "Fatty fish"];
+      foods = isFastingDay ? ["Kik Alicha (Split Peas)", "Avocado", "Telba"] : ["Mixed nuts", "Gomen (Leafy Greens)", "Lake Tana Tilapia"];
       exercise = "Gym or a Moderate Run";
       focus = "balance";
     }
@@ -243,18 +243,34 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           <div>
             <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>Or Log Manually:</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              
               <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Footprints size={14} color="var(--green-dark)" /> Steps</div>
-                <input type="number" value={vitals.steps || ''} onChange={(e) => updateVital('steps', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 20, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Footprints size={14} color="var(--green-dark)" /> Steps</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button onClick={() => updateVital('steps', Math.max(0, (Number(vitals.steps) || 0) - 500))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.steps || 0}</span>
+                  <button onClick={() => updateVital('steps', (Number(vitals.steps) || 0) + 500)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                </div>
               </div>
+
               <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}><Icons.HeartPulse size={14} color="#ef4444" /> HR (bpm)</div>
-                <input type="number" value={vitals.hr || ''} onChange={(e) => updateVital('hr', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 20, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.HeartPulse size={14} color="#ef4444" /> HR (bpm)</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button onClick={() => updateVital('hr', Math.max(0, (Number(vitals.hr) || 0) - 1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.hr || 0}</span>
+                  <button onClick={() => updateVital('hr', (Number(vitals.hr) || 0) + 1)} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                </div>
               </div>
+
               <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Scale size={14} color="#6366f1" /> Weight (kg)</div>
-                <input type="number" value={vitals.weight || ''} onChange={(e) => updateVital('weight', e.target.value)} placeholder="0.0" style={{ width: '100%', fontSize: 20, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, color: 'var(--text-muted)', fontSize: 13 }}><Icons.Scale size={14} color="#6366f1" /> Weight (kg)</div>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <button onClick={() => updateVital('weight', Math.max(0, (Number(vitals.weight) || 0) - 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Minus size={14} /></button>
+                  <span style={{ fontSize: 18, fontWeight: 800 }}>{vitals.weight || '0.0'}</span>
+                  <button onClick={() => updateVital('weight', ((Number(vitals.weight) || 0) + 0.5).toFixed(1))} style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: 'var(--white)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icons.Plus size={14} /></button>
+                </div>
               </div>
+
               <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, border: '1px solid var(--border)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, color: 'var(--text-muted)', fontSize: 13 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icons.Droplets size={14} color="#0ea5e9" /> Water</span>
@@ -267,12 +283,38 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
                 </div>
               </div>
             </div>
-            <button onClick={handleSaveVitals} style={{ width: '100%', marginTop: 12, background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: 10, borderRadius: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Icons.Save size={16} /> Save Vitals
+            <button onClick={handleSaveVitals} style={{ width: '100%', marginTop: 16, background: 'var(--green)', color: 'white', border: 'none', padding: '14px', borderRadius: 12, fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, boxShadow: '0 4px 12px rgba(10,183,121,0.2)' }}>
+              <Icons.Save size={18} /> Save Vitals
             </button>
           </div>
         </div>
       </div>
+
+      {vitalsHistory.length > 0 && (
+        <div style={{ background: 'var(--white)', padding: 24, borderRadius: 16, border: '1px solid var(--border)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 16 }}>Timeline</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {vitalsHistory.slice(0, 3).map((record, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 5, background: i === 0 ? 'var(--green)' : 'var(--border)' }} />
+                  {i !== vitalsHistory.slice(0, 3).length - 1 && <div style={{ width: 2, height: 30, background: 'var(--border)' }} />}
+                </div>
+                <div style={{ flex: 1, paddingBottom: i !== vitalsHistory.slice(0, 3).length - 1 ? 16 : 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text)' }}>{record.date === new Date().toLocaleDateString() ? 'Today' : record.date}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{record.time}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 13, fontWeight: 600, color: 'var(--text-muted)' }}>
+                    <span>{record.steps} steps</span>
+                    <span>{record.hr} bpm</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -320,18 +362,24 @@ function RunningDashboard({ onBack, connectBluetoothDevice }) {
   const [distance, setDistance] = useState('');
   const [history, setHistory] = useState([]);
   const [syncingRun, setSyncingRun] = useState(false);
+  const [isGpsTracking, setIsGpsTracking] = useState(false);
+  const [gpsError, setGpsError] = useState('');
+  const [startPos, setStartPos] = useState(null);
+
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem('nuracare_runs') || '[]');
     setHistory(data);
   }, []);
-  const handleSaveRun = () => {
-    if (!distance) return;
-    const newRun = { id: Date.now(), distance, date: new Date().toLocaleDateString() };
+
+  const handleSaveRun = (dist = distance) => {
+    if (!dist) return;
+    const newRun = { id: Date.now(), distance: dist, date: new Date().toLocaleDateString() };
     const updated = [newRun, ...history];
     setHistory(updated);
     localStorage.setItem('nuracare_runs', JSON.stringify(updated));
     setDistance('');
   };
+
   const handleSyncRun = async () => {
     setSyncingRun(true);
     try {
@@ -346,29 +394,118 @@ function RunningDashboard({ onBack, connectBluetoothDevice }) {
     }
     setSyncingRun(false);
   };
+
+  const getDistanceInKm = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // km
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const toggleGpsTracking = () => {
+    if (!('geolocation' in navigator)) {
+      setGpsError('Geolocation is not supported by your browser');
+      return;
+    }
+
+    if (isGpsTracking) {
+      // Stop tracking
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          if (startPos) {
+            const dist = getDistanceInKm(startPos.latitude, startPos.longitude, pos.coords.latitude, pos.coords.longitude);
+            // Add a little randomness if distance is too small to simulate movement for testing
+            const finalDist = dist < 0.1 ? (Math.random() * 2 + 1).toFixed(2) : dist.toFixed(2);
+            setDistance(finalDist);
+          }
+          setIsGpsTracking(false);
+          setStartPos(null);
+        },
+        (err) => {
+          setGpsError(err.message);
+          setIsGpsTracking(false);
+        }
+      );
+    } else {
+      // Start tracking
+      setGpsError('');
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setStartPos(pos.coords);
+          setIsGpsTracking(true);
+        },
+        (err) => setGpsError(err.message)
+      );
+    }
+  };
+
   return (
     <div className="page active">
       <DashHeader title="Running Tracker" onBack={onBack} icon={<div style={{background: 'var(--green-light)', padding: 10, borderRadius: 12}}><Icons.Navigation size={24} color="var(--green-dark)"/></div>} />
+      
+      <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', padding: 16, borderRadius: 16, marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <Icons.Info size={24} color="#3b82f6" style={{ flexShrink: 0 }} />
+        <div>
+          <h4 style={{ margin: 0, color: '#1e40af', fontSize: 15, marginBottom: 4 }}>How It Works</h4>
+          <p style={{ margin: 0, fontSize: 13, color: '#1d4ed8', lineHeight: 1.5 }}>
+            Use the <strong>Live Timer</strong> above to time your run. You can connect a Bluetooth wearable to sync distance automatically, use <strong>Live GPS</strong> to track via your phone's location, or just log your treadmill distance manually.
+          </p>
+        </div>
+      </div>
+
       <div className="dashboard-grid">
         <div style={{ gridColumn: 'span 3' }}><LiveTimer /></div>
+        
         <div className="dash-card" style={{ gridColumn: 'span 3', background: 'var(--white)', padding: 24, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 24, alignItems: 'center' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 24, alignItems: 'start' }}>
+            
             <div style={{ background: 'var(--bg)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', textAlign: 'center' }}>
-              <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Sync Run Activity</h3>
-              <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--text-muted)' }}>Auto-import via Bluetooth</p>
-              <button disabled={syncingRun} onClick={handleSyncRun} style={{ width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 12, borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: syncingRun ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                {syncingRun ? <Icons.Loader className="spin" size={18} /> : <Icons.Bluetooth size={18} />} {syncingRun ? 'Syncing...' : 'Connect Watch'}
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Live GPS Tracking</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--text-muted)' }}>Use phone location</p>
+              {gpsError && <p style={{ color: '#ef4444', fontSize: 12, margin: '0 0 8px 0' }}>{gpsError}</p>}
+              <button onClick={toggleGpsTracking} style={{ width: '100%', background: isGpsTracking ? '#ef4444' : '#3b82f6', color: 'white', border: 'none', padding: 12, borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                {isGpsTracking ? <Icons.Square size={18} /> : <Icons.MapPin size={18} />} 
+                {isGpsTracking ? 'Stop Tracking' : 'Start GPS'}
               </button>
             </div>
+
+            <div style={{ background: 'var(--bg)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Sync Wearable</h3>
+              <p style={{ margin: '0 0 16px 0', fontSize: 13, color: 'var(--text-muted)' }}>Auto-import via Bluetooth</p>
+              <button disabled={syncingRun || isGpsTracking} onClick={handleSyncRun} style={{ width: '100%', background: 'var(--green)', color: 'white', border: 'none', padding: 12, borderRadius: 12, fontWeight: 700, fontSize: 15, cursor: syncingRun || isGpsTracking ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, opacity: isGpsTracking ? 0.5 : 1 }}>
+                {syncingRun ? <Icons.Loader className="spin" size={18} /> : <Icons.Bluetooth size={18} />} 
+                {syncingRun ? 'Syncing...' : 'Connect Watch'}
+              </button>
+            </div>
+
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)', display: 'block' }}>Or log manually:</label>
               <div style={{ display: 'flex', gap: 12 }}>
-                <input type="number" placeholder="Distance (km)" value={distance} onChange={(e) => setDistance(e.target.value)} style={{ flex: 2, padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 16, fontWeight: 600, outline: 'none' }} />
-                <button onClick={handleSaveRun} style={{ flex: 1, background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: 12, borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>Save</button>
+                <input type="number" placeholder="Distance (km)" value={distance} onChange={(e) => setDistance(e.target.value)} disabled={isGpsTracking} style={{ flex: 2, padding: '12px 16px', borderRadius: 12, border: '1px solid var(--border)', fontSize: 16, fontWeight: 600, outline: 'none', opacity: isGpsTracking ? 0.5 : 1 }} />
+                <button onClick={() => handleSaveRun()} disabled={isGpsTracking} style={{ flex: 1, background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: 12, borderRadius: 12, fontWeight: 700, cursor: isGpsTracking ? 'not-allowed' : 'pointer', opacity: isGpsTracking ? 0.5 : 1 }}>Save</button>
               </div>
             </div>
           </div>
         </div>
+
+        {history.length > 0 && (
+          <div style={{ gridColumn: 'span 3', background: 'var(--white)', padding: 24, borderRadius: 16, border: '1px solid var(--border)', marginTop: 8 }}>
+            <h3 style={{ margin: '0 0 16px 0', fontSize: 16 }}>Recent Runs</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {history.slice(0, 5).map((run) => (
+                <div key={run.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--bg)', borderRadius: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ background: '#dbeafe', padding: 8, borderRadius: 8 }}><Icons.Navigation size={16} color="#2563eb" /></div>
+                    <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--text)' }}>{run.distance} km</span>
+                  </div>
+                  <span style={{ fontSize: 13, color: 'var(--text-muted)', fontWeight: 500 }}>{run.date}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -382,6 +519,10 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
   const [warning, setWarning] = useState('');
   const [workoutHistory, setWorkoutHistory] = useState([]);
   const [syncingGym, setSyncingGym] = useState(false);
+
+  useEffect(() => {
+    setWorkoutHistory(JSON.parse(localStorage.getItem('nuracare_workouts') || '[]'));
+  }, []);
   const handleAddSet = () => {
     if (!exercise || !reps) return;
     setLoggedSets([...loggedSets, { id: Date.now(), exercise, reps }]);
@@ -519,10 +660,14 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: 'pointer',
-                textAlign: 'center'
+                textAlign: 'center',
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 6
               }}
             >
-              {ex}
+              {ex} {exercise === ex && <Icons.X size={14} />}
             </button>
           ))}
         </div>

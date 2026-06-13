@@ -1049,8 +1049,21 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
           <DynamicIcon name={tip.icon} size={28} />
         </div>
         <div className="tip-content-wrap">
-          <div className="tip-label">TODAY's INSIGHT</div>
-          <div className="tip-text">{tip.benefit}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <div className="tip-label">TODAY'S INSIGHT</div>
+            {tip.tags && tip.tags.length > 0 && (
+              <span style={{ fontSize: 11, background: 'rgba(255,255,255,0.2)', padding: '2px 8px', borderRadius: 10, fontWeight: 600, color: 'var(--green-dark)' }}>
+                #{tip.tags[0]}
+              </span>
+            )}
+          </div>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: 18, color: 'var(--green-dark)' }}>{tip.name}</h3>
+          <div className="tip-text" style={{ marginBottom: tip.vid ? 12 : 0 }}>{tip.benefit}</div>
+          {tip.vid && (
+            <a href={tip.vid} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--green-dark)', textDecoration: 'none', fontWeight: 600, background: 'rgba(255,255,255,0.4)', padding: '4px 10px', borderRadius: 12 }}>
+              <Icons.PlayCircle size={16} /> Watch How
+            </a>
+          )}
         </div>
       </div>
 
@@ -1442,7 +1455,24 @@ WELLNESS CONTEXT:${checkinContext}
       };
 
       const hour = new Date().getHours();
-      const timeContext = hour < 12 ? "How did you sleep last night?" : hour < 18 ? "How has your day been so far?" : "How are your energy levels this evening?";
+      let timeContext = hour < 12 ? "How did you sleep last night?" : hour < 18 ? "How has your day been so far?" : "How are your energy levels this evening?";
+      
+      if (recentCheckins && recentCheckins.length > 0) {
+        const last = recentCheckins[recentCheckins.length - 1];
+        const todayStr = new Date().toISOString().split('T')[0];
+        const isToday = last.date === todayStr;
+        
+        if (isToday) {
+          if (last.stress >= 7) timeContext = "I saw from your check-in that you're quite stressed today. How are you holding up now?";
+          else if (last.sleep <= 5) timeContext = "I noticed you didn't sleep well. Are you feeling very tired?";
+          else timeContext = "I saw you checked in earlier. How are you feeling compared to this morning?";
+        } else {
+          const daysSince = Math.floor((new Date() - new Date(last.date)) / (1000 * 60 * 60 * 24));
+          if (daysSince >= 2) timeContext = `It's been a few days since your last check-in. How have you been?`;
+          else if (last.mood <= 5) timeContext = `You were feeling a bit down last time we spoke. Are things any better today?`;
+        }
+      }
+      
       const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. ${timeContext}` };
       
       const cur = sessions.find(s => s.id === currentSessionId);
@@ -1880,6 +1910,7 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
   const [history, setHistory] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
+  const [doctorName, setDoctorName] = useState('');
   const [notes, setNotes] = useState('');
   const [nextVisit, setNextVisit] = useState('');
 
@@ -1893,6 +1924,7 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
     const newVisit = { 
       id: Date.now(), 
       name: activeItem.name, 
+      doctorName,
       date: new Date().toLocaleDateString(),
       notes,
       nextVisit
@@ -1901,6 +1933,7 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
     setHistory(updated);
     localStorage.setItem('nuracare_checkup_history', JSON.stringify(updated));
     setModalOpen(false);
+    setDoctorName('');
     setNotes('');
     setNextVisit('');
     showToast(`${activeItem.name} logged successfully!`, 'success');
@@ -1908,9 +1941,26 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
 
   const openModal = (item) => {
     setActiveItem(item);
+    setDoctorName('');
     setNotes('');
     setNextVisit('');
     setModalOpen(true);
+  };
+
+  const getDueStatus = (dateStr) => {
+    if (!dateStr) return null;
+    const days = Math.ceil((new Date(dateStr) - new Date()) / (1000 * 60 * 60 * 24));
+    if (days < 0) return { text: `Overdue by ${Math.abs(days)} days`, color: '#ef4444', bg: '#fef2f2' };
+    if (days <= 14) return { text: `Due in ${days} days`, color: '#d97706', bg: '#fffbeb' };
+    return null;
+  };
+
+  const createCalendarLink = (visit) => {
+    if (!visit.nextVisit) return '#';
+    const date = visit.nextVisit.replace(/-/g, '');
+    const title = encodeURIComponent(`${visit.name} Appointment`);
+    const details = encodeURIComponent(`NuraCare Reminder: Scheduled checkup for ${visit.name}${visit.doctorName ? ` with ${visit.doctorName}` : ''}.`);
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${date}T090000Z/${date}T100000Z&details=${details}`;
   };
 
   const plannerItems = [
@@ -1962,16 +2012,33 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
         <div>
           <h3 style={{ marginBottom: 16 }}>Visit History</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            {history.map(visit => (
-              <div key={visit.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                  <span style={{ fontWeight: 600 }}>{visit.name}</span>
-                  <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{visit.date}</span>
+            {history.map(visit => {
+              const status = getDueStatus(visit.nextVisit);
+              return (
+                <div key={visit.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontWeight: 600 }}>{visit.name}</span>
+                      {status && <span style={{ fontSize: 11, background: status.bg, color: status.color, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{status.text}</span>}
+                    </div>
+                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{visit.date}</span>
+                  </div>
+                  {visit.doctorName && <p style={{ margin: '0 0 4px 0', fontSize: 13, color: 'var(--text-muted)' }}><Icons.User size={12} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> {visit.doctorName}</p>}
+                  {visit.notes && <p style={{ margin: '4px 0 12px 0', fontSize: 14, color: 'var(--text)' }}><strong>Findings:</strong> {visit.notes}</p>}
+                  
+                  {visit.nextVisit && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                      <p style={{ margin: 0, fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}>
+                        <Icons.Calendar size={14} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> Next: {visit.nextVisit}
+                      </p>
+                      <a href={createCalendarLink(visit)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1a73e8', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Icons.Plus size={12} /> Add to Google Calendar
+                      </a>
+                    </div>
+                  )}
                 </div>
-                {visit.notes && <p style={{ margin: '0 0 8px 0', fontSize: 14, color: 'var(--text)' }}><strong>Notes:</strong> {visit.notes}</p>}
-                {visit.nextVisit && <p style={{ margin: 0, fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}><Icons.Calendar size={14} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> Next Visit: {visit.nextVisit}</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -1981,15 +2048,24 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
           <div style={{ background: 'var(--white)', padding: 32, borderRadius: 24, width: '90%', maxWidth: 400, boxShadow: '0 24px 48px rgba(0,0,0,0.1)' }}>
             <h3 style={{ margin: '0 0 20px 0', fontSize: 20 }}>Log {activeItem?.name}</h3>
             
-            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Visit Notes</label>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Doctor or Clinic Name</label>
+            <input 
+              type="text" 
+              value={doctorName} 
+              onChange={e => setDoctorName(e.target.value)} 
+              placeholder="e.g. Dr. Abebe, Yekatit 12" 
+              style={{ width: '100%', padding: 12, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16, fontFamily: 'inherit' }}
+            />
+
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Doctor's Findings</label>
             <textarea 
               value={notes} 
               onChange={e => setNotes(e.target.value)} 
-              placeholder="Any notes from the doctor?" 
-              style={{ width: '100%', height: 100, padding: 12, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 20, resize: 'none', fontFamily: 'inherit' }}
+              placeholder="Any notes, prescriptions, or advice?" 
+              style={{ width: '100%', height: 80, padding: 12, borderRadius: 12, border: '1px solid var(--border)', marginBottom: 16, resize: 'none', fontFamily: 'inherit' }}
             />
             
-            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Remind me next visit (Optional)</label>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Schedule Next Visit</label>
             <input 
               type="date" 
               value={nextVisit} 
@@ -2009,7 +2085,7 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
 }
 
 function Discovery({ t }) {
-  const [filters, setFilters] = useState([]);
+  const [filters, setFilters] = useState(() => JSON.parse(localStorage.getItem('nuracare_interests') || '[]'));
   const [feed, setFeed] = useState([]);
   const [availableTags, setAvailableTags] = useState([]);
   const [activeTab, setActiveTab] = useState('all'); // 'all' or 'local'
@@ -2027,11 +2103,9 @@ function Discovery({ t }) {
   }, [filters, activeTab]);
 
   const toggleFilter = (tag) => {
-    if (filters.includes(tag)) {
-      setFilters(filters.filter(f => f !== tag));
-    } else {
-      setFilters([...filters, tag]);
-    }
+    const updated = filters.includes(tag) ? filters.filter(f => f !== tag) : [...filters, tag];
+    setFilters(updated);
+    localStorage.setItem('nuracare_interests', JSON.stringify(updated));
   };
 
   return (
@@ -2055,24 +2129,30 @@ function Discovery({ t }) {
         </button>
       </div>
       
-      <div style={{ marginBottom: 24, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {availableTags.map(tag => (
-          <button 
-            key={tag} 
-            onClick={() => toggleFilter(tag)}
-            style={{ 
-              padding: '6px 12px', 
-              borderRadius: 20, 
-              border: `1.5px solid ${filters.includes(tag) ? 'var(--green-dark)' : 'var(--border)'}`,
-              background: filters.includes(tag) ? 'var(--green-light)' : 'transparent',
-              color: filters.includes(tag) ? 'var(--green-dark)' : 'var(--text-muted)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer'
-            }}>
-            #{tag}
-          </button>
-        ))}
+      <div style={{ marginBottom: 24 }}>
+        <h4 style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--text-muted)' }}>Follow your interests:</h4>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {availableTags.map(tag => (
+            <button 
+              key={tag} 
+              onClick={() => toggleFilter(tag)}
+              style={{ 
+                padding: '6px 12px', 
+                borderRadius: 20, 
+                border: `1.5px solid ${filters.includes(tag) ? 'var(--green-dark)' : 'var(--border)'}`,
+                background: filters.includes(tag) ? 'var(--green-light)' : 'transparent',
+                color: filters.includes(tag) ? 'var(--green-dark)' : 'var(--text-muted)',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 4
+              }}>
+              {filters.includes(tag) ? <Icons.Check size={14}/> : <Icons.Plus size={14}/>} {tag}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="section-title">{activeTab === 'local' ? 'Nutritional Breakdown' : 'Articles & Guides'}</div>
