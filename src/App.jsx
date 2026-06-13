@@ -680,11 +680,11 @@ export default function App() {
         </div>
         <nav className="sidebar-nav">
           <NavItem icon={Icons.Home} label={t("home")} active={activePage === 'home'} onClick={() => {setActivePage('home'); setSidebarOpen(false);}} />
-          <NavItem icon={Icons.CalendarCheck} label="Daily Check-in" active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.CalendarCheck} label={t("daily_checkin")} active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
-          <NavItem icon={Icons.Stethoscope} label="Checkups" active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Stethoscope} label={t("checkups")} active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Zap} label={t("lifestyle")} active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <div className="mobile-only-sessions">
@@ -712,15 +712,15 @@ export default function App() {
                  setSidebarOpen(false);
                }}>
                  <span className="nav-icon" style={{marginRight: 8}}><Icons.Plus size={14}/></span>
-                 <span className="nav-label">New Session</span>
+                 <span className="nav-label">{t("new_session")}</span>
             </a>
           </div>
           <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
             <option value="en">English</option>
             <option value="am">አማርኛ</option>
           </select>
-          <NavItem icon={Icons.User} label="Profile" active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.Star} label="Upgrade to Premium" active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.User} label={t("profile")} active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Star} label={t("upgrade_premium")} active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
@@ -1603,6 +1603,7 @@ WELLNESS CONTEXT:${checkinContext}
   const [isLoading, setIsLoading] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [chatError, setChatError] = useState(null);
+  const [chatLang, setChatLang] = useState(lang);
   const [showQuickStart, setShowQuickStart] = useState(() => {
     const cur = sessions.find(s => s.id === currentSessionId);
     return !cur || !cur.messages || cur.messages.length <= 1;
@@ -1612,8 +1613,12 @@ WELLNESS CONTEXT:${checkinContext}
 
   const generateSmartTitle = async (firstUserMsg, firstAiSummary, sessionId) => {
     try {
-      const cur = sessions.find(s => s.id === sessionId);
-      if (cur) saveSession({ ...cur, name: "✨ Naming...", isSmartName: true });
+      const placeholderTitle = firstUserMsg.split(' ').slice(0, 4).join(' ') + '...';
+      
+      // Update session immediately using a functional state update to avoid stale closures
+      setSessions(prev => prev.map(s => 
+        s.id === sessionId ? { ...s, name: placeholderTitle, isSmartName: true } : s
+      ));
       
       const isDev = import.meta.env.DEV;
       let title = '';
@@ -1638,15 +1643,17 @@ WELLNESS CONTEXT:${checkinContext}
       }
       
       if (title) {
-        const cur2 = sessions.find(s => s.id === sessionId) || cur;
-        if (cur2) {
-          saveSession({ ...cur2, name: title, isSmartName: true });
-        }
+        setSessions(prev => {
+          const updated = prev.map(s => s.id === sessionId ? { ...s, name: title, isSmartName: true } : s);
+          localStorage.setItem('nuracare_sessions', JSON.stringify(updated));
+          return updated;
+        });
       }
     } catch (e) {
       console.error('Smart title failed:', e);
-      const cur3 = sessions.find(s => s.id === sessionId);
-      if (cur3) saveSession({ ...cur3, name: getSessionName(cur3.messages), isSmartName: false });
+      setSessions(prev => prev.map(s => 
+        s.id === sessionId ? { ...s, name: firstUserMsg.split(' ').slice(0, 5).join(' ') + '...', isSmartName: false } : s
+      ));
     }
   };
 
@@ -1749,8 +1756,22 @@ WHEN YOU HAVE ENOUGH INFO, append this JSON at the END of your message:
 \`\`\`json
 {"urgency":"low|mid|high","summary":"one-line description","naturalRemedies":["remedy 1","remedy 2","remedy 3"],"action":"what to do next"}
 \`\`\`
-Only include the JSON once — after you know symptom + duration + severity.${lang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
+Only include the JSON once — after you know symptom + duration + severity.${chatLang === 'am' ? '\n\nCRITICAL: YOU MUST RESPOND ENTIRELY IN AMHARIC (አማርኛ). All greetings, medical assessments, remedies, and instructions must be in Amharic.' : ''}`;
   };
+
+  useEffect(() => {
+    setMessages(prev => {
+      const newSys = { id: 'system', role: 'system', content: buildSystemPrompt() };
+      const updated = [...prev];
+      if (updated.length > 0 && updated[0].role === 'system') {
+        updated[0] = newSys;
+      } else {
+        updated.unshift(newSys);
+      }
+      return updated;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chatLang]);
 
   const sendMessage = async (text) => {
     const trimmed = (text || '').trim();
@@ -1967,15 +1988,21 @@ Only include the JSON once — after you know symptom + duration + severity.${la
         {/* ── Chat Area ── */}
         <div className="chat-container" style={{ flex: 1, minWidth: 0, position: 'relative' }}>
           <div style={{ position: 'absolute', top: 16, right: 20, zIndex: 10 }}>
-            <button 
-              className="btn-icon"
-              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
-              onClick={() => {
-                setShareSession(sessions.find(s => s.id === currentSessionId));
-              }}
-            >
-              <Icons.Share size={14} /> Share
-            </button>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select value={chatLang} onChange={(e) => setChatLang(e.target.value)} style={{ padding: '6px 12px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', outline: 'none', background: 'rgba(255,255,255,0.8)', color: 'var(--text)', fontSize: 13 }}>
+                <option value="en">English (Chat)</option>
+                <option value="am">አማርኛ (ውይይት)</option>
+              </select>
+              <button 
+                className="btn-icon"
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', background: 'rgba(255,255,255,0.8)', border: '1px solid var(--border)', borderRadius: '12px', fontSize: 13, color: 'var(--text)', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
+                onClick={() => {
+                  setShareSession(sessions.find(s => s.id === currentSessionId));
+                }}
+              >
+                <Icons.Share size={14} /> {t("share")}
+              </button>
+            </div>
           </div>
           {chatError && (
             <div className="chat-error-banner">
@@ -2032,7 +2059,8 @@ Only include the JSON once — after you know symptom + duration + severity.${la
                 disabled={isLoading || isStreaming}
               />
               <button className="btn-send" onClick={() => sendMessage(input)} disabled={!input.trim() || isLoading || isStreaming}>
-                {t("send")}
+                <Icons.Send size={18} />
+                <span>{t("send")}</span>
               </button>
             </div>
           </div>

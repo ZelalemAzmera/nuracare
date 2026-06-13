@@ -44,6 +44,6 @@ Format: Title Case, no quotes, no punctuation.`;
     });
   } catch (err) {
     console.error('Title API error:', err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+    return new Response(JSON.stringify({ error: err.message || 'Unknown error' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
   }
 }

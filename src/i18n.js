@@ -31,7 +31,18 @@ export const translations = {
     language: "Language",
     english: "English",
     amharic: "አማርኛ",
-    health_check: "Health check"
+    health_check: "Health check",
+    checkups: "Checkups",
+    lifestyle: "Lifestyle",
+    upgrade_premium: "Upgrade to Premium",
+    share: "Share",
+    daily_checkin: "Daily Check-in",
+    profile: "Profile",
+    type_message: "Type a message...",
+    send: "Send",
+    nura_subtitle: "I'm Nura, your health companion. What's on your mind today?",
+    past_sessions: "Past Sessions",
+    new_session: "New Session"
   },
   am: {
     home: "ዋና ገጽ",
@@ -65,6 +76,17 @@ export const translations = {
     language: "ቋንቋ",
     english: "English",
     amharic: "አማርኛ",
-    health_check: "የጤና ምርመራ"
+    health_check: "የጤና ምርመራ",
+    checkups: "ምርመራዎች",
+    lifestyle: "የአኗኗር ዘይቤ",
+    upgrade_premium: "ወደ ፕሪሚየም ያሳድጉ",
+    share: "አጋራ",
+    daily_checkin: "የዕለት ምርመራ",
+    profile: "የግል ማህደር",
+    type_message: "መልዕክት ይፃፉ...",
+    send: "ላክ",
+    nura_subtitle: "እኔ ኑራ ነኝ፣ የጤና አጋርዎ። ዛሬ ምን ላግዝዎ?",
+    past_sessions: "ያለፉ ውይይቶች",
+    new_session: "አዲስ ውይይት"
   }
 };

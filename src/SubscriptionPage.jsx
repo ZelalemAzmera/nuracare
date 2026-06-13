@@ -3,12 +3,12 @@ import * as Icons from 'lucide-react';
 import { showToast } from './App';
 
 export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise }) {
-  const [loading, setLoading] = useState(false);
+  const [loadingGateway, setLoadingGateway] = useState(null);
   const [paymentModal, setPaymentModal] = useState({ isOpen: false, plan: null, amount: 0 });
   const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
 
   const handleCheckout = async (gateway, amount) => {
-    setLoading(true);
+    setLoadingGateway(gateway);
     try {
       let action = gateway === 'Chapa' ? 'chapa-checkout' : 'stripe-checkout';
       const res = await fetch(`/api/payment?action=${action}`, {
@@ -32,7 +32,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
       console.error(e);
       showToast(`Payment initiation failed for ${gateway}: ${e.message}`, 'error');
     } finally {
-      setLoading(false);
+      setLoadingGateway(null);
       setPaymentModal({ isOpen: false, plan: null, amount: 0 });
     }
   };
@@ -153,7 +153,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h2 style={{ margin: 0, fontSize: 22, color: 'var(--text)', fontWeight: 700 }}>Select Payment</h2>
-              <button onClick={() => !loading && setPaymentModal({ isOpen: false, plan: null, amount: 0 })} style={{ background: 'var(--bg)', border: 'none', cursor: 'pointer', borderRadius: '50%', padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => !loadingGateway && setPaymentModal({ isOpen: false, plan: null, amount: 0 })} style={{ background: 'var(--bg)', border: 'none', cursor: 'pointer', borderRadius: '50%', padding: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Icons.X size={20} color="var(--text-muted)" />
               </button>
             </div>
@@ -165,19 +165,19 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <button 
                 onClick={() => handleCheckout('Chapa', paymentModal.amount)} 
-                disabled={loading} 
-                style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: 'none', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', background: 'var(--green)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 16, transition: 'all 0.2s' }}
+                disabled={!!loadingGateway} 
+                style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: 'none', fontWeight: 600, cursor: loadingGateway ? 'not-allowed' : 'pointer', background: 'var(--green)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 16, transition: 'all 0.2s' }}
               >
-                {loading ? <Icons.Loader className="spin" size={20} /> : <Icons.CreditCard size={20} />}
+                {loadingGateway === 'Chapa' ? <Icons.Loader className="spin" size={20} /> : <Icons.CreditCard size={20} />}
                 Pay with Chapa (ETB)
               </button>
               
               <button 
                 onClick={() => handleCheckout('Stripe', paymentModal.amount)} 
-                disabled={loading} 
-                style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: '2px solid var(--border)', fontWeight: 600, cursor: loading ? 'not-allowed' : 'pointer', background: 'var(--bg)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 16, transition: 'all 0.2s' }}
+                disabled={!!loadingGateway} 
+                style={{ width: '100%', padding: '16px 20px', borderRadius: 16, border: '2px solid var(--border)', fontWeight: 600, cursor: loadingGateway ? 'not-allowed' : 'pointer', background: 'var(--bg)', color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, fontSize: 16, transition: 'all 0.2s' }}
               >
-                {loading ? <Icons.Loader className="spin" size={20} /> : <Icons.Globe size={20} />}
+                {loadingGateway === 'Stripe' ? <Icons.Loader className="spin" size={20} /> : <Icons.Globe size={20} />}
                 Pay with Stripe (USD)
               </button>
             </div>

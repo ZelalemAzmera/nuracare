@@ -224,8 +224,7 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
         </div>
       )}
 
-      <div className="section-title">🏃‍♂️ Exercise Dashboards</div>
-      <div className="dashboard-grid">
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}>
         <OverviewCard 
           title="Running Tracker" desc="Track your outdoor runs or treadmill distance."
           icon={<Icons.Navigation size={28} color="var(--green-dark)" />}
@@ -249,8 +248,6 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           icon={<Icons.Flower2 size={28} color="var(--green-dark)" />}
           onClick={() => setActiveSection('yoga')}
         />
-
->>>>>>> origin/feat/global-calendar-pipeline
       </div>
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
@@ -867,7 +864,8 @@ function YogaDashboard({ onBack, recent }) {
 function OverviewCard({ title, desc, icon, onClick }) {
   return (
     <div className="dash-card" onClick={onClick} style={{ 
-      gridColumn: 'span 2', 
+      display: 'flex',
+      flex: '1 1 200px',
       flexDirection: 'column', 
       alignItems: 'flex-start',
       padding: '24px',

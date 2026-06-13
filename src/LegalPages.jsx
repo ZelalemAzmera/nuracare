@@ -89,32 +89,44 @@ export function MedicalDisclaimer({ onBack }) {
         <button className="btn-back" onClick={onBack}><Icons.ArrowLeft size={20} /></button>
         <div>
           <h1 className="page-title">Medical Disclaimer</h1>
-          <p className="page-subtitle" style={{ color: '#dc2626' }}>Please read this important notice carefully</p>
+          <p className="page-subtitle" style={{ color: 'var(--text-muted)' }}>Your AI wellness companion, built to complement professional care</p>
         </div>
       </div>
-      <div className="dash-card" style={{ display: 'block', padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)', border: '2px solid #fca5a5' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: '#dc2626' }}>
-          <Icons.AlertTriangle size={32} />
-          <h2 style={{ margin: 0 }}>Not Medical Advice</h2>
+      <div className="dash-card" style={{ display: 'block', padding: 32, fontSize: 15, lineHeight: 1.6, color: 'var(--text)', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24, color: 'var(--green-dark)' }}>
+          <Icons.HeartHandshake size={32} />
+          <h2 style={{ margin: 0 }}>How NuraCare Works Best</h2>
         </div>
         
-        <p style={{ fontWeight: 'bold' }}>NuraCare is an informational tool and is NOT a substitute for professional medical advice, diagnosis, or treatment.</p>
+        <p style={{ fontWeight: '500', fontSize: 16 }}>NuraCare is designed to work alongside your doctor, not replace them. We are here to help you understand your wellness, track your symptoms, and discover natural lifestyle habits.</p>
 
-        <p>The AI-generated insights, wellness suggestions, and symptom analyses provided by this application are intended for general informational and educational purposes only.</p>
-
-        <h3 style={{ marginTop: 24 }}>Key Limitations:</h3>
-        <ul>
-          <li><strong>No Doctor-Patient Relationship:</strong> Using NuraCare does not create a doctor-patient relationship between you and the developers or the AI.</li>
-          <li><strong>Always Consult a Professional:</strong> Always seek the advice of your physician or other qualified health provider with any questions you may have regarding a medical condition.</li>
-          <li><strong>Never Ignore Professional Advice:</strong> Never disregard professional medical advice or delay in seeking it because of something you have read on this application.</li>
-          <li><strong>Emergencies:</strong> If you think you may have a medical emergency, call your doctor, go to the nearest emergency department, or call emergency services (like 911) immediately. NuraCare should NEVER be used for emergencies.</li>
+        <h3 style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icons.CheckCircle2 size={18} color="var(--green)" /> What NuraCare does well:
+        </h3>
+        <ul style={{ color: 'var(--text-muted)' }}>
+          <li>Helps you track your daily mood, sleep, stress, and energy.</li>
+          <li>Suggests natural remedies and local herbs for minor discomforts.</li>
+          <li>Provides lifestyle guidance like breathing exercises or nutrition tips.</li>
+          <li>Summarizes your health trends so you can have better conversations with your doctor.</li>
         </ul>
 
-        <p style={{ marginTop: 24, padding: 16, background: '#fee2e2', borderRadius: 8, color: '#991b1b', fontWeight: '500' }}>
-          By using NuraCare, you acknowledge that you understand and agree to this disclaimer. You assume full responsibility for how you choose to use this information.
-        </p>
+        <h3 style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icons.Stethoscope size={18} color="var(--blue, #3b82f6)" /> When to see a doctor:
+        </h3>
+        <ul style={{ color: 'var(--text-muted)' }}>
+          <li>NuraCare helps you come prepared to your doctor's visit with a clear picture of your symptoms.</li>
+          <li>If you experience persistent, worsening, or new severe symptoms, always consult a qualified healthcare provider.</li>
+          <li>The AI-generated insights are informational tools, not a formal medical diagnosis or treatment plan.</li>
+        </ul>
 
-        <p style={{ marginTop: 32, color: 'var(--text-muted)', fontSize: 13 }}>Last updated: {new Date().toLocaleDateString()}</p>
+        <div style={{ marginTop: 24, padding: 16, background: 'rgba(59, 130, 246, 0.05)', borderLeft: '4px solid #3b82f6', borderRadius: '0 8px 8px 0', color: 'var(--text)' }}>
+          <strong>For Emergencies:</strong> If you think you may have a medical emergency, please call your local emergency services immediately.
+        </div>
+
+        <p style={{ marginTop: 32, color: 'var(--text-muted)', fontSize: 12, borderTop: '1px solid var(--border)', paddingTop: 16 }}>
+          Legal Notice: By using NuraCare, you acknowledge that the application is for educational and informational purposes only and does not establish a doctor-patient relationship.
+          <br /><br />Last updated: {new Date().toLocaleDateString()}
+        </p>
       </div>
     </div>
   );
