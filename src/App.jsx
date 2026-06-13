@@ -627,10 +627,6 @@ export default function App() {
           <NavItem icon={Icons.Zap} label="Lifestyle" active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
-          <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
-            <option value="en">English</option>
-            <option value="am">አማርኛ</option>
-          </select>
           <div className="mobile-only-sessions">
             <div style={{fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8, letterSpacing: 0.5}}>{t("past_sessions").toUpperCase()}</div>
             {sessions.slice(0, 5).map(s => (
@@ -659,6 +655,10 @@ export default function App() {
                  <span className="nav-label">New Session</span>
             </a>
           </div>
+          <select value={lang} onChange={(e) => setLang(e.target.value)} style={{width: '100%', padding: '8px', borderRadius: '12px', border: '1px solid var(--border)', fontFamily: 'var(--font)', marginBottom: 12, outline: 'none'}}>
+            <option value="en">English</option>
+            <option value="am">አማርኛ</option>
+          </select>
           <NavItem icon={Icons.User} label="Profile" active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Star} label="Upgrade to Premium" active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>

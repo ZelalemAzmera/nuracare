@@ -238,6 +238,7 @@ body::before {
   padding: 32px 24px; transition: transform 0.3s;
   box-shadow: 0 12px 32px rgba(0,0,0,0.02);
   margin-right: 20px;
+  overflow-y: auto;
 }
 .sidebar-logo {
   display: flex; align-items: center; gap: 10px;
