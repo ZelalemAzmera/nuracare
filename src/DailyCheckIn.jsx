@@ -21,6 +21,8 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
   const [portion, setPortion] = useState('Normal');
 
   const [plannedActivity, setPlannedActivity] = useState('Rest Day (Suggested)');
+  const [isEditingSleep, setIsEditingSleep] = useState(false);
+  const [isEditingActivity, setIsEditingActivity] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
@@ -109,11 +111,15 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <Icons.Watch size={24} color="var(--green-dark)" />
                         <div>
-                          <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
+                          {isEditingSleep ? (
+                             <input type="number" autoFocus value={sleepHours} onChange={e => setSleepHours(Number(e.target.value))} onBlur={() => setIsEditingSleep(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingSleep(false)} style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)', width: '70px', background: 'transparent', border: 'none', borderBottom: '2px solid var(--green-dark)', outline: 'none' }} />
+                          ) : (
+                             <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
+                          )}
                           <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Synced via Fitbit/Google Health</div>
                         </div>
                       </div>
-                      <button onClick={() => { const val = prompt('Enter sleep hours:', sleepHours); if (val && !isNaN(val)) setSleepHours(Number(val)); }} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
+                      <button onClick={() => setIsEditingSleep(!isEditingSleep)} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>{isEditingSleep ? 'Done' : 'Edit'}</button>
                     </div>
                 </div>
 
@@ -206,11 +212,15 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                       <Icons.Activity size={24} color="var(--green-dark)" />
                       <div>
-                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>{plannedActivity}</div>
+                        {isEditingActivity ? (
+                          <input type="text" autoFocus value={plannedActivity} onChange={e => setPlannedActivity(e.target.value)} onBlur={() => setIsEditingActivity(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingActivity(false)} style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)', width: '150px', background: 'transparent', border: 'none', borderBottom: '2px solid var(--green-dark)', outline: 'none' }} />
+                        ) : (
+                          <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>{plannedActivity}</div>
+                        )}
                         <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Based on your wearable data</div>
                       </div>
                     </div>
-                    <button onClick={() => { const val = prompt('Enter planned activity (e.g., Cardio, Rest, Lifting):', plannedActivity); if(val) setPlannedActivity(val); }} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
+                    <button onClick={() => setIsEditingActivity(!isEditingActivity)} style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>{isEditingActivity ? 'Done' : 'Edit'}</button>
                   </div>
                 </div>
 

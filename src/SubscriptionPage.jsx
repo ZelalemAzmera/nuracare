@@ -88,9 +88,9 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
           </button>
         </div>
 
-        {/* Pro Plan */}
+        {/* Plus Plan */}
         <div style={cardStyle}>
-          <h3 style={{ margin: '0 0 8px 0', fontSize: 20 }}>Pro</h3>
+          <h3 style={{ margin: '0 0 8px 0', fontSize: 20 }}>Plus</h3>
           <div style={{ marginBottom: 24 }}>
             <span style={{ fontSize: 36, fontWeight: 800 }}>{isEthiopia ? 'Birr 150' : '$5'}</span>
             <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 14 }}>/month</span>
@@ -102,8 +102,8 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
               </div>
             ))}
           </div>
-          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Pro', amount: isEthiopia ? 150 : 5 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1px solid var(--green)', fontWeight: 600, cursor: 'pointer', background: 'transparent', color: 'var(--green)', transition: 'all 0.2s' }}>
-            Upgrade to Pro
+          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Plus', amount: isEthiopia ? 150 : 5 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1px solid var(--green)', fontWeight: 600, cursor: 'pointer', background: 'transparent', color: 'var(--green)', transition: 'all 0.2s' }}>
+            Upgrade to Plus
           </button>
         </div>
 
