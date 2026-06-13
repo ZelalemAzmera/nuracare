@@ -24,7 +24,9 @@ export function useSupabaseProfile() {
       
       if (!error && data) {
         const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
-        setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode });
+        const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
+        const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
+        setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
       }
       setLoading(false);
     }
@@ -46,6 +48,16 @@ export function useSupabaseProfile() {
       localStorage.setItem(`fastingMode_${user.id}`, dbPayload.fastingMode);
       delete dbPayload.fastingMode;
     }
+
+    if ('culturalHeritage' in dbPayload) {
+      localStorage.setItem(`culturalHeritage_${user.id}`, dbPayload.culturalHeritage);
+      delete dbPayload.culturalHeritage;
+    }
+
+    if ('langPref' in dbPayload) {
+      localStorage.setItem(`langPref_${user.id}`, dbPayload.langPref);
+      delete dbPayload.langPref;
+    }
     
     const { data, error } = await supabase
       .from('profiles')
@@ -55,7 +67,9 @@ export function useSupabaseProfile() {
       
     if (!error && data) {
       const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
-      setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode });
+      const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
+      const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
+      setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
     } else {
       console.error('Error updating profile', error);
       window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message: 'Failed to save profile: ' + error.message, type: 'error' } }));

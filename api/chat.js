@@ -16,9 +16,7 @@ function buildSystemPrompt(profile, memoryContext, lang, culturalContext) {
         timezone: profile?.location?.timezone || "Unknown",
         current_weather: culturalContext?.active_season || "Unknown"
       },
-      cultural_preference: profile?.culturalHeritage === 'Ethiopia' 
-        ? `Ethiopian (Follows ${profile?.fastingMode || 'Standard'} Diet)` 
-        : `Global User (Follows ${profile?.fastingMode || 'Standard'} Diet)`,
+      cultural_preference: `${profile?.culturalHeritage && profile.culturalHeritage !== 'Global' ? profile.culturalHeritage : 'Global'} User (Follows ${profile?.fastingMode || 'Standard'} Diet)`,
       infrastructure_context: {
         gym_availability_density: (profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia') ? "LOW" : "HIGH",
         wearable_sync_active: true

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Component } from 'react';
 import * as Icons from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import { useTranslation } from './useTranslation';
+import { COUNTRIES } from './countries';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 // Vercel AI SDK used in api/chat.js (server-side streaming)
@@ -515,8 +516,7 @@ export default function App() {
                 <div className="form-group">
                   <label>Location Born (Heritage/Cultural Identity)</label>
                   <select value={obCulturalHeritage} onChange={e => setObCulturalHeritage(e.target.value)} style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}}>
-                    <option value="Global">Global / Other</option>
-                    <option value="Ethiopia">Ethiopia</option>
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
