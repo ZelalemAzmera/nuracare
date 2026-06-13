@@ -1463,17 +1463,20 @@ WELLNESS CONTEXT:${checkinContext}
         const isToday = last.date === todayStr;
         
         if (isToday) {
-          if (last.stress >= 7) timeContext = "I saw from your check-in that you're quite stressed today. How are you holding up now?";
-          else if (last.sleep <= 5) timeContext = "I noticed you didn't sleep well. Are you feeling very tired?";
-          else timeContext = "I saw you checked in earlier. How are you feeling compared to this morning?";
+          if (last.stress >= 7) timeContext = lang === 'am' ? "ዛሬ በጣም እንደተጨነቁ አይቻለሁ። አሁን እንዴት ነዎት?" : "I saw from your check-in that you're quite stressed today. How are you holding up now?";
+          else if (last.sleep <= 5) timeContext = lang === 'am' ? "በደንብ እንዳልተኙ አስተውያለሁ። በጣም ደክሞዎታል?" : "I noticed you didn't sleep well. Are you feeling very tired?";
+          else timeContext = lang === 'am' ? "ቀደም ብለው እንደገቡ አይቻለሁ። ከጠዋቱ ጋር ሲነፃፀር አሁን እንዴት ይሰማዎታል?" : "I saw you checked in earlier. How are you feeling compared to this morning?";
         } else {
           const daysSince = Math.floor((new Date() - new Date(last.date)) / (1000 * 60 * 60 * 24));
-          if (daysSince >= 2) timeContext = `It's been a few days since your last check-in. How have you been?`;
-          else if (last.mood <= 5) timeContext = `You were feeling a bit down last time we spoke. Are things any better today?`;
+          if (daysSince >= 2) timeContext = lang === 'am' ? `ካለፈው ጊዜ ጀምሮ ጥቂት ቀናት አልፈዋል። እንዴት ነበሩ?` : `It's been a few days since your last check-in. How have you been?`;
+          else if (last.mood <= 5) timeContext = lang === 'am' ? `ባለፈው ጊዜ ትንሽ አዝነው ነበር። ዛሬ የተሻለ ነው?` : `You were feeling a bit down last time we spoke. Are things any better today?`;
         }
       }
       
-      const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${fn} 👋 I'm Nura, your personal health companion. ${timeContext}` };
+      const welcomeContent = lang === 'am' 
+        ? `ሰላም ${fn} 👋 እኔ ኑራ ነኝ፣ የግል የጤና ጓደኛዎ። ${timeContext}`
+        : `Hi ${fn} 👋 I'm Nura, your personal health companion. ${timeContext}`;
+      const welcome = { id: 'welcome', role: 'assistant', content: welcomeContent };
       
       const cur = sessions.find(s => s.id === currentSessionId);
       if (cur && cur.messages && cur.messages.length > 0) {
@@ -1484,7 +1487,7 @@ WELLNESS CONTEXT:${checkinContext}
         return cur.messages;
       }
       return [systemPrompt, welcome];
-    } catch { return [{ id: 'welcome', role: 'assistant', content: `Hi there 👋 I'm Nura. How are you feeling today?` }]; }
+    } catch { return [{ id: 'welcome', role: 'assistant', content: lang === 'am' ? `ሰላም 👋 እኔ ኑራ ነኝ። ዛሬ ምን ይሰማዎታል?` : `Hi there 👋 I'm Nura. How are you feeling today?` }]; }
   });
 
   const [input, setInput] = useState('');
@@ -1788,7 +1791,9 @@ Only include the JSON once — after you know symptom + duration + severity.${la
     }
   }, [currentSessionId, sessions, firstName, messages.length]);
 
-  const quickOptions = ['Headache', 'Stomach ache', 'Sore throat', 'Fatigue', 'Cough', 'Fever'];
+  const quickOptions = lang === 'am' 
+    ? ['ራስ ምታት', 'የሆድ ሕመም', 'የጉሮሮ ሕመም', 'ድካም', 'ሳል', 'ትኩሳት'] 
+    : ['Headache', 'Stomach ache', 'Sore throat', 'Fatigue', 'Cough', 'Fever'];
 
   return (
     <div className="page active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>

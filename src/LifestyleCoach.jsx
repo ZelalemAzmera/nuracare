@@ -230,7 +230,7 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
       </div>
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
-      <div className="dash-card" style={{ background: 'var(--white)', padding: 24, marginBottom: 20 }}>
+      <div className="dash-card" style={{ background: 'var(--white)', padding: 24, marginBottom: 20, display: 'block' }}>
         <div className="vitals-grid">
           
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>

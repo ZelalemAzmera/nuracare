@@ -6,7 +6,7 @@ export default async function handler(req) {
   }
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 });
 
-  const GROQ_KEY = process.env.GROQ_API_KEY;
+  const GROQ_KEY = process.env.GROQ_API_KEY || process.env.VITE_GROQ_API_KEY;
   if (!GROQ_KEY) {
     return new Response(JSON.stringify({ error: { message: 'GROQ_API_KEY is missing in Vercel Environment Variables.' } }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
