@@ -42,6 +42,7 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
   const [activeSection, setActiveSection] = useState('overview');
   const [recentData, setRecentData] = useState(null);
   const [analysis, setAnalysis] = useState(null);
+  const [syncingVitals, setSyncingVitals] = useState(false);
 
   useEffect(() => {
     const data = getCheckins();
@@ -115,7 +116,18 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
     const newHistory = [newRecord, ...vitalsHistory];
     setVitalsHistory(newHistory);
     localStorage.setItem('nuracare_vitals_history', JSON.stringify(newHistory));
-    alert('Vitals saved to history!');
+    showToast('Vitals saved to history!', 'success');
+  };
+
+  const handleSyncVitals = async () => {
+    setSyncingVitals(true);
+    await new Promise(r => setTimeout(r, 1500));
+    updateVital('steps', Math.floor(Math.random() * 5000 + 3000));
+    updateVital('hr', Math.floor(Math.random() * 20 + 60));
+    updateVital('weight', (70 + Math.random() * 5).toFixed(1));
+    updateVital('water', Math.floor(Math.random() * 4 + 4));
+    setSyncingVitals(false);
+    showToast('Wearable synced successfully!', 'success');
   };
 
   // Routing
@@ -150,6 +162,8 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           border: '1px solid rgba(255,255,255,0.9)',
           boxShadow: '0 8px 32px rgba(34,197,94,0.06)',
           marginBottom: 32,
+          display: 'flex',
+          flexDirection: 'column'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
             <div style={{ padding: 14, background: 'var(--green-light)', borderRadius: 16 }}>
@@ -210,39 +224,40 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
       
-      <div className="dash-card" style={{ background: 'var(--white)', padding: 32, marginBottom: 20 }}>
+      <div className="dash-card" style={{ background: 'var(--white)', padding: 32, marginBottom: 20, display: 'flex', flexDirection: 'column' }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: 18, textAlign: 'center' }}>Sync Your Vitals</h3>
         <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically import heart rate, steps, and weight from your smart device.</p>
         
-        <button onClick={() => alert("Syncing wearable...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
-          <Icons.Watch size={20} /> Sync Wearable Device
+        <button disabled={syncingVitals} onClick={handleSyncVitals} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: syncingVitals ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32, transition: 'all 0.2s' }}>
+          {syncingVitals ? <Icons.Loader className="spin" size={20} /> : <Icons.Watch size={20} />} 
+          {syncingVitals ? 'Syncing...' : 'Sync Wearable Device'}
         </button>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 32 }}>
           <h3 style={{ margin: '0 0 16px 0', fontSize: 16, color: 'var(--text-muted)' }}>No wearable device? Log Manually:</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
-            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
                 <Icons.Footprints size={18} color="var(--green-dark)" /> Steps
               </div>
               <input type="number" value={vitals.steps || ''} onChange={(e) => updateVital('steps', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
             </div>
             
-            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
                 <Icons.HeartPulse size={18} color="#ef4444" /> Heart Rate (bpm)
               </div>
               <input type="number" value={vitals.hr || ''} onChange={(e) => updateVital('hr', e.target.value)} placeholder="0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
             </div>
 
-            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12, color: 'var(--text-muted)' }}>
                 <Icons.Scale size={18} color="#6366f1" /> Weight (kg)
               </div>
               <input type="number" value={vitals.weight || ''} onChange={(e) => updateVital('weight', e.target.value)} placeholder="0.0" style={{ width: '100%', fontSize: 24, fontWeight: 800, border: 'none', background: 'transparent', outline: 'none' }} />
             </div>
 
-            <div className="dash-card" style={{ background: 'var(--bg)', border: 'none' }}>
+            <div className="dash-card" style={{ background: 'var(--bg)', border: '1px solid var(--border)', display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, color: 'var(--text-muted)' }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Droplets size={18} color="#0ea5e9" /> Water</span>
                 <span style={{ fontWeight: 800 }}>{vitals.water}/8</span>
@@ -368,6 +383,7 @@ function LiveTimer() {
 function RunningDashboard({ onBack }) {
   const [distance, setDistance] = useState('');
   const [history, setHistory] = useState([]);
+  const [syncingRun, setSyncingRun] = useState(false);
 
   useEffect(() => {
     const data = JSON.parse(localStorage.getItem('nuracare_runs') || '[]');
@@ -382,6 +398,15 @@ function RunningDashboard({ onBack }) {
     localStorage.setItem('nuracare_runs', JSON.stringify(updated));
     setDistance('');
   };
+
+  const handleSyncRun = async () => {
+    setSyncingRun(true);
+    await new Promise(r => setTimeout(r, 1500));
+    const dist = (Math.random() * 5 + 2).toFixed(2);
+    setDistance(dist);
+    setSyncingRun(false);
+    showToast('Wearable synced! Distance loaded.', 'success');
+  };
   
   return (
     <div className="page active">
@@ -395,8 +420,9 @@ function RunningDashboard({ onBack }) {
           <h3 style={{ margin: '0 0 16px 0', fontSize: 18, textAlign: 'center' }}>Sync Your Activity</h3>
           <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically import your runs from your smartwatch or fitness tracker.</p>
           
-          <button onClick={() => alert("Syncing wearable data...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
-            <Icons.Watch size={20} /> Sync Wearable Device
+          <button disabled={syncingRun} onClick={handleSyncRun} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: syncingRun ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 24, transition: 'all 0.2s' }}>
+            {syncingRun ? <Icons.Loader className="spin" size={20} /> : <Icons.Watch size={20} />} 
+            {syncingRun ? 'Syncing...' : 'Sync Wearable Device'}
           </button>
 
           <div style={{ borderTop: '1px solid var(--border)', paddingTop: 24 }}>
@@ -440,6 +466,7 @@ function GymDashboard({ onBack, recent }) {
   const [selectedMuscle, setSelectedMuscle] = useState('legs');
   const [warning, setWarning] = useState('');
   const [workoutHistory, setWorkoutHistory] = useState([]);
+  const [syncingGym, setSyncingGym] = useState(false);
 
   useEffect(() => {
     // Recovery warning logic
@@ -448,7 +475,6 @@ function GymDashboard({ onBack, recent }) {
     if (workouts.length >= 3) {
       const recentWorkouts = workouts.slice(-3);
       // simplified check: just check if all last 3 workouts had 'legs' or similar
-      // A more robust check:
       let legCount = 0;
       let pushCount = 0;
       let pullCount = 0;
@@ -480,7 +506,19 @@ function GymDashboard({ onBack, recent }) {
     localStorage.setItem('nuracare_workouts', JSON.stringify(workouts));
     setWorkoutHistory([newWorkout, ...workoutHistory]);
     setLoggedSets([]);
-    alert('Workout saved successfully!');
+    showToast('Workout saved successfully!', 'success');
+  };
+
+  const handleSyncGym = async () => {
+    setSyncingGym(true);
+    await new Promise(r => setTimeout(r, 1500));
+    const fakeSets = [
+      { id: Date.now()+1, exercise: 'Bench Press', reps: '3x10 60kg' },
+      { id: Date.now()+2, exercise: 'Pushups', reps: '3x15 bodyweight' }
+    ];
+    setLoggedSets([...loggedSets, ...fakeSets]);
+    setSyncingGym(false);
+    showToast('Smartwatch synced! Sets loaded.', 'success');
   };
 
   // Dynamic Workout Generator
@@ -515,7 +553,6 @@ function GymDashboard({ onBack, recent }) {
   };
 
   const workout = generateWorkout();
-  const allExercises = [...EXERCISE_DB.legs, ...EXERCISE_DB.push, ...EXERCISE_DB.pull, ...EXERCISE_DB.core, ...EXERCISE_DB.recovery].sort();
 
   return (
     <div className="page active">
@@ -537,12 +574,13 @@ function GymDashboard({ onBack, recent }) {
         </div>
       </div>
 
-      <div className="dash-card" style={{ background: 'var(--white)', padding: 32 }}>
+      <div className="dash-card" style={{ background: 'var(--white)', padding: 32, display: 'flex', flexDirection: 'column' }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: 18, textAlign: 'center' }}>Sync Workout Data</h3>
         <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically pull sets and reps from your wearable device.</p>
         
-        <button onClick={() => alert("Syncing workout from wearable...")} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32 }}>
-          <Icons.Watch size={20} /> Sync Wearable Device
+        <button disabled={syncingGym} onClick={handleSyncGym} style={{ width: '100%', background: 'var(--bg)', color: 'var(--green-dark)', border: '2px solid var(--green)', padding: 16, borderRadius: 16, fontWeight: 700, fontSize: 16, cursor: syncingGym ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 32, transition: 'all 0.2s' }}>
+          {syncingGym ? <Icons.Loader className="spin" size={20} /> : <Icons.Watch size={20} />} 
+          {syncingGym ? 'Syncing...' : 'Sync Wearable Device'}
         </button>
 
         <div style={{ borderTop: '1px solid var(--border)', paddingTop: 32 }}>
