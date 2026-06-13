@@ -64,6 +64,23 @@ export default function WellnessDashboard() {
         </div>
       </div>
 
+      {/* Dynamic Text Analysis Summary */}
+      {latest && (
+        <div className="dash-card" style={{ marginBottom: 32, background: 'var(--green-light)', border: '1px solid var(--green)', padding: 24, display: 'flex', gap: 16 }}>
+          <Icons.Activity size={28} color="var(--green-dark)" style={{ flexShrink: 0 }} />
+          <div>
+            <h3 style={{ margin: '0 0 8px 0', fontSize: 18, color: 'var(--green-dark)' }}>Weekly Insight Summary</h3>
+            <p style={{ margin: 0, fontSize: 14, color: 'var(--text)', lineHeight: 1.6 }}>
+              {burnout.score > 65 
+                ? "Your burnout risk is elevated. High stress and lower energy levels are impacting your overall resilience. Focus heavily on active recovery and prioritize sleep."
+                : wellness.total > 70 
+                ? "Your overall wellness is very strong right now. You have good mental resilience and solid physical vitality. Maintain this balance to keep burnout low."
+                : "You are in a balanced state but there's room for improvement. Small enhancements in sleep and hydration will bring up your baseline wellness."}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* 5-Core Breakdown */}
       <div className="section-title">5-Core Breakdown</div>
       <div className="dash-card card-large" style={{ marginBottom: 32 }}>

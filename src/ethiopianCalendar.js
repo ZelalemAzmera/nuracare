@@ -1,31 +1,36 @@
 export const TSOM_TYPES = {
-  NONE: 'None',
-  ORTHODOX: 'Orthodox Christian (Tsom)',
-  MUSLIM: 'Muslim (Ramadan)'
+  NONE: 'none',
+  ORTHODOX: 'orthodox',
+  ISLAMIC: 'islamic'
 };
 
-// Simplified Ethiopian fasting calendar approximation for 2024-2026.
-// In a full production app, this would use a proper Ethiopic calendar library.
-// Abiy Tsom (Great Lent) - usually ~55 days before Easter.
-// Filseta - usually August 1st-16th (Gregorian August 7 - 22 approx)
+/**
+ * Approximate Ramadan check. 
+ * Since Islamic calendar is lunar, this is a simplified mock for the hackathon
+ * assuming Ramadan is occurring right now, or during specific months.
+ */
+export function isRamadanActive() {
+  // Mocking that Ramadan is currently active for demonstration purposes
+  return true;
+}
 
 export function isFastingToday(mode) {
+  if (mode === TSOM_TYPES.ISLAMIC) {
+    return isRamadanActive();
+  }
+
   if (mode !== TSOM_TYPES.ORTHODOX) return false;
 
   const today = new Date();
   const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 3 = Wed, 5 = Fri
   
-  // Every Wednesday and Friday is a fasting day in Orthodox Christianity
-  // (with exceptions like the 50 days after Easter, but we'll simplify here).
   if (dayOfWeek === 3 || dayOfWeek === 5) {
     return true;
   }
 
-  // Very simplified Abiy Tsom / Filseta detection
   const month = today.getMonth(); // 0 = Jan
   const date = today.getDate();
 
-  // Approximate Filseta: August 7 - August 22
   if (month === 7 && date >= 7 && date <= 22) {
     return true;
   }
@@ -39,8 +44,13 @@ export function isFastingToday(mode) {
 }
 
 export function getCurrentFastName(mode) {
-  if (mode !== TSOM_TYPES.ORTHODOX) return null;
-  if (!isFastingToday(mode)) return null;
+  if (mode === TSOM_TYPES.ISLAMIC) {
+    if (isRamadanActive()) return "Ramadan Fast";
+    return "None";
+  }
+
+  if (mode !== TSOM_TYPES.ORTHODOX) return "None";
+  if (!isFastingToday(mode)) return "None";
 
   const today = new Date();
   const month = today.getMonth();
@@ -59,4 +69,28 @@ export function getCurrentFastName(mode) {
   if (dayOfWeek === 5) return 'Friday Fast';
 
   return 'Regular Fast';
+}
+
+/**
+ * Checks if a specific meal/food choice during fasting poses a high glycemic spike risk.
+ * For example, Yetsom Beyaynetu with extra injera and potatoes can cause an energy crash.
+ */
+export function checkGlycemicSpikeRisk(foodArr) {
+  const highCarbKeywords = ['injera', 'potato', 'pasta', 'bread', 'rice', 'macaroni', 'dinich'];
+  const proteinKeywords = ['shiro', 'misir', 'lentils', 'beans', 'tofu', 'nuts', 'seeds', 'kik'];
+  
+  let carbCount = 0;
+  let proteinCount = 0;
+
+  for (const f of foodArr) {
+    const lower = f.toLowerCase();
+    if (highCarbKeywords.some(k => lower.includes(k))) carbCount++;
+    if (proteinKeywords.some(k => lower.includes(k))) proteinCount++;
+  }
+
+  // If heavy carbs without enough protein to balance it
+  if (carbCount >= 2 && proteinCount === 0) {
+    return true;
+  }
+  return false;
 }

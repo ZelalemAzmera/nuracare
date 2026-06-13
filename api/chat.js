@@ -1,13 +1,14 @@
 // Edge runtime — proxies Groq streaming SSE to the client
 export const config = { runtime: 'edge' };
 
-function buildSystemPrompt(profile, memoryContext, lang) {
+function buildSystemPrompt(profile, memoryContext, lang, culturalContext) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
   const recentRecords = (profile?.records || []).slice(-5).map(r =>
     `- ${r.dateStr}: ${r.summary} (${r.urgency} urgency) — action: ${r.action}`
   ).join('\n') || 'No past records yet.';
 
   const crossMemory = memoryContext || 'No previous sessions yet.';
+  const dynamicContextStr = culturalContext ? `\nDYNAMIC CULTURAL & SEASONAL CONTEXT (Ethiopian Calendar):\n${JSON.stringify(culturalContext, null, 2)}\n\nIMPORTANT CONTEXT RULE: You MUST tailor your nutritional, rest, and mobility advice to the current cultural day provided above. (e.g. recommend indoor workouts if it is Kiremt/Rainy season, or strictly vegan Ethiopian dishes like Shiro if it is a fasting day like Wednesday/Friday Tsom).` : '';
 
   const localHerbsDB = {
     ET: ['Damakese (Ocimum lamiifolium)', 'Tena Adam (Ruta chalepensis)', 'Gesho (Rhamnus prinoides)', 'Kosso (Hagenia abyssinica)', 'Wogert (Zehneria scabra)'],
@@ -34,6 +35,7 @@ ${recentRecords}
 ${medicalNotes}
 USER'S LOCAL HERBS (prefer these when suggesting natural remedies):
 ${userHerbs.join(', ')}
+${dynamicContextStr}
 
 CROSS-SESSION MEMORY (general knowledge from previous conversations — use this to personalize, reference past topics when relevant, never repeat questions already answered):
 ${crossMemory}
@@ -97,8 +99,18 @@ export default async function handler(req) {
   try {
     const { messages, profile, memoryContext, lang } = await req.json();
 
+    let culturalContext = null;
+    try {
+      // In Vercel Edge, req.headers.get('host') gets the current host. 
+      // We construct an absolute URL to fetch our internal python API.
+      const host = req.headers.get('host') || 'localhost:3000';
+      const protocol = req.headers.get('x-forwarded-proto') || 'http';
+      const calRes = await fetch(`${protocol}://${host}/api/calendar`);
+      if (calRes.ok) culturalContext = await calRes.json();
+    } catch(e) { console.error('Failed to fetch calendar context:', e); }
+
     const groqMessages = [
-      { role: 'system', content: buildSystemPrompt(profile, memoryContext, lang) },
+      { role: 'system', content: buildSystemPrompt(profile, memoryContext, lang, culturalContext) },
       ...(messages || [])
         .filter(m => m.id !== 'welcome' && m.content)
         .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
