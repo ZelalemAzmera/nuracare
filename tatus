@@ -1,0 +1,20 @@
+[33mdeb3aa7[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m feat: enforce terms of service agreement on auth page
+[33md864276[m fix: correct legal pages flexbox layout bug
+[33mae8cfc1[m style: premium responsive design overhaul and glassmorphism upgrades
+[33m40c428e[m feat: add privacy policy, terms of service, and medical disclaimer
+[33m9b7e9a1[m fix: persist active page state across reloads
+[33m64e58f8[m fix: change cron schedule to daily for vercel hobby tier
+[33md96f456[m redeploy: force Vercel to build continuous syncing
+[33m4d0a84e[m redeploy: force Vercel to build continuous syncing
+[33mded3bc5[m feat: implement continuous syncing and cron job
+[33m6fb8060[m fix: preserve other connected_devices when connecting
+[33m67c1fad[m redeploy: Oura environment variables
+[33me7aaa14[m Added Oura Ring integration
+[33m4ac68b1[m fix: supabase database save conflict
+[33m96040a7[m fix: white screen bug on wearable hub
+[33md056e55[m feat: add disconnect button and debug fitbit token exchange
+[33mffd1027[m fix: switch fitbit auth to google health oauth
+[33m7c4f354[m feat: replace terra with direct fitbit oauth integration
+[33m04c0ca1[m feat: wearable hub, apple health xml parser, and 5-core integration
+[33mf2d7de0[m fix: wearable ui mock, desktop vitals layout, responsive mobile padding
+[33mf345582[m fix: chat models, wellness history depth, discovery UI, and profile fasting error

@@ -760,6 +760,7 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
           </div>
         </div>
       </div>
+    </div>
 
       {workoutHistory.length > 0 && (
         <div style={{ marginTop: 32 }}>
@@ -962,7 +963,7 @@ function NutritionDashboard({ onBack, profile }) {
     <div className="page active">
       <DashHeader title="Nutrition Tracker" onBack={onBack} icon={<div style={{background: 'var(--green-light)', padding: 10, borderRadius: 12}}><Icons.Utensils size={24} color="var(--green-dark)"/></div>} />
       
-      {isEthiopia ? (
+      {isEthiopia && (
         <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
             <Icons.PieChart size={24} color="var(--green-dark)" />
@@ -983,42 +984,42 @@ function NutritionDashboard({ onBack, profile }) {
             <p style={{ margin: 0, fontSize: 13, color: '#b45309' }}>Tsom is active today. Ensure your plate contains no meat, dairy, or eggs. Recommended: Shiro, Gomen, and Misir.</p>
           </div>
         </div>
-      ) : (
-        <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-            <Icons.Database size={24} color="var(--green-dark)" />
-            <h3 style={{ margin: 0 }}>Global Macro Tracker</h3>
-          </div>
-          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Powered by OpenFoodFacts — the world's largest open food database. Search real products and log exact macronutrients.</p>
-          
-          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Search foods (e.g. 'Chicken Breast', 'Oats')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
-            <button onClick={handleSearch} disabled={searching} style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>{searching ? 'Searching...' : 'Search'}</button>
-          </div>
-          
-          {results.length > 0 && (
-            <div style={{ marginBottom: 24 }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: 15 }}>Results (per 100g)</h4>
-              {results.map((food, i) => (
-                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'var(--bg)', borderRadius: 12, marginBottom: 8, border: '1px solid var(--border)' }}>
-                  {food.image && <img src={food.image} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: 14 }}>{food.name}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{food.brand} • {food.serving}</div>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12 }}>
-                      <span style={{ color: '#dc2626', fontWeight: 600 }}>{food.calories} kcal</span>
-                      <span>P: {food.protein}g</span>
-                      <span>C: {food.carbs}g</span>
-                      <span>F: {food.fat}g</span>
-                    </div>
-                  </div>
-                  <button onClick={() => logFood(food)} style={{ background: 'var(--green)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Log</button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       )}
+
+      <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          <Icons.Database size={24} color="var(--green-dark)" />
+          <h3 style={{ margin: 0 }}>Global Macro Tracker</h3>
+        </div>
+        <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Powered by OpenFoodFacts — the world's largest open food database. Search real products and log exact macronutrients.</p>
+        
+        <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+          <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} placeholder="Search foods (e.g. 'Chicken Breast', 'Oats')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
+          <button onClick={handleSearch} disabled={searching} style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>{searching ? 'Searching...' : 'Search'}</button>
+        </div>
+        
+        {results.length > 0 && (
+          <div style={{ marginBottom: 24 }}>
+            <h4 style={{ margin: '0 0 12px 0', fontSize: 15 }}>Results (per 100g)</h4>
+            {results.map((food, i) => (
+              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: 12, background: 'var(--bg)', borderRadius: 12, marginBottom: 8, border: '1px solid var(--border)' }}>
+                {food.image && <img src={food.image} alt="" style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover' }} />}
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{food.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{food.brand} • {food.serving}</div>
+                  <div style={{ display: 'flex', gap: 12, marginTop: 4, fontSize: 12 }}>
+                    <span style={{ color: '#dc2626', fontWeight: 600 }}>{food.calories} kcal</span>
+                    <span>P: {food.protein}g</span>
+                    <span>C: {food.carbs}g</span>
+                    <span>F: {food.fat}g</span>
+                  </div>
+                </div>
+                <button onClick={() => logFood(food)} style={{ background: 'var(--green)', color: 'white', border: 'none', padding: '8px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Log</button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {logged.length > 0 && (
         <div className="dash-card" style={{ padding: 24 }}>
