@@ -554,8 +554,26 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
   const [syncingGym, setSyncingGym] = useState(false);
 
   useEffect(() => {
-    setWorkoutHistory(JSON.parse(localStorage.getItem('nuracare_workouts') || '[]'));
-  }, []);
+    const workouts = JSON.parse(localStorage.getItem('nuracare_workouts') || '[]');
+    setWorkoutHistory(workouts.filter(w => w.type === 'gym').reverse());
+    
+    if (workouts.length >= 3) {
+      const recentWorkouts = workouts.slice(-3);
+      let legCount = 0;
+      let pushCount = 0;
+      let pullCount = 0;
+      recentWorkouts.forEach(w => {
+        if (!w.sets) return;
+        if (w.sets.some(s => EXERCISE_DB.legs.includes(s.exercise))) legCount++;
+        if (w.sets.some(s => EXERCISE_DB.push.includes(s.exercise))) pushCount++;
+        if (w.sets.some(s => EXERCISE_DB.pull.includes(s.exercise))) pullCount++;
+      });
+      if (legCount >= 3 && selectedMuscle === 'legs') setWarning('You have trained legs 3 times recently. Consider resting them today.');
+      else if (pushCount >= 3 && selectedMuscle === 'push') setWarning('You have trained push muscles 3 times recently. Consider a pull or leg day.');
+      else if (pullCount >= 3 && selectedMuscle === 'pull') setWarning('You have trained pull muscles 3 times recently. Consider a push or leg day.');
+      else setWarning('');
+    }
+  }, [selectedMuscle]);
   const handleAddSet = () => {
     if (!exercise || !repsInput) return;
     const repStr = weightInput ? `${repsInput} reps @ ${weightInput}kg` : `${repsInput} reps`;
@@ -579,13 +597,13 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
       const device = await connectBluetoothDevice();
       const fakeSets = [{ id: Date.now()+1, exercise: 'Bench Press', reps: '3x10 60kg' }];
       setLoggedSets([...loggedSets, ...fakeSets]);
-      showToast(`Connected to ${device.name}! Sets synced.`, 'success');
+      alert(`Connected to ${device.name}! Sets synced.`);
       if (device.gatt.connected) device.gatt.disconnect();
     } catch (e) {
-      showToast('Bluetooth sync failed. Falling back to simulation...', 'error');
+      alert('Bluetooth sync failed. Falling back to simulation...');
       await new Promise(r => setTimeout(r, 1500));
       setLoggedSets([...loggedSets, { id: Date.now()+1, exercise: 'Bench Press', reps: '3x10 60kg' }]);
-      showToast('Watch simulated! Sets loaded.', 'success');
+      alert('Watch simulated! Sets loaded.');
     }
     setSyncingGym(false);
   };
@@ -760,7 +778,6 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
           </div>
         </div>
       </div>
-    </div>
 
       {workoutHistory.length > 0 && (
         <div style={{ marginTop: 32 }}>
