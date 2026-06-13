@@ -21,8 +21,17 @@ export function AuthProvider({ children }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUpWithEmail = async (email, password) => {
-    const { data, error } = await supabase.auth.signUp({ email, password });
+  const signUpWithEmail = async (email, password, name, phone) => {
+    const { data, error } = await supabase.auth.signUp({ 
+      email, 
+      password,
+      options: {
+        data: {
+          full_name: name,
+          phone: phone,
+        }
+      }
+    });
     if (error) throw error;
     return data;
   };

@@ -317,6 +317,11 @@ export default function App() {
 
   // Onboarding Form State
   const [obName, setObName] = useState('');
+  useEffect(() => {
+    if (user?.user_metadata?.full_name && !obName) {
+      setObName(user.user_metadata.full_name);
+    }
+  }, [user]);
   const [obAge, setObAge] = useState('');
   const [obCulturalHeritage, setObCulturalHeritage] = useState('Global');
   const [obLang, setObLang] = useState('English');
@@ -721,6 +726,7 @@ export default function App() {
           </select>
           <NavItem icon={Icons.User} label={t("profile")} active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Star} label={t("upgrade_premium")} active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.LogOut} label={t("log_out") || "Log Out"} active={false} onClick={() => { handleLogout(); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('terms'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Terms of Service</a>
@@ -1613,12 +1619,16 @@ WELLNESS CONTEXT:${checkinContext}
 
   const generateSmartTitle = async (firstUserMsg, firstAiSummary, sessionId) => {
     try {
+      const existingSession = sessions.find(s => s.id === sessionId);
+      if (!existingSession) return;
+      
       const placeholderTitle = firstUserMsg.split(' ').slice(0, 4).join(' ') + '...';
       
-      // Update session immediately using a functional state update to avoid stale closures
-      setSessions(prev => prev.map(s => 
-        s.id === sessionId ? { ...s, name: placeholderTitle, isSmartName: true } : s
-      ));
+      saveSession({
+        ...existingSession,
+        name: placeholderTitle,
+        isSmartName: true
+      });
       
       const isDev = import.meta.env.DEV;
       let title = '';
@@ -1643,17 +1653,22 @@ WELLNESS CONTEXT:${checkinContext}
       }
       
       if (title) {
-        setSessions(prev => {
-          const updated = prev.map(s => s.id === sessionId ? { ...s, name: title, isSmartName: true } : s);
-          localStorage.setItem('nuracare_sessions', JSON.stringify(updated));
-          return updated;
+        saveSession({
+          ...existingSession,
+          name: title,
+          isSmartName: true
         });
       }
     } catch (e) {
       console.error('Smart title failed:', e);
-      setSessions(prev => prev.map(s => 
-        s.id === sessionId ? { ...s, name: firstUserMsg.split(' ').slice(0, 5).join(' ') + '...', isSmartName: false } : s
-      ));
+      const existingSession = sessions.find(s => s.id === sessionId);
+      if (existingSession) {
+        saveSession({
+          ...existingSession,
+          name: firstUserMsg.split(' ').slice(0, 5).join(' ') + '...',
+          isSmartName: false
+        });
+      }
     }
   };
 
@@ -2347,10 +2362,10 @@ function Discovery({ t }) {
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {feed.filter(i => !!i.vid).map((item, i) => (
           <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden', background: '#fafafa' }}>
-            <a href={item.vid} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block' }}>
-              <img src={item.image} alt={item.name} style={{ width: '100%', height: 180, objectFit: 'cover', opacity: 0.8 }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=400&q=80'}} />
-              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(0,0,0,0.6)', borderRadius: '50%', padding: 12 }}>
-                <Icons.Play size={24} color="#fff" fill="#fff" />
+            <a href={item.vid} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block', backgroundColor: '#000' }}>
+              <img src={item.image} alt={item.name} style={{ width: '100%', height: 180, objectFit: 'cover', opacity: 0.9 }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1611162617474-5b21e879e113?auto=format&fit=crop&w=400&q=80'}} />
+              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: '#ff0000', borderRadius: '12px', width: 68, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                <Icons.Play size={28} color="#fff" fill="#fff" />
               </div>
             </a>
             <div style={{ padding: 16 }}>
@@ -2374,6 +2389,8 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [loading, setLoading] = useState(false);
@@ -2390,8 +2407,8 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
       if (isLogin) {
         await signInWithEmail(email, password);
       } else {
-        await signUpWithEmail(email, password);
-        showToast('Signup successful! Please check your email to verify, or try logging in.', 'success');
+        await signUpWithEmail(email, password, name, phone);
+        showToast('Signup successful! Please check your email to verify.', 'success');
       }
     } catch (error) {
       setErrorMsg(error.message);
@@ -2411,11 +2428,23 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
           <h2 className="step-title" style={{textAlign: 'center'}}>{isLogin ? 'Welcome Back' : 'Create an Account'}</h2>
           
           <form onSubmit={handleSubmit}>
-            <div className="form-group" style={{textAlign: 'left'}}>
+            {!isLogin && (
+              <>
+                <div className="form-group" style={{textAlign: 'left', marginBottom: 16}}>
+                  <label>Full Name</label>
+                  <input type="text" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Sarah Smith" required={!isLogin} style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}} />
+                </div>
+                <div className="form-group" style={{textAlign: 'left', marginBottom: 16}}>
+                  <label>Phone Number (Optional)</label>
+                  <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 234 567 8900" style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}} />
+                </div>
+              </>
+            )}
+            <div className="form-group" style={{textAlign: 'left', marginBottom: 16}}>
               <label>Email</label>
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" required style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}} />
             </div>
-            <div className="form-group" style={{marginTop: 16, textAlign: 'left'}}>
+            <div className="form-group" style={{textAlign: 'left'}}>
               <label>Password</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}} />
             </div>
