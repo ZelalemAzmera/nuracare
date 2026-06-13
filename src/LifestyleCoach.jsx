@@ -164,7 +164,8 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
   if (activeSection === 'running') return <RunningDashboard onBack={() => setActiveSection('overview')} connectBluetoothDevice={connectBluetoothDevice} />;
   if (activeSection === 'yoga') return <YogaDashboard onBack={() => setActiveSection('overview')} recent={recentData} />;
-  if (activeSection === 'gym') return <GymDashboard onBack={() => setActiveSection('overview')} recent={recentData} connectBluetoothDevice={connectBluetoothDevice} />;
+  if (activeSection === 'gym') return <GymDashboard onBack={() => setActiveSection('overview')} recent={recentData} profile={profile} connectBluetoothDevice={connectBluetoothDevice} />;
+  if (activeSection === 'nutrition') return <NutritionDashboard onBack={() => setActiveSection('overview')} profile={profile} />;
 
   return (
     <div className="page active">
@@ -224,9 +225,31 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
 
       <div className="section-title">🏃‍♂️ Exercise Dashboards</div>
       <div className="dashboard-grid">
-        <OverviewCard title="Running Tracker" desc="Track your outdoor runs or treadmill distance." icon={<Icons.Navigation size={28} color="var(--green-dark)" />} onClick={() => setActiveSection('running')} />
-        <OverviewCard title="Gym & Strength" desc="Log sets, reps, and get routine suggestions." icon={<Icons.Dumbbell size={28} color="var(--green-dark)" />} onClick={() => setActiveSection('gym')} />
-        <OverviewCard title="Yoga Flow" desc="Guided sessions based on your body tension." icon={<Icons.Flower2 size={28} color="var(--green-dark)" />} onClick={() => setActiveSection('yoga')} />
+        <OverviewCard 
+          title="Running Tracker" desc="Track your outdoor runs or treadmill distance."
+          icon={<Icons.Navigation size={28} color="var(--green-dark)" />}
+          onClick={() => setActiveSection('running')}
+        />
+
+        <OverviewCard 
+          title="Gym & Strength" desc="Log sets, reps, and get routine suggestions."
+          icon={<Icons.Dumbbell size={28} color="var(--green-dark)" />}
+          onClick={() => setActiveSection('gym')}
+        />
+
+        <OverviewCard 
+          title="Nutrition & Fasting" desc="Log your meals, macros, and track fasting rules."
+          icon={<Icons.Utensils size={28} color="var(--green-dark)" />}
+          onClick={() => setActiveSection('nutrition')}
+        />
+
+        <OverviewCard 
+          title="Yoga Flow" desc="Guided sessions based on your body tension."
+          icon={<Icons.Flower2 size={28} color="var(--green-dark)" />}
+          onClick={() => setActiveSection('yoga')}
+        />
+
+>>>>>>> origin/feat/global-calendar-pipeline
       </div>
 
       <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
@@ -521,9 +544,11 @@ function RunningDashboard({ onBack, connectBluetoothDevice }) {
   );
 }
 
-function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
+/* --- GYM --- */
+function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
   const [exercise, setExercise] = useState('');
-  const [reps, setReps] = useState('');
+  const [repsInput, setRepsInput] = useState('');
+  const [weightInput, setWeightInput] = useState('');
   const [loggedSets, setLoggedSets] = useState([]);
   const [selectedMuscle, setSelectedMuscle] = useState('legs');
   const [warning, setWarning] = useState('');
@@ -534,10 +559,12 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
     setWorkoutHistory(JSON.parse(localStorage.getItem('nuracare_workouts') || '[]'));
   }, []);
   const handleAddSet = () => {
-    if (!exercise || !reps) return;
-    setLoggedSets([...loggedSets, { id: Date.now(), exercise, reps }]);
+    if (!exercise || !repsInput) return;
+    const repStr = weightInput ? `${repsInput} reps @ ${weightInput}kg` : `${repsInput} reps`;
+    setLoggedSets([...loggedSets, { id: Date.now(), exercise, reps: repStr }]);
     setExercise('');
-    setReps('');
+    setRepsInput('');
+    setWeightInput('');
   };
   const handleSaveWorkout = () => {
     if (loggedSets.length === 0) return;
@@ -566,6 +593,16 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
   };
 
   const generateWorkout = () => {
+    const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
+    
+    if (isEthiopia) {
+      return {
+        title: "Gym-Less Everyday Movement",
+        desc: "No gym nearby? Use your bodyweight to build functional strength.",
+        exercises: ["Bodyweight Squats", "Pushups", "Pull-ups (or Doorway Rows)", "Planks"]
+      };
+    }
+
     if (!recent) return { title: "Full Body Foundation", desc: "Start strong with core compound movements.", exercises: [EXERCISE_DB.legs[0], EXERCISE_DB.push[3], EXERCISE_DB.pull[1], EXERCISE_DB.core[0]] };
     
     if (recent.energy >= 7 && recent.stress <= 4) {
@@ -604,7 +641,14 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
       <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, display: 'flex', gap: 16, alignItems: 'flex-start', border: '1px solid var(--border)' }}>
         <Icons.BrainCircuit size={28} color="var(--green-dark)" style={{ flexShrink: 0 }} />
         <div style={{ width: '100%' }}>
-          <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: 18 }}>{workout.title}</h4>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: 18 }}>{workout.title}</h4>
+            {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
+              <a href="https://www.google.com/maps/search/gyms+near+me/" target="_blank" rel="noreferrer" className="btn-outline-sm" style={{ display: 'flex', gap: 6, alignItems: 'center', textDecoration: 'none' }}>
+                <Icons.MapPin size={14} /> Find Nearby Gyms
+              </a>
+            )}
+          </div>
           {workout.desc && <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>{workout.desc}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {workout.exercises.map((ex, i) => (
@@ -615,6 +659,26 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
           </div>
         </div>
       </div>
+
+      {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
+        <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, border: '1px solid var(--border)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Map size={20} color="var(--green-dark)" /> Gym & Studio Finder</h3>
+          <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Using your location ({profile?.location?.city || 'Unknown'}), we found these functional fitness centers nearby:</p>
+          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+            {[
+              { name: 'Planet Fitness', dist: '0.8 mi', type: 'Commercial Gym' },
+              { name: 'CorePower Yoga', dist: '1.2 mi', type: 'Yoga Studio' },
+              { name: 'CrossFit Silver Spring', dist: '2.5 mi', type: 'Functional Training' }
+            ].map(gym => (
+              <div key={gym.name} style={{ minWidth: 200, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{gym.type} • {gym.dist}</div>
+                <button style={{ width: '100%', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Directions</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="dash-card" style={{ background: 'var(--white)', padding: 24, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 24, alignItems: 'start' }}>
@@ -683,13 +747,16 @@ function GymDashboard({ onBack, recent, connectBluetoothDevice }) {
         </div>
 
         {exercise && (
-          <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
+          <div style={{ background: 'var(--bg)', padding: 16, borderRadius: 12, display: 'flex', gap: 12, alignItems: 'flex-end', border: '1px solid var(--border)' }}>
             <div style={{ flex: 1 }}>
-              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--text-muted)' }}>Sets & Reps</label>
-              <input type="text" placeholder="e.g. 3x10 60kg" value={reps} onChange={(e)=>setReps(e.target.value)} style={{ width: '100%', padding: 10, borderRadius: 8, border: '1px solid var(--border)', fontSize: 14 }} />
+              <label style={{ display: 'block', fontSize: 12, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Tap to log grid:</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input type="number" placeholder="Reps" value={repsInput} onChange={(e)=>setRepsInput(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 16, fontWeight: 700 }} />
+                <input type="number" placeholder="Weight (kg)" value={weightInput} onChange={(e)=>setWeightInput(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 16, fontWeight: 700 }} />
+              </div>
             </div>
-            <button onClick={handleAddSet} disabled={!reps} style={{ marginTop: 20, background: 'var(--green)', color: 'white', border: 'none', padding: '10px 16px', borderRadius: 8, fontWeight: 600, cursor: reps ? 'pointer' : 'not-allowed', opacity: reps ? 1 : 0.5 }}>
-              Add
+            <button onClick={handleAddSet} disabled={!repsInput} style={{ background: 'var(--green)', color: 'white', border: 'none', padding: '12px 24px', borderRadius: 8, fontWeight: 700, cursor: repsInput ? 'pointer' : 'not-allowed', opacity: repsInput ? 1 : 0.5 }}>
+              <Icons.Plus size={20} />
             </button>
           </div>
         )}
@@ -788,16 +855,17 @@ function YogaDashboard({ onBack, recent }) {
                     <span style={{ fontSize: 12, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{pose.dur}</span>
                   </div>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{pose.desc}</p>
-                  <div style={{ marginTop: 12, display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ position: 'relative', display: 'block', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)', width: 120 }}>
-                      <img src={`https://img.youtube.com/vi/${pose.vid}/hqdefault.jpg`} alt="Video preview" style={{ width: '100%', height: 68, objectFit: 'cover', opacity: 0.9, display: 'block' }} />
-                      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', background: 'rgba(255,255,255,0.9)', borderRadius: '50%', padding: 4, boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
-                        <Icons.Play size={16} color="#ef4444" fill="#ef4444" />
-                      </div>
-                    </a>
-                    <a href={`https://youtube.com/watch?v=${pose.vid}`} target="_blank" rel="noreferrer" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#ef4444', textDecoration: 'none', fontWeight: 600, border: '1.5px solid #ef4444', padding: '6px 16px', borderRadius: 20 }}>
-                      <Icons.Youtube size={16} /> Watch Tutorial
-                    </a>
+                  <div style={{ marginTop: 12, borderRadius: 12, overflow: 'hidden', border: '1px solid var(--border)', background: '#000', height: 200 }}>
+                    <iframe 
+                      width="100%" 
+                      height="100%" 
+                      src={`https://www.youtube.com/embed/${pose.vid}?controls=1&modestbranding=1`} 
+                      title="YouTube video player" 
+                      frameBorder="0" 
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                      allowFullScreen
+                      style={{ display: 'block' }}
+                    ></iframe>
                   </div>
                 </div>
               </div>
@@ -833,6 +901,70 @@ function OverviewCard({ title, desc, icon, onClick }) {
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{desc}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* --- NUTRITION DASHBOARD --- */
+function NutritionDashboard({ onBack, profile }) {
+  const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
+  
+  return (
+    <div className="page active">
+      <DashHeader title="Nutrition Tracker" onBack={onBack} icon={<div style={{background: 'var(--green-light)', padding: 10, borderRadius: 12}}><Icons.Utensils size={24} color="var(--green-dark)"/></div>} />
+      
+      {isEthiopia ? (
+        <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <Icons.PieChart size={24} color="var(--green-dark)" />
+            <h3 style={{ margin: 0 }}>Gebeta Fractional Logging</h3>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>In Ethiopia, communal eating is standard. Log your meals by estimating the fraction of the Gebeta you consumed.</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {['1/4 Gebeta', '1/2 Gebeta', '3/4 Gebeta', 'Full Gebeta'].map(fraction => (
+              <button key={fraction} style={{ padding: '16px', borderRadius: 12, border: '1px solid var(--green)', background: 'var(--white)', color: 'var(--green-dark)', fontWeight: 600, cursor: 'pointer' }}>
+                {fraction}
+              </button>
+            ))}
+          </div>
+          
+          <div style={{ marginTop: 24, padding: 16, background: '#fef3c7', borderRadius: 12, border: '1px solid #fcd34d' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#92400e' }}>Active Fasting Rules</h4>
+            <p style={{ margin: 0, fontSize: 13, color: '#b45309' }}>Tsom is active today. Ensure your plate contains no meat, dairy, or eggs. Recommended: Shiro, Gomen, and Misir.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <Icons.Database size={24} color="var(--green-dark)" />
+            <h3 style={{ margin: 0 }}>Global Macro Tracker</h3>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Connected to USDA FoodData Central. Log exact grams/ounces to accurately track your macronutrients.</p>
+          
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <input type="text" placeholder="Search USDA Database (e.g. 'Chicken Breast')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
+            <button style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Search</button>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Quantity</label>
+              <input type="number" placeholder="100" style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Unit</label>
+              <select style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <option>Grams (g)</option>
+                <option>Ounces (oz)</option>
+                <option>Cups</option>
+              </select>
+            </div>
+          </div>
+          
+          <button style={{ width: '100%', padding: 16, background: 'var(--green)', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, marginTop: 24, cursor: 'pointer' }}>Log Macros</button>
+        </div>
+      )}
     </div>
   );
 }

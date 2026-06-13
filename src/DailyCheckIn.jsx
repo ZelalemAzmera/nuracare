@@ -93,9 +93,16 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                 
                 <div style={{ marginTop: 32, marginBottom: 24 }}>
                   <label style={{ display: 'block', fontWeight: 600, marginBottom: 8, color: 'var(--text)' }}>How many hours did you sleep?</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <input type="range" min="0" max="12" step="0.5" value={sleepHours} onChange={(e) => setSleepHours(parseFloat(e.target.value))} style={{ flex: 1, accentColor: 'var(--green)' }} />
-                    <span style={{ fontWeight: 800, fontSize: 22, width: 55, color: 'var(--green-dark)' }}>{sleepHours}h</span>
+                  
+                  <div style={{ background: 'var(--green-light)', padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--green)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Icons.Watch size={24} color="var(--green-dark)" />
+                      <div>
+                        <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
+                        <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Synced via Apple Health</div>
+                      </div>
+                    </div>
+                    <button style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
                   </div>
                 </div>
 
@@ -182,18 +189,17 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 12, color: 'var(--text)' }}>What's your planned daily activity?</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-                    {['Rest/None', 'Light (Walk)', 'Moderate (Jog)', 'Intense (Gym)'].map(opt => (
-                      <button key={opt} onClick={() => setActivity(opt)} style={{
-                        padding: '12px 14px', borderRadius: 20, border: '1.5px solid var(--green)',
-                        background: activity === opt ? 'var(--green)' : 'transparent',
-                        color: activity === opt ? 'white' : 'var(--green-dark)',
-                        fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', fontSize: 13
-                      }}>
-                        {opt}
-                      </button>
-                    ))}
+                  <label style={{ display: 'block', fontWeight: 600, marginBottom: 12, color: 'var(--text)' }}>Today's Planned Activity</label>
+                  
+                  <div style={{ background: 'var(--green-light)', padding: '16px', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', border: '1px solid var(--green)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <Icons.Activity size={24} color="var(--green-dark)" />
+                      <div>
+                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>Rest Day (Suggested)</div>
+                        <div style={{ fontSize: '13px', color: 'var(--green-dark)', opacity: 0.8 }}>Based on your Garmin HRV score</div>
+                      </div>
+                    </div>
+                    <button style={{ background: 'var(--white)', border: 'none', padding: '8px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: 'bold', color: 'var(--green-dark)', cursor: 'pointer' }}>Edit</button>
                   </div>
                 </div>
 

@@ -1,13 +1,35 @@
 // Edge runtime — proxies Groq streaming SSE to the client
 export const config = { runtime: 'edge' };
 
-function buildSystemPrompt(profile, memoryContext, lang) {
+function buildSystemPrompt(profile, memoryContext, lang, culturalContext) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
   const recentRecords = (profile?.records || []).slice(-5).map(r =>
     `- ${r.dateStr}: ${r.summary} (${r.urgency} urgency) — action: ${r.action}`
   ).join('\n') || 'No past records yet.';
 
   const crossMemory = memoryContext || 'No previous sessions yet.';
+  const aiPayload = {
+    user_profile: {
+      detected_location: {
+        country: profile?.location?.country || "Unknown",
+        city: profile?.location?.city || "Unknown",
+        timezone: profile?.location?.timezone || "Unknown",
+        current_weather: culturalContext?.active_season || "Unknown"
+      },
+      cultural_preference: profile?.culturalHeritage === 'Ethiopia' 
+        ? `Ethiopian (Follows ${profile?.fastingMode || 'Standard'} Diet)` 
+        : `Global User (Follows ${profile?.fastingMode || 'Standard'} Diet)`,
+      infrastructure_context: {
+        gym_availability_density: (profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia') ? "LOW" : "HIGH",
+        wearable_sync_active: true
+      }
+    }
+  };
+
+  const dynamicContextStr = `\nDYNAMIC LOCATION & CULTURAL CONTEXT:\n${JSON.stringify(aiPayload, null, 2)}\n\nIMPORTANT CONTEXT RULE: You MUST tailor your nutritional, rest, and mobility advice to the location and cultural context provided above. (e.g. recommend home bodyweight workouts if gym availability is LOW, or recommend real gyms and studios if HIGH. Adapt nutrition based on cultural preferences and local fasting rules).`;
+
+  // Merge the ethiopian specific context if available
+  const ethioContextStr = culturalContext ? `\nETHIOPIAN CALENDAR CONTEXT:\n${JSON.stringify(culturalContext, null, 2)}` : '';
 
   const localHerbsDB = {
     ET: ['Damakese (Ocimum lamiifolium)', 'Tena Adam (Ruta chalepensis)', 'Gesho (Rhamnus prinoides)', 'Kosso (Hagenia abyssinica)', 'Wogert (Zehneria scabra)'],
@@ -34,6 +56,8 @@ ${recentRecords}
 ${medicalNotes}
 USER'S LOCAL HERBS (prefer these when suggesting natural remedies):
 ${userHerbs.join(', ')}
+${dynamicContextStr}
+${ethioContextStr}
 
 CROSS-SESSION MEMORY (general knowledge from previous conversations — use this to personalize, reference past topics when relevant, never repeat questions already answered):
 ${crossMemory}
@@ -98,8 +122,18 @@ export default async function handler(req) {
   try {
     const { messages, profile, memoryContext, lang } = await req.json();
 
+    let culturalContext = null;
+    try {
+      // In Vercel Edge, req.headers.get('host') gets the current host. 
+      // We construct an absolute URL to fetch our internal python API.
+      const host = req.headers.get('host') || 'localhost:3000';
+      const protocol = req.headers.get('x-forwarded-proto') || 'http';
+      const calRes = await fetch(`${protocol}://${host}/api/calendar`);
+      if (calRes.ok) culturalContext = await calRes.json();
+    } catch(e) { console.error('Failed to fetch calendar context:', e); }
+
     const groqMessages = [
-      { role: 'system', content: buildSystemPrompt(profile, memoryContext, lang) },
+      { role: 'system', content: buildSystemPrompt(profile, memoryContext, lang, culturalContext) },
       ...(messages || [])
         .filter(m => m.id !== 'welcome' && m.content)
         .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))

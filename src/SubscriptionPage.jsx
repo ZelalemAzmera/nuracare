@@ -5,6 +5,7 @@ import { showToast } from './App';
 export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise }) {
   const [loading, setLoading] = useState(false);
   const [paymentModal, setPaymentModal] = useState({ isOpen: false, plan: null, amount: 0 });
+  const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
 
   const handleCheckout = async (gateway, amount) => {
     setLoading(true);
@@ -91,7 +92,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
         <div style={cardStyle}>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 20 }}>Pro</h3>
           <div style={{ marginBottom: 24 }}>
-            <span style={{ fontSize: 36, fontWeight: 800 }}>Birr 150 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 'normal' }}>or $3</span></span>
+            <span style={{ fontSize: 36, fontWeight: 800 }}>{isEthiopia ? 'Birr 150' : '$5'}</span>
             <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 14 }}>/month</span>
           </div>
           <div style={{ flex: 1, marginBottom: 32 }}>
@@ -101,7 +102,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
               </div>
             ))}
           </div>
-          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Pro', amount: 150 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1px solid var(--green)', fontWeight: 600, cursor: 'pointer', background: 'transparent', color: 'var(--green)', transition: 'all 0.2s' }}>
+          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Pro', amount: isEthiopia ? 150 : 5 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: '1px solid var(--green)', fontWeight: 600, cursor: 'pointer', background: 'transparent', color: 'var(--green)', transition: 'all 0.2s' }}>
             Upgrade to Pro
           </button>
         </div>
@@ -111,7 +112,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
           <div style={{ position: 'absolute', top: -12, left: '50%', transform: 'translateX(-50%)', background: 'var(--green)', color: 'white', padding: '4px 16px', borderRadius: 20, fontSize: 12, fontWeight: 'bold', whiteSpace: 'nowrap', zIndex: 10 }}>RECOMMENDED</div>
           <h3 style={{ margin: '0 0 8px 0', fontSize: 20 }}>Premium</h3>
           <div style={{ marginBottom: 24 }}>
-            <span style={{ fontSize: 36, fontWeight: 800 }}>Birr 300 <span style={{ fontSize: 14, color: 'var(--text-muted)', fontWeight: 'normal' }}>or $5</span></span>
+            <span style={{ fontSize: 36, fontWeight: 800 }}>{isEthiopia ? 'Birr 300' : '$10'}</span>
             <span style={{ color: 'var(--text-muted)', display: 'block', fontSize: 14 }}>/month</span>
           </div>
           <div style={{ flex: 1, marginBottom: 32 }}>
@@ -121,7 +122,7 @@ export default function SubscriptionPage({ profile, onBack, onNavigateEnterprise
               </div>
             ))}
           </div>
-          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Premium', amount: 300 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', fontWeight: 600, cursor: 'pointer', background: 'var(--green)', color: 'white', transition: 'all 0.2s' }}>
+          <button onClick={() => setPaymentModal({ isOpen: true, plan: 'Premium', amount: isEthiopia ? 300 : 10 })} style={{ width: '100%', padding: 14, borderRadius: 12, border: 'none', fontWeight: 600, cursor: 'pointer', background: 'var(--green)', color: 'white', transition: 'all 0.2s' }}>
             Upgrade to Premium
           </button>
         </div>

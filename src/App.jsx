@@ -316,6 +316,7 @@ export default function App() {
   // Onboarding Form State
   const [obName, setObName] = useState('');
   const [obAge, setObAge] = useState('');
+  const [obCulturalHeritage, setObCulturalHeritage] = useState('Global');
   const [obConditions, setObConditions] = useState([]);
   const [obOtherCondition, setObOtherCondition] = useState('');
   const [obFasting, setObFasting] = useState(TSOM_TYPES.NONE);
@@ -352,7 +353,9 @@ export default function App() {
             location: {
               country: data.country_name,
               code: data.country_code,
-              city: data.city
+              city: data.city,
+              timezone: data.timezone,
+              currency: data.currency
             }
           };
           setProfile(p);
@@ -369,7 +372,7 @@ export default function App() {
     setProfile(null);
     setOnboardingStep(0);
     setActivePage('home');
-    setObName(''); setObAge(''); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
+    setObName(''); setObAge(''); setObCulturalHeritage('Global'); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
     signOut();
   };
 
@@ -399,6 +402,7 @@ export default function App() {
     const p = {
       name: obName,
       age: obAge,
+      culturalHeritage: obCulturalHeritage,
       conditions: allConditions,
       medications: obMeds,
       fastingMode: obFasting,
@@ -510,6 +514,13 @@ export default function App() {
                   <label>How old are you?</label>
                   <input type="number" value={obAge} onChange={e => setObAge(e.target.value)} placeholder="e.g. 28" />
                 </div>
+                <div className="form-group">
+                  <label>Cultural Heritage / Birthplace</label>
+                  <select value={obCulturalHeritage} onChange={e => setObCulturalHeritage(e.target.value)} style={{width: '100%', padding: '12px', borderRadius: '12px', border: '1px solid var(--border)'}}>
+                    <option value="Global">Global / Other</option>
+                    <option value="Ethiopia">Ethiopia</option>
+                  </select>
+                </div>
                 <button className="btn-primary" onClick={() => { if(obName) setOnboardingStep(2); else showToast("Please enter your name", "error"); }}>Continue</button>
               </div>
             )}
@@ -557,17 +568,44 @@ export default function App() {
                   </div>
                 )}
                 
-                <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 12, color: 'var(--text)' }}>Dietary Context</h3>
-                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12 }}>
+                <h3 style={{ fontSize: 16, marginTop: 24, marginBottom: 12, color: 'var(--text)' }}>Dietary & Fasting Context</h3>
+                
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
                   <input 
-                    type="checkbox" 
-                    checked={obFasting === TSOM_TYPES.ORTHODOX} 
-                    onChange={(e) => setObFasting(e.target.checked ? TSOM_TYPES.ORTHODOX : TSOM_TYPES.NONE)} 
+                    type="radio" 
+                    checked={obFasting === TSOM_TYPES.NONE} 
+                    onChange={() => setObFasting(TSOM_TYPES.NONE)} 
                     style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
                   />
                   <div>
-                    <span style={{ fontWeight: 600, display: 'block' }}>Follow Orthodox Christian Fasting (Tsom)</span>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nura will adapt recipes for fasting periods.</span>
+                    <span style={{ fontWeight: 600, display: 'block' }}>Standard Diet</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>No regular fasting restrictions.</span>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12, marginBottom: 8 }}>
+                  <input 
+                    type="radio" 
+                    checked={obFasting === TSOM_TYPES.ORTHODOX} 
+                    onChange={() => setObFasting(TSOM_TYPES.ORTHODOX)} 
+                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: 600, display: 'block' }}>Orthodox Christian Fasting (Tsom)</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Nura will adapt recipes to be plant-based during fasting periods.</span>
+                  </div>
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', padding: 16, border: '1px solid var(--border)', borderRadius: 12 }}>
+                  <input 
+                    type="radio" 
+                    checked={obFasting === TSOM_TYPES.ISLAMIC} 
+                    onChange={() => setObFasting(TSOM_TYPES.ISLAMIC)} 
+                    style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                  />
+                  <div>
+                    <span style={{ fontWeight: 600, display: 'block' }}>Islamic Fasting (Ramadan)</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>Shifts hydration & exercise tracking to post-Iftar evening hours.</span>
                   </div>
                 </label>
 
@@ -754,21 +792,47 @@ export default function App() {
 
             <div className="section-title" style={{marginTop: 32}}>Preferences</div>
             <div className="dash-card">
-              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 12 }}>
                 <input 
-                  type="checkbox" 
-                  checked={profile.fastingMode === TSOM_TYPES.ORTHODOX} 
-                  onChange={(e) => {
-                    const mode = e.target.checked ? TSOM_TYPES.ORTHODOX : TSOM_TYPES.NONE;
-                    saveProfile({ ...profile, fastingMode: mode });
-                    showToast(e.target.checked ? 'Fasting mode enabled' : 'Fasting mode disabled', 'success');
+                  type="radio" 
+                  checked={profile.fastingMode === TSOM_TYPES.NONE} 
+                  onChange={() => {
+                    saveProfile({ ...profile, fastingMode: TSOM_TYPES.NONE });
+                    showToast('Standard diet enabled', 'success');
                   }} 
                   style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
                 />
-                <span style={{ fontWeight: 600 }}>Enable Fasting Mode (Tsom)</span>
+                <span style={{ fontWeight: 600 }}>Standard Diet (No Restrictions)</span>
               </label>
-              <p style={{ margin: '8px 0 0 30px', fontSize: 13, color: 'var(--text-muted)' }}>
-                When enabled, NuraCare will adjust nutritional recommendations to be plant-based and suitable for fasting periods.
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 12 }}>
+                <input 
+                  type="radio" 
+                  checked={profile.fastingMode === TSOM_TYPES.ORTHODOX} 
+                  onChange={() => {
+                    saveProfile({ ...profile, fastingMode: TSOM_TYPES.ORTHODOX });
+                    showToast('Orthodox fasting mode enabled', 'success');
+                  }} 
+                  style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                />
+                <span style={{ fontWeight: 600 }}>Orthodox Christian Fasting (Tsom)</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }}>
+                <input 
+                  type="radio" 
+                  checked={profile.fastingMode === TSOM_TYPES.ISLAMIC} 
+                  onChange={() => {
+                    saveProfile({ ...profile, fastingMode: TSOM_TYPES.ISLAMIC });
+                    showToast('Islamic fasting mode enabled', 'success');
+                  }} 
+                  style={{ width: 18, height: 18, accentColor: 'var(--green)' }}
+                />
+                <span style={{ fontWeight: 600 }}>Islamic Fasting (Ramadan)</span>
+              </label>
+              
+              <p style={{ margin: '12px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                NuraCare will adjust nutritional recommendations and athletic tracking based on your active fasting cycle.
               </p>
             </div>
 
@@ -1359,13 +1423,24 @@ export function UrgencyCard({ data }) {
   return (
     <div className={`result-card urgency-card-${data.urgency}`} style={{ marginTop: 12, maxWidth: '90%' }}>
       {!isMentalHealth && <div className={`urgency-badge urgency-${data.urgency}`} style={{ marginBottom: 16 }}>{label}</div>}
-      {data.action && (
+      
+      {data.urgency === 'high' && (
+        <div className="result-section" style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
+          <div className="result-section-label" style={{ color: '#dc2626' }}>🚨 Immediate Medical Attention Recommended</div>
+          <p style={{ color: '#991b1b', fontSize: '14px', marginBottom: '12px' }}>Your symptoms indicate a potentially serious condition. Please seek medical help immediately.</p>
+          <a href="https://www.google.com/maps/search/hospitals+near+me/" target="_blank" rel="noopener noreferrer" className="btn-primary" style={{ background: '#dc2626', display: 'flex', justifyContent: 'center', textDecoration: 'none' }}>
+            <Icons.MapPin size={18} style={{marginRight: 8}} /> Find Nearest Hospital
+          </a>
+        </div>
+      )}
+
+      {data.action && data.urgency !== 'high' && (
         <div className="result-section">
           <div className="result-section-label">✅ What To Do</div>
           <p>{data.action}</p>
         </div>
       )}
-      {data.naturalRemedies && data.naturalRemedies.length > 0 && (
+      {data.naturalRemedies && data.naturalRemedies.length > 0 && data.urgency !== 'high' && (
         <div className="result-section">
           <div className="result-section-label">🌿 Natural Support</div>
           <ul className="natural-list">
