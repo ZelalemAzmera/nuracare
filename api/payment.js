@@ -10,7 +10,7 @@ async function handleChapaCheckout(req, res) {
   const CHAPA_SECRET = process.env.CHAPA_SECRET_KEY;
   
   if (!CHAPA_SECRET) {
-    return res.status(200).json({ checkoutUrl: 'https://checkout.chapa.co/checkout/test-url-simulation' });
+    return res.status(200).json({ checkoutUrl: `https://${req.headers.host}/?payment=success&mock=chapa` });
   }
 
   const tx_ref = `NURA-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -106,7 +106,7 @@ async function handleStripeCheckout(req, res) {
   const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
   if (!STRIPE_SECRET) {
-    return res.status(200).json({ checkoutUrl: 'https://checkout.stripe.com/test-url-simulation' });
+    return res.status(200).json({ checkoutUrl: `https://${req.headers.host}/?payment=success&mock=stripe` });
   }
 
   const stripe = new Stripe(STRIPE_SECRET);
