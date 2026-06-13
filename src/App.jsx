@@ -353,7 +353,9 @@ export default function App() {
             location: {
               country: data.country_name,
               code: data.country_code,
-              city: data.city
+              city: data.city,
+              timezone: data.timezone,
+              currency: data.currency
             }
           };
           setProfile(p);

@@ -121,7 +121,8 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
   // Routing
   if (activeSection === 'running') return <RunningDashboard onBack={() => setActiveSection('overview')} />;
   if (activeSection === 'yoga') return <YogaDashboard onBack={() => setActiveSection('overview')} recent={recentData} />;
-  if (activeSection === 'gym') return <GymDashboard onBack={() => setActiveSection('overview')} recent={recentData} />;
+  if (activeSection === 'gym') return <GymDashboard onBack={() => setActiveSection('overview')} recent={recentData} profile={profile} />;
+  if (activeSection === 'nutrition') return <NutritionDashboard onBack={() => setActiveSection('overview')} profile={profile} />;
 
   return (
     <div className="page active">
@@ -198,6 +199,12 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           title="Gym & Strength" desc="Log sets, reps, and get routine suggestions."
           icon={<Icons.Dumbbell size={28} color="var(--green-dark)" />}
           onClick={() => setActiveSection('gym')}
+        />
+
+        <OverviewCard 
+          title="Nutrition & Fasting" desc="Log your meals, macros, and track fasting rules."
+          icon={<Icons.Utensils size={28} color="var(--green-dark)" />}
+          onClick={() => setActiveSection('nutrition')}
         />
 
         <OverviewCard 
@@ -557,6 +564,26 @@ function GymDashboard({ onBack, recent, profile }) {
         </div>
       </div>
 
+      {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
+        <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, border: '1px solid var(--border)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Map size={20} color="var(--green-dark)" /> Gym & Studio Finder</h3>
+          <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Using your location ({profile?.location?.city || 'Unknown'}), we found these functional fitness centers nearby:</p>
+          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+            {[
+              { name: 'Planet Fitness', dist: '0.8 mi', type: 'Commercial Gym' },
+              { name: 'CorePower Yoga', dist: '1.2 mi', type: 'Yoga Studio' },
+              { name: 'CrossFit Silver Spring', dist: '2.5 mi', type: 'Functional Training' }
+            ].map(gym => (
+              <div key={gym.name} style={{ minWidth: 200, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{gym.type} • {gym.dist}</div>
+                <button style={{ width: '100%', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>Directions</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="dash-card" style={{ background: 'var(--white)', padding: 32 }}>
         <h3 style={{ margin: '0 0 8px 0', fontSize: 18, textAlign: 'center' }}>Sync Workout Data</h3>
         <p style={{ margin: '0 0 24px 0', fontSize: 14, color: 'var(--text-muted)', textAlign: 'center' }}>Automatically pull sets and reps from your wearable device.</p>
@@ -770,6 +797,70 @@ function OverviewCard({ title, desc, icon, onClick }) {
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>{desc}</p>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* --- NUTRITION DASHBOARD --- */
+function NutritionDashboard({ onBack, profile }) {
+  const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
+  
+  return (
+    <div className="page active">
+      <DashHeader title="Nutrition Tracker" onBack={onBack} icon={<div style={{background: 'var(--green-light)', padding: 10, borderRadius: 12}}><Icons.Utensils size={24} color="var(--green-dark)"/></div>} />
+      
+      {isEthiopia ? (
+        <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <Icons.PieChart size={24} color="var(--green-dark)" />
+            <h3 style={{ margin: 0 }}>Gebeta Fractional Logging</h3>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>In Ethiopia, communal eating is standard. Log your meals by estimating the fraction of the Gebeta you consumed.</p>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {['1/4 Gebeta', '1/2 Gebeta', '3/4 Gebeta', 'Full Gebeta'].map(fraction => (
+              <button key={fraction} style={{ padding: '16px', borderRadius: 12, border: '1px solid var(--green)', background: 'var(--white)', color: 'var(--green-dark)', fontWeight: 600, cursor: 'pointer' }}>
+                {fraction}
+              </button>
+            ))}
+          </div>
+          
+          <div style={{ marginTop: 24, padding: 16, background: '#fef3c7', borderRadius: 12, border: '1px solid #fcd34d' }}>
+            <h4 style={{ margin: '0 0 8px 0', color: '#92400e' }}>Active Fasting Rules</h4>
+            <p style={{ margin: 0, fontSize: 13, color: '#b45309' }}>Tsom is active today. Ensure your plate contains no meat, dairy, or eggs. Recommended: Shiro, Gomen, and Misir.</p>
+          </div>
+        </div>
+      ) : (
+        <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+            <Icons.Database size={24} color="var(--green-dark)" />
+            <h3 style={{ margin: 0 }}>Global Macro Tracker</h3>
+          </div>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 24 }}>Connected to USDA FoodData Central. Log exact grams/ounces to accurately track your macronutrients.</p>
+          
+          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
+            <input type="text" placeholder="Search USDA Database (e.g. 'Chicken Breast')" style={{ flex: 1, padding: '12px 16px', borderRadius: 8, border: '1px solid var(--border)', fontSize: 15 }} />
+            <button style={{ background: 'var(--text)', color: 'white', border: 'none', padding: '0 24px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>Search</button>
+          </div>
+          
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Quantity</label>
+              <input type="number" placeholder="100" style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ display: 'block', fontSize: 13, fontWeight: 600, marginBottom: 8, color: 'var(--text-muted)' }}>Unit</label>
+              <select style={{ width: '100%', padding: '12px', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <option>Grams (g)</option>
+                <option>Ounces (oz)</option>
+                <option>Cups</option>
+              </select>
+            </div>
+          </div>
+          
+          <button style={{ width: '100%', padding: 16, background: 'var(--green)', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, marginTop: 24, cursor: 'pointer' }}>Log Macros</button>
+        </div>
+      )}
     </div>
   );
 }
