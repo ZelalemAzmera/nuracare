@@ -7,6 +7,7 @@ import '../css/style.css'
 import '../css/toast.css'
 import '../css/skeleton.css'
 import { AuthProvider } from './AuthContext'
+import { CheckupsProvider } from './useCheckups'
 import SharedChatPage from './SharedChatPage'
 
 const root = ReactDOM.createRoot(document.getElementById('root'))
@@ -24,10 +25,13 @@ if (window.location.pathname.startsWith('/share/')) {
   root.render(
     <React.StrictMode>
       <AuthProvider>
-        <App />
+        <CheckupsProvider>
+          <App />
+        </CheckupsProvider>
       </AuthProvider>
       <Analytics />
       <SpeedInsights />
     </React.StrictMode>
   )
 }
+

@@ -1984,27 +1984,96 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
         }]});
       }
 
+      // ── Appointment Detection ──────────────────────────────────────────────
+      // Scan the user's OWN message for appointment keywords first (instant, no API needed)
       try {
-        const appointmentRes = await fetch('/api/document', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'extract-appointment', text: accumulated })
-        });
-        if (appointmentRes.ok) {
-          const appointmentData = await appointmentRes.json();
-          if (appointmentData.detected && appointmentData.date) {
-            await addCheckup({
-              name: appointmentData.name || 'AI Suggested Appointment',
-              doctor: appointmentData.doctor || null,
-              next_visit: appointmentData.date,
-              source: 'ai_chat',
-              notes: 'Extracted automatically from your conversation with Nura.'
-            });
-            showToast(`Added ${appointmentData.name || 'appointment'} to Checkups!`, 'success');
+        const userText = trimmed.toLowerCase();
+        const appointmentKeywords = [
+          'appointment', 'checkup', 'check-up', 'check up', 'doctor visit',
+          'hospital', 'clinic', 'dentist', 'eye exam', 'follow-up', 'follow up',
+          'i have an appointment', 'scheduled', 'booked', 'i have a checkup',
+          'see my doctor', 'visit my doctor', 'going to the doctor',
+          'i have a dental', 'i have a medical'
+        ];
+        const hasAppointmentMention = appointmentKeywords.some(k => userText.includes(k));
+
+        if (hasAppointmentMention) {
+          // Try to parse a date from the message
+          const today = new Date();
+          let detectedDate = null;
+          let appointmentName = 'Doctor Appointment';
+
+          // Named date patterns: "on June 20", "on the 15th", "next Monday", "tomorrow", "in 3 days"
+          const months = { january:0, february:1, march:2, april:3, may:4, june:5, july:6, august:7, september:8, october:9, november:10, december:11 };
+          const shortMonths = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+          const days = { sunday:0, monday:1, tuesday:2, wednesday:3, thursday:4, friday:5, saturday:6 };
+
+          // "next monday", "next tuesday" etc.
+          const nextDayMatch = userText.match(/next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)/i);
+          if (nextDayMatch) {
+            const targetDay = days[nextDayMatch[1].toLowerCase()];
+            const d = new Date(today);
+            d.setDate(d.getDate() + ((targetDay + 7 - d.getDay()) % 7 || 7));
+            detectedDate = d.toISOString().split('T')[0];
           }
+
+          // "tomorrow"
+          if (!detectedDate && userText.includes('tomorrow')) {
+            const d = new Date(today);
+            d.setDate(d.getDate() + 1);
+            detectedDate = d.toISOString().split('T')[0];
+          }
+
+          // "in X days"
+          const inDaysMatch = userText.match(/in\s+(\d+)\s+days?/i);
+          if (!detectedDate && inDaysMatch) {
+            const d = new Date(today);
+            d.setDate(d.getDate() + parseInt(inDaysMatch[1]));
+            detectedDate = d.toISOString().split('T')[0];
+          }
+
+          // "on June 20" or "on 20 June"
+          const monthNames = { ...months, ...shortMonths };
+          const onMonthDayMatch = userText.match(/on\s+([a-z]+)\s+(\d{1,2})/i) || userText.match(/on\s+(\d{1,2})\s+([a-z]+)/i);
+          if (!detectedDate && onMonthDayMatch) {
+            const [_, a, b] = onMonthDayMatch;
+            let month, day;
+            if (isNaN(a)) { month = monthNames[a.toLowerCase()]; day = parseInt(b); }
+            else { day = parseInt(a); month = monthNames[b.toLowerCase()]; }
+            if (month !== undefined && day) {
+              const d = new Date(today.getFullYear(), month, day);
+              if (d < today) d.setFullYear(d.getFullYear() + 1);
+              detectedDate = d.toISOString().split('T')[0];
+            }
+          }
+
+          // "on the 15th / 3rd / 21st"
+          const onOrdinalMatch = userText.match(/on\s+the\s+(\d{1,2})(?:st|nd|rd|th)?/i);
+          if (!detectedDate && onOrdinalMatch) {
+            const d = new Date(today.getFullYear(), today.getMonth(), parseInt(onOrdinalMatch[1]));
+            if (d < today) d.setMonth(d.getMonth() + 1);
+            detectedDate = d.toISOString().split('T')[0];
+          }
+
+          // Determine appointment name from the user's text
+          if (userText.includes('dentist') || userText.includes('dental')) appointmentName = 'Dentist Appointment';
+          else if (userText.includes('eye')) appointmentName = 'Eye Exam';
+          else if (userText.includes('follow')) appointmentName = 'Follow-up Visit';
+          else if (userText.includes('checkup') || userText.includes('check-up')) appointmentName = 'General Checkup';
+          else if (userText.includes('hospital')) appointmentName = 'Hospital Visit';
+
+          // Log the checkup — with date if found, without if just mentioned
+          await addCheckup({
+            name: appointmentName,
+            date_logged: new Date().toISOString().split('T')[0],
+            next_visit: detectedDate || null,
+            source: 'ai_chat',
+            notes: `Mentioned in chat: "${trimmed.slice(0, 120)}${trimmed.length > 120 ? '...' : ''}"`
+          });
+          showToast(`📅 ${appointmentName} logged to Checkups!`, 'success');
         }
       } catch (e) {
-        console.error('Error extracting appointment:', e);
+        console.error('Error detecting appointment from user message:', e);
       }
 
       // Generate smart title if it's the first exchange

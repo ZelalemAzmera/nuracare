@@ -1,8 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext, createContext } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 
+// ─── Shared Context so all components use ONE instance ───────────────────────
+const CheckupsContext = createContext(null);
+
+export function CheckupsProvider({ children }) {
+  const value = useCheckupsState();
+  return (
+    <CheckupsContext.Provider value={value}>
+      {children}
+    </CheckupsContext.Provider>
+  );
+}
+
+// Hook used by all child components
 export function useCheckups() {
+  const ctx = useContext(CheckupsContext);
+  if (!ctx) throw new Error('useCheckups must be used within <CheckupsProvider>');
+  return ctx;
+}
+
+// Internal hook that holds the actual state — only instantiated ONCE in the Provider
+function useCheckupsState() {
   const { user } = useAuth();
   const [checkups, setCheckups] = useState([]);
   const [loading, setLoading] = useState(true);
