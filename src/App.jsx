@@ -423,7 +423,12 @@ export default function App() {
 
   if (!profile) {
     if (onboardingStep === -1) {
-      return <AuthPage setOnboardingStep={setOnboardingStep} setActivePage={setActivePage} useAuth={useAuth} t={t} />;
+      return (
+        <>
+          <AuthPage setOnboardingStep={setOnboardingStep} setActivePage={setActivePage} useAuth={useAuth} t={t} />
+          <ToastContainer />
+        </>
+      );
     }
 
     if (onboardingStep === 0) {

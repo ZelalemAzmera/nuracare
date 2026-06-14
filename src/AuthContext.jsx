@@ -33,6 +33,9 @@ export function AuthProvider({ children }) {
       }
     });
     if (error) throw error;
+    if (data?.user?.identities?.length === 0) {
+      throw new Error("This email is already registered. Please log in.");
+    }
     return data;
   };
 
