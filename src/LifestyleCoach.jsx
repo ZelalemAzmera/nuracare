@@ -613,16 +613,6 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
   };
 
   const generateWorkout = () => {
-    const isEthiopia = profile?.location?.code === 'ET' || profile?.location?.country === 'Ethiopia';
-    
-    if (isEthiopia) {
-      return {
-        title: "Gym-Less Everyday Movement",
-        desc: "No gym nearby? Use your bodyweight to build functional strength.",
-        exercises: ["Bodyweight Squats", "Pushups", "Pull-ups (or Doorway Rows)", "Planks"]
-      };
-    }
-
     if (!recent) return { title: "Full Body Foundation", desc: "Start strong with core compound movements.", exercises: [EXERCISE_DB.legs[0], EXERCISE_DB.push[3], EXERCISE_DB.pull[1], EXERCISE_DB.core[0]] };
     
     if (recent.energy >= 7 && recent.stress <= 4) {
