@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, createContext } from 'react';
 import { supabase } from './supabase';
 import { useAuth } from './AuthContext';
 
-// ─── Shared Context so all components use ONE instance ───────────────────────
+// ─── Shared Context so all components use ONE instance ────────────────────────
 const CheckupsContext = createContext(null);
 
 export function CheckupsProvider({ children }) {
@@ -14,38 +14,46 @@ export function CheckupsProvider({ children }) {
   );
 }
 
-// Hook used by all child components
 export function useCheckups() {
   const ctx = useContext(CheckupsContext);
   if (!ctx) throw new Error('useCheckups must be used within <CheckupsProvider>');
   return ctx;
 }
 
-// Internal hook that holds the actual state — only instantiated ONCE in the Provider
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+function getLocalKey(userId) {
+  return userId ? `nuracare_checkups_${userId}` : 'nuracare_guest_checkups';
+}
+
+function readLocal(userId) {
+  try {
+    const raw = localStorage.getItem(getLocalKey(userId));
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+function writeLocal(userId, data) {
+  try {
+    localStorage.setItem(getLocalKey(userId), JSON.stringify(data));
+  } catch {}
+}
+
+// ─── Core state hook — ONE instance via Provider ──────────────────────────────
 function useCheckupsState() {
   const { user } = useAuth();
-  const [checkups, setCheckups] = useState([]);
+  const [checkups, setCheckups] = useState(() => readLocal(user?.id));
   const [loading, setLoading] = useState(true);
 
+  // On mount / user change: load local immediately, then sync from Supabase
   useEffect(() => {
-    if (!user) {
-      // Fallback to localStorage for guest users
-      const stored = localStorage.getItem('nuracare_guest_checkups');
-      if (stored) {
-        try {
-          setCheckups(JSON.parse(stored));
-        } catch (e) {
-          console.error('Error parsing guest checkups', e);
-        }
-      } else {
-        setCheckups([]);
-      }
-      setLoading(false);
-      return;
-    }
+    const local = readLocal(user?.id);
+    setCheckups(local);
+    setLoading(false);
 
-    async function fetchCheckups() {
-      setLoading(true);
+    if (!user) return; // Guest: localStorage is the only store
+
+    // Background sync from Supabase — merge with local
+    (async () => {
       const { data, error } = await supabase
         .from('checkups')
         .select('*')
@@ -53,16 +61,19 @@ function useCheckupsState() {
         .order('date_logged', { ascending: false });
 
       if (!error && data) {
-        setCheckups(data);
-      } else if (error) {
-        console.error('Error fetching checkups', error);
+        // Merge: remote wins for entries with proper UUIDs; keep local-only entries
+        const remoteIds = new Set(data.map(r => r.id));
+        const localOnly = local.filter(l => !remoteIds.has(l.id) && l.id?.startsWith('local-'));
+        const merged = [...data, ...localOnly].sort(
+          (a, b) => new Date(b.date_logged) - new Date(a.date_logged)
+        );
+        setCheckups(merged);
+        writeLocal(user.id, merged);
       }
-      setLoading(false);
-    }
+    })();
+  }, [user?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    fetchCheckups();
-  }, [user]);
-
+  // ── addCheckup ──────────────────────────────────────────────────────────────
   const addCheckup = async (data) => {
     const payload = {
       name: data.name,
@@ -70,17 +81,21 @@ function useCheckupsState() {
       date_logged: data.date_logged || new Date().toISOString().split('T')[0],
       next_visit: data.next_visit || null,
       notes: data.notes || null,
-      source: data.source || 'manual'
+      source: data.source || 'manual',
     };
 
-    if (!user) {
-      const newEntry = { id: 'guest-' + Date.now(), ...payload };
-      const updated = [newEntry, ...checkups];
-      setCheckups(updated);
-      localStorage.setItem('nuracare_guest_checkups', JSON.stringify(updated));
-      return { data: newEntry, error: null };
-    }
+    // Step 1: Write to localStorage immediately so UI updates instantly
+    const localId = 'local-' + Date.now();
+    const localEntry = { id: localId, ...payload, user_id: user?.id || 'guest' };
+    setCheckups(prev => {
+      const updated = [localEntry, ...prev];
+      writeLocal(user?.id, updated);
+      return updated;
+    });
 
+    if (!user) return { data: localEntry, error: null };
+
+    // Step 2: Sync to Supabase in background — replace local entry with real UUID on success
     const { data: result, error } = await supabase
       .from('checkups')
       .insert({ ...payload, user_id: user.id })
@@ -88,37 +103,44 @@ function useCheckupsState() {
       .single();
 
     if (!error && result) {
-      setCheckups(prev => [result, ...prev]);
+      // Replace the local placeholder with the real Supabase entry
+      setCheckups(prev => {
+        const updated = prev.map(c => c.id === localId ? result : c);
+        writeLocal(user.id, updated);
+        return updated;
+      });
+      return { data: result, error: null };
     } else {
-      console.error('Error adding checkup', error);
+      // Supabase failed — local entry stays so user still sees their data
+      console.warn('Supabase insert failed (keeping local copy):', error?.message);
+      return { data: localEntry, error };
     }
-    return { data: result, error };
   };
 
+  // ── deleteCheckup ───────────────────────────────────────────────────────────
   const deleteCheckup = async (id) => {
-    if (!user) {
-      const updated = checkups.filter(c => c.id !== id);
-      setCheckups(updated);
-      localStorage.setItem('nuracare_guest_checkups', JSON.stringify(updated));
-      return { error: null };
-    }
+    setCheckups(prev => {
+      const updated = prev.filter(c => c.id !== id);
+      writeLocal(user?.id, updated);
+      return updated;
+    });
+
+    if (!user || id.startsWith('local-')) return { error: null };
 
     const { error } = await supabase.from('checkups').delete().eq('id', id);
-    if (!error) {
-      setCheckups(prev => prev.filter(c => c.id !== id));
-    } else {
-      console.error('Error deleting checkup', error);
-    }
+    if (error) console.warn('Supabase delete failed:', error?.message);
     return { error };
   };
 
+  // ── updateCheckup ───────────────────────────────────────────────────────────
   const updateCheckup = async (id, data) => {
-    if (!user) {
-      const updated = checkups.map(c => c.id === id ? { ...c, ...data } : c);
-      setCheckups(updated);
-      localStorage.setItem('nuracare_guest_checkups', JSON.stringify(updated));
-      return { error: null };
-    }
+    setCheckups(prev => {
+      const updated = prev.map(c => c.id === id ? { ...c, ...data } : c);
+      writeLocal(user?.id, updated);
+      return updated;
+    });
+
+    if (!user || id.startsWith('local-')) return { error: null };
 
     const { data: result, error } = await supabase
       .from('checkups')
@@ -128,9 +150,13 @@ function useCheckupsState() {
       .single();
 
     if (!error && result) {
-      setCheckups(prev => prev.map(c => c.id === id ? result : c));
+      setCheckups(prev => {
+        const updated = prev.map(c => c.id === id ? result : c);
+        writeLocal(user?.id, updated);
+        return updated;
+      });
     } else {
-      console.error('Error updating checkup', error);
+      console.warn('Supabase update failed:', error?.message);
     }
     return { error };
   };

@@ -415,6 +415,7 @@ export default function App() {
   };
 
   const handleLogout = async () => {
+    await signOut(); // MUST be first — user becomes null before any state clears
     clearProfile();
     clearSessions();
     setOnboardingStep(0);
@@ -422,7 +423,6 @@ export default function App() {
     setCurrentSessionId('session-' + Date.now());
     setObName(''); setObAge(''); setObCulturalHeritage('Global'); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
     localStorage.removeItem('nuracare_activePage');
-    await signOut();
   };
 
   const handleDeleteSession = (id) => {
@@ -1646,7 +1646,13 @@ function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, hand
   const [messages, setMessages] = useState(() => {
     try {
       const fn = profile?.name?.split(' ')[0] || 'there';
-      const recentCheckins = getCheckins().slice(-3);
+      // Only use check-in data for returning users with sessions — prevents stale data from
+      // a different user on the same device being shown to a new account
+      const hasExistingSessions = sessions && sessions.some(s => s.messages?.some(m => m.role === 'user'));
+      const sevenDaysAgo = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+      const recentCheckins = hasExistingSessions
+        ? getCheckins().filter(c => new Date(c.date) >= sevenDaysAgo).slice(-3)
+        : [];
       const checkinContext = recentCheckins.length > 0 
         ? `\n\nRecent Wellness Check-ins (scale 1-10):\n${recentCheckins.map(c => `[${c.date}] Mood: ${c.mood}, Sleep: ${c.sleep}, Stress: ${c.stress}, Energy: ${c.energy}`).join('\n')}` 
         : '';
@@ -1665,7 +1671,8 @@ WELLNESS CONTEXT:${checkinContext}
       const hour = new Date().getHours();
       let timeContext = hour < 12 ? "How did you sleep last night?" : hour < 18 ? "How has your day been so far?" : "How are your energy levels this evening?";
       
-      if (recentCheckins && recentCheckins.length > 0) {
+      // Only personalise greeting for returning users with recent check-ins
+      if (hasExistingSessions && recentCheckins.length > 0) {
         const last = recentCheckins[recentCheckins.length - 1];
         const todayStr = new Date().toISOString().split('T')[0];
         const isToday = last.date === todayStr;
