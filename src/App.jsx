@@ -869,7 +869,7 @@ export default function App() {
             </div>
 
             <div className="section-title" style={{marginTop: 32}}>Preferences</div>
-            <div className="dash-card">
+            <div className="dash-card" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', marginBottom: 12 }}>
                 <input 
                   type="radio" 
@@ -2228,6 +2228,7 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
     setDoctorName('');
     setNotes('');
     setNextVisit('');
+    setActiveTab('history'); // Auto-switch to History tab so user sees the new entry
     showToast(`${activeItem.name} logged successfully!`, 'success');
   };
 
