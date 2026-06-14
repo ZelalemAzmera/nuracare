@@ -2514,7 +2514,8 @@ function Discovery({ t }) {
               )}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {feed.filter(i => !!i.vid).length > 0 && <div className="section-title" style={{ marginTop: 40 }}>Watch & Learn</div>}
