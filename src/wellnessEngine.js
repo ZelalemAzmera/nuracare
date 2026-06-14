@@ -213,27 +213,27 @@ export function getRecoveryRecommendations(checkins) {
   const avgStress = recent.reduce((sum, c) => sum + c.stress, 0) / recent.length;
 
   if (burnout.score > 65) {
-    recommendations.push("🚨 Your burnout risk is elevated. Reduce non-essential tasks today and prioritize recovery.");
+    recommendations.push("Your burnout risk is elevated. Reduce non-essential tasks today and prioritize recovery.");
   }
 
   if (latest.stress > 7 || avgStress > 7) {
-    recommendations.push("🧘 Your stress levels are high. Try the 5-5 breathing exercise in the Lifestyle tab.");
+    recommendations.push("Your stress levels are high. Try the 5-5 breathing exercise in the Lifestyle tab.");
   }
 
   if (latest.sleep < 5 || avgSleep < 6) {
-    recommendations.push("🌙 You've been lacking sleep. Try to go to bed 30 minutes earlier tonight and reduce screen time.");
+    recommendations.push("You've been lacking sleep. Try to go to bed 30 minutes earlier tonight and reduce screen time.");
   }
 
   if (latest.energy < 4) {
-    recommendations.push("⚡ Your energy is low. Schedule a 5-minute micro-break every 90 minutes today.");
+    recommendations.push("Your energy is low. Schedule a 5-minute micro-break every 90 minutes today.");
   }
 
   if (latest.mood < 4) {
-    recommendations.push("🚶 Sunlight can naturally boost mood. Try to get 15 minutes of outdoor light today.");
+    recommendations.push("Sunlight can naturally boost mood. Try to get 15 minutes of outdoor light today.");
   }
 
   if (recommendations.length === 0) {
-    recommendations.push("✨ You're doing great! Keep up the good habits and maintain your routine.");
+    recommendations.push("You're doing great! Keep up the good habits and maintain your routine.");
   }
 
   return recommendations;

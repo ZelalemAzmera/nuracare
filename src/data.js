@@ -33,7 +33,7 @@ export const discoveryData = {
 
 export const chatFlow = [
   {
-    question: "Hi there 🌿 What's bothering you today?",
+    question: "Hi there! What's bothering you today?",
     options: ["Headache", "Stomach Pain", "Fatigue", "Cold / Flu symptoms"],
     field: "symptom"
   },
