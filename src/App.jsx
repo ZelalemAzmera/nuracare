@@ -742,7 +742,7 @@ export default function App() {
       <div className="mobile-topbar">
         <button className="hamburger" onClick={() => setSidebarOpen(true)}><Icons.Menu /></button>
         <div className="mobile-logo" style={{display: 'flex', alignItems: 'center'}}><Icons.Leaf size={16} style={{marginRight: 4}}/> NuraCare</div>
-        <div className="mobile-avatar">{profile.name ? profile.name[0].toUpperCase() : '🌿'}</div>
+        <div className="mobile-avatar">{profile.name ? profile.name[0].toUpperCase() : <Icons.User size={18} />}</div>
       </div>
 
       <main className="content-area">
@@ -772,7 +772,7 @@ export default function App() {
               </button>
             </div>
             <div className="profile-card">
-              <div className="profile-avatar">{profile.name ? profile.name[0].toUpperCase() : '🌿'}</div>
+              <div className="profile-avatar">{profile.name ? profile.name[0].toUpperCase() : <Icons.User size={32} />}</div>
               <div className="profile-info">
                 <h2>{profile.name || 'User'}</h2>
                 <p>{profile.age ? `${profile.age} years old` : ''}</p>
@@ -1460,16 +1460,16 @@ export function parseUrgencyFromContent(content) {
 
 export function UrgencyCard({ data }) {
   const isMentalHealth = !!data.summary?.toLowerCase().match(/mental|emotion|sad|anxiet|depress|unhappy|stress/);
-  const label = data.urgency === 'high' ? '🔴 High Urgency'
-    : data.urgency === 'mid' ? '🟡 Moderate — Monitor Closely'
-    : '🟢 Low Urgency — Self-Care';
+  const label = data.urgency === 'high' ? <><Icons.AlertOctagon size={16} style={{marginRight: 6, verticalAlign: 'text-bottom'}}/> High Urgency</>
+    : data.urgency === 'mid' ? <><Icons.AlertTriangle size={16} style={{marginRight: 6, verticalAlign: 'text-bottom'}}/> Moderate — Monitor Closely</>
+    : <><Icons.CheckCircle size={16} style={{marginRight: 6, verticalAlign: 'text-bottom'}}/> Low Urgency — Self-Care</>;
   return (
     <div className={`result-card urgency-card-${data.urgency}`} style={{ marginTop: 12, maxWidth: '90%' }}>
       {!isMentalHealth && <div className={`urgency-badge urgency-${data.urgency}`} style={{ marginBottom: 16 }}>{label}</div>}
       
       {data.urgency === 'high' && (
         <div className="result-section" style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
-          <div className="result-section-label" style={{ color: '#dc2626' }}>🚨 Immediate Medical Attention Recommended</div>
+          <div className="result-section-label" style={{ color: '#dc2626', display: 'flex', alignItems: 'center', gap: 6 }}><Icons.AlertCircle size={18} /> Immediate Medical Attention Recommended</div>
           <p style={{ color: '#991b1b', fontSize: '14px', marginBottom: '12px' }}>Your symptoms indicate a potentially serious condition. Please seek medical help immediately.</p>
           {data._hospitals && data._hospitals.length > 0 ? (
             <div>
@@ -1491,13 +1491,13 @@ export function UrgencyCard({ data }) {
 
       {data.action && data.urgency !== 'high' && (
         <div className="result-section">
-          <div className="result-section-label">✅ What To Do</div>
+          <div className="result-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icons.CheckSquare size={18} /> What To Do</div>
           <p>{data.action}</p>
         </div>
       )}
       {data.naturalRemedies && data.naturalRemedies.length > 0 && data.urgency !== 'high' && (
         <div className="result-section">
-          <div className="result-section-label">🌿 Natural Support</div>
+          <div className="result-section-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icons.Leaf size={18} /> Natural Support</div>
           <ul className="natural-list">
             {data.naturalRemedies.map((tip, i) => <li key={i}>{tip}</li>)}
           </ul>
@@ -1604,8 +1604,8 @@ WELLNESS CONTEXT:${checkinContext}
       }
       
       const welcomeContent = lang === 'am' 
-        ? `ሰላም ${fn} 👋 እኔ ኑራ ነኝ፣ የግል የጤና ጓደኛዎ። ${timeContext}`
-        : `Hi ${fn} 👋 I'm Nura, your personal health companion. ${timeContext}`;
+        ? `ሰላም ${fn} እኔ ኑራ ነኝ፣ የግል የጤና ጓደኛዎ። ${timeContext}`
+        : `Hi ${fn}, I'm Nura, your personal health companion. ${timeContext}`;
       const welcome = { id: 'welcome', role: 'assistant', content: welcomeContent };
       
       const cur = sessions.find(s => s.id === currentSessionId);
@@ -1617,7 +1617,7 @@ WELLNESS CONTEXT:${checkinContext}
         return cur.messages;
       }
       return [systemPrompt, welcome];
-    } catch { return [{ id: 'welcome', role: 'assistant', content: lang === 'am' ? `ሰላም 👋 እኔ ኑራ ነኝ። ዛሬ ምን ይሰማዎታል?` : `Hi there 👋 I'm Nura. How are you feeling today?` }]; }
+    } catch { return [{ id: 'welcome', role: 'assistant', content: lang === 'am' ? `ሰላም እኔ ኑራ ነኝ። ዛሬ ምን ይሰማዎታል?` : `Hi there, I'm Nura. How are you feeling today?` }]; }
   });
 
   const [input, setInput] = useState('');
@@ -1726,7 +1726,7 @@ WELLNESS CONTEXT:${checkinContext}
     const timer = setTimeout(() => {
       setMessages(prev => [...prev, {
         id: 'checkin-' + Date.now(), role: 'assistant',
-        content: `Hey ${firstName} 👋 Last time you mentioned ${lastHigh.summary.toLowerCase()}. How are you feeling now — is it getting better? 🌿`
+        content: `Hey ${firstName}, last time you mentioned ${lastHigh.summary.toLowerCase()}. How are you feeling now — is it getting better?`
       }]);
       setShowQuickStart(false);
       try { localStorage.setItem('nuracare_last_checkin', String(lastHigh.id)); } catch {}
@@ -1915,7 +1915,7 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
     } catch (err) {
       console.error('Nura error:', err);
       setChatError(err?.message || 'Connection failed.');
-      setMessages(prev => [...prev, { id: 'err-' + Date.now(), role: 'assistant', content: "I'm having trouble connecting right now. 🌿 Please check the error banner above." }]);
+      setMessages(prev => [...prev, { id: 'err-' + Date.now(), role: 'assistant', content: "I'm having trouble connecting right now. Please check the error banner above." }]);
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
@@ -1926,7 +1926,7 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
   const startNewSession = () => {
     const newId = 'session-' + Date.now();
     const systemPromptObj = { id: 'system', role: 'system', content: buildSystemPrompt() };
-    const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
+    const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName}, starting a fresh session — what's going on today?` };
     setCurrentSessionId(newId);
     setMessages([systemPromptObj, welcome]);
     setInput(''); setShowQuickStart(true); setChatError(null);
@@ -1953,7 +1953,7 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
         setShowQuickStart(s.messages.length <= 1);
       } else {
         const systemPromptObj = { id: 'system', role: 'system', content: buildSystemPrompt() };
-        const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName} 👋 Starting a fresh session — what's going on today? 🌿` };
+        const welcome = { id: 'welcome', role: 'assistant', content: `Hi ${firstName}, starting a fresh session — what's going on today?` };
         setMessages([systemPromptObj, welcome]);
         setShowQuickStart(true);
       }
@@ -1979,7 +1979,7 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
     <div className="page active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="page-header" style={{ flexShrink: 0 }}>
         <div>
-          <h2 style={{fontFamily: 'var(--font-head)', fontSize: 24, marginBottom: 8}}>{t("hello")}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''} 👋</h2>
+          <h2 style={{fontFamily: 'var(--font-head)', fontSize: 24, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6}}>{t("hello")}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''} <Icons.Hand size={24} color="var(--green-dark)" /></h2>
           <p style={{color: 'var(--text-muted)', marginBottom: 24}}>I'm Nura, your health companion. What's on your mind today?</p>
         </div>
       </div>

@@ -187,7 +187,9 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
         </div>
       )}
 
-      <div className="section-title">✨ Personalized AI Insights</div>
+      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Icons.Sparkles size={20} color="var(--green-dark)" /> Personalized AI Insights
+      </div>
       {analysis && (
         <div className="dash-card card-large" style={{ background: 'rgba(255,255,255,0.85)', border: '1px solid rgba(255,255,255,0.9)', marginBottom: 32, display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
@@ -250,7 +252,9 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
         />
       </div>
 
-      <div className="section-title" style={{ marginTop: 32 }}>❤️ Vitals & Hydration</div>
+      <div className="section-title" style={{ marginTop: 32, display: 'flex', alignItems: 'center', gap: 8 }}>
+        <Icons.Heart size={20} color="#ef4444" /> Vitals & Hydration
+      </div>
       <div className="dash-card" style={{ background: 'var(--white)', padding: 24, marginBottom: 20, display: 'block' }}>
         <div className="vitals-grid">
           
@@ -659,11 +663,9 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
         <div style={{ width: '100%' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <h4 style={{ margin: '0 0 4px 0', color: 'var(--text)', fontSize: 18 }}>{workout.title}</h4>
-            {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
-              <a href="https://www.google.com/maps/search/gyms+near+me/" target="_blank" rel="noreferrer" className="btn-outline-sm" style={{ display: 'flex', gap: 6, alignItems: 'center', textDecoration: 'none' }}>
-                <Icons.MapPin size={14} /> Find Nearby Gyms
-              </a>
-            )}
+            <a href="https://www.google.com/maps/search/gyms+near+me/" target="_blank" rel="noreferrer" className="btn-outline-sm" style={{ display: 'flex', gap: 6, alignItems: 'center', textDecoration: 'none' }}>
+              <Icons.MapPin size={14} /> Find Nearby Gyms
+            </a>
           </div>
           {workout.desc && <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.5 }}>{workout.desc}</p>}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
@@ -676,9 +678,7 @@ function GymDashboard({ onBack, recent, profile, connectBluetoothDevice }) {
         </div>
       </div>
 
-      {profile?.location?.code !== 'ET' && profile?.location?.country !== 'Ethiopia' && (
-        <LiveGymFinder profile={profile} />
-      )}
+      <LiveGymFinder profile={profile} />
 
       <div className="dash-card" style={{ background: 'var(--white)', padding: 24, display: 'flex', flexDirection: 'column' }}>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 24, alignItems: 'start' }}>
@@ -911,14 +911,16 @@ function LiveGymFinder({ profile }) {
   const [gyms, setGyms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [radius, setRadius] = useState(5000);
 
-  useEffect(() => {
+  const performSearch = (searchRadius) => {
     setLoading(true);
+    setError(null);
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         async pos => {
           try {
-            const results = await fetchNearbyGyms(pos.coords.latitude, pos.coords.longitude);
+            const results = await fetchNearbyGyms(pos.coords.latitude, pos.coords.longitude, searchRadius);
             setGyms(results);
           } catch { setError('Failed to fetch gyms.'); }
           setLoading(false);
@@ -928,25 +930,51 @@ function LiveGymFinder({ profile }) {
     } else {
       setError('Geolocation not supported.'); setLoading(false);
     }
-  }, []);
+  };
+
+  useEffect(() => {
+    performSearch(radius);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handleExpand = () => {
+    const newRadius = radius + 5000;
+    setRadius(newRadius);
+    performSearch(newRadius);
+  };
 
   return (
     <div style={{ background: 'var(--bg)', padding: 24, borderRadius: 20, marginBottom: 32, border: '1px solid var(--border)' }}>
       <h3 style={{ margin: '0 0 16px 0', fontSize: 18, display: 'flex', alignItems: 'center', gap: 8 }}><Icons.Map size={20} color="var(--green-dark)" /> Gym & Studio Finder</h3>
-      <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Live results from OpenStreetMap near {profile?.location?.city || 'your location'}:</p>
-      {loading && <p style={{ color: 'var(--text-muted)', fontSize: 14 }}><Icons.Loader className="spin" size={16} style={{ marginRight: 8 }} />Searching nearby fitness centers...</p>}
+      <p style={{ margin: '0 0 16px 0', fontSize: 14, color: 'var(--text-muted)' }}>Live results from OpenStreetMap near {profile?.location?.city || 'your location'} ({(radius / 1000).toFixed(0)} km radius):</p>
+      {loading && <p style={{ color: 'var(--text-muted)', fontSize: 14, display: 'flex', alignItems: 'center' }}><Icons.Loader className="spin" size={16} style={{ marginRight: 8 }} />Searching nearby fitness centers...</p>}
       {error && <p style={{ color: '#dc2626', fontSize: 14 }}>{error}</p>}
-      {!loading && gyms.length === 0 && !error && <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>No fitness facilities found nearby. Try expanding your search radius.</p>}
-      <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
-        {gyms.map((gym, i) => (
-          <div key={i} style={{ minWidth: 210, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-            <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{gym.type}</div>
-            <div style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, marginBottom: 12 }}>{gym.distance}</div>
-            <a href={gym.directionsUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100%', textAlign: 'center', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13, textDecoration: 'none' }}>Directions</a>
+      {!loading && gyms.length === 0 && !error && (
+        <div style={{ color: 'var(--text-muted)', fontSize: 14, display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <p style={{ margin: 0 }}>No fitness facilities found nearby.</p>
+          <button onClick={handleExpand} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--green-light)', color: 'var(--green-dark)', border: '1px solid var(--green)', padding: '8px 16px', borderRadius: 8, fontWeight: 600, cursor: 'pointer' }}>
+            <Icons.Maximize2 size={16} /> Expand Search Area
+          </button>
+        </div>
+      )}
+      {!loading && gyms.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 16, overflowX: 'auto', paddingBottom: 8 }}>
+            {gyms.map((gym, i) => (
+              <div key={i} style={{ minWidth: 210, background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                <h5 style={{ margin: '0 0 4px 0', fontSize: 15 }}>{gym.name}</h5>
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 4 }}>{gym.type}</div>
+                <div style={{ fontSize: 13, color: 'var(--green-dark)', fontWeight: 600, marginBottom: 12 }}>{gym.distance}</div>
+                <a href={gym.directionsUrl} target="_blank" rel="noreferrer" style={{ display: 'block', width: '100%', textAlign: 'center', background: 'var(--green-light)', color: 'var(--green-dark)', border: 'none', padding: '8px', borderRadius: 8, fontWeight: 600, cursor: 'pointer', fontSize: 13, textDecoration: 'none' }}>Directions</a>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button onClick={handleExpand} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', color: 'var(--text-muted)', border: '1px solid var(--border)', padding: '6px 12px', borderRadius: 8, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }}>
+              <Icons.Plus size={14} /> Expand Area
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
