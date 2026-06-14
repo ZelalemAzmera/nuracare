@@ -2495,11 +2495,9 @@ function Discovery({ t }) {
       <div className="section-title">{activeTab === 'local' ? 'Nutritional Breakdown' : 'Articles & Guides'}</div>
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
         {feed.filter(i => !i.vid).map((item, i) => {
-          const keyword = item.name.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase() || 'health';
-          const dynamicImage = `https://loremflickr.com/400/300/${keyword},food/all`;
           return (
             <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden' }}>
-              <img src={dynamicImage} alt={item.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80'}} />
+              <img src={item.image} alt={item.name} style={{ width: '100%', height: 160, objectFit: 'cover', backgroundColor: '#e8f5e9' }} onError={(e)=>{e.target.src='https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Pfefferminze_natur_peppermint.jpg/400px-Pfefferminze_natur_peppermint.jpg'}} />
               <div style={{ padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <h3 style={{ margin: 0, fontSize: 16 }}>{item.name}</h3>
