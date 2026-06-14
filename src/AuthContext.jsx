@@ -32,7 +32,12 @@ export function AuthProvider({ children }) {
         }
       }
     });
-    if (error) throw error;
+    if (error) {
+      if (error.message.toLowerCase().includes('rate limit')) {
+        throw new Error("Too many signup attempts. Please try again later or log in.");
+      }
+      throw error;
+    }
     if (data?.user?.identities?.length === 0) {
       throw new Error("This email is already registered. Please log in.");
     }

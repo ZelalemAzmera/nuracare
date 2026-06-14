@@ -118,3 +118,25 @@ CREATE POLICY "Users can insert own tokens."
 
 CREATE POLICY "Users can update own tokens."
   ON public.wearable_tokens FOR UPDATE USING (auth.uid() = user_id);
+
+-- Checkups
+CREATE TABLE IF NOT EXISTS public.checkups (
+  id           UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id      UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  name         TEXT NOT NULL,
+  doctor       TEXT,
+  date_logged  DATE NOT NULL DEFAULT CURRENT_DATE,
+  next_visit   DATE,
+  notes        TEXT,
+  source       TEXT DEFAULT 'manual',
+  reminded_5d  BOOLEAN DEFAULT FALSE,
+  reminded_1d  BOOLEAN DEFAULT FALSE,
+  reminded_1h  BOOLEAN DEFAULT FALSE,
+  created_at   TIMESTAMP WITH TIME ZONE DEFAULT now()
+);
+
+ALTER TABLE public.checkups ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can CRUD own checkups."
+  ON public.checkups FOR ALL USING (auth.uid() = user_id);
+

@@ -10,6 +10,7 @@ import { discoveryData, getDailyTip } from './data';
 import FloatingLeaves, { LeafSVG, FlowerSVG, DropletSVG } from './FloatingLeaves';
 import { useAuth } from './AuthContext';
 import { useSupabaseProfile, useSupabaseSessions } from './useSupabase';
+import { useCheckups } from './useCheckups';
 import DailyCheckIn from './DailyCheckIn';
 import WellnessDashboard from './WellnessDashboard';
 import LifestyleCoach from './LifestyleCoach';
@@ -273,8 +274,9 @@ const ShareModal = ({ isOpen, onClose, session }) => {
 
 export default function App() {
   const { user, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, loading: authLoading } = useAuth();
-  const { profile, setProfile, loading: profileLoading } = useSupabaseProfile();
-  const { sessions, saveSession, deleteSession, loading: sessionsLoading } = useSupabaseSessions();
+  const { profile, setProfile, clearProfile, loading: profileLoading } = useSupabaseProfile();
+  const { sessions, saveSession, deleteSession, clearSessions, loading: sessionsLoading } = useSupabaseSessions();
+  const { checkups, updateCheckup } = useCheckups();
   const { t, lang, setLang } = useTranslation();
   
   const [onboardingStep, setOnboardingStep] = useState(0);
@@ -308,6 +310,47 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('nuracare_discoveryTab', discoveryTab);
   }, [discoveryTab]);
+
+  // Smart Reminder Engine
+  useEffect(() => {
+    if (!checkups || checkups.length === 0) return;
+
+    // Ask for Notification permission if not granted yet
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const triggerReminder = (checkup, message, flagKey) => {
+      showToast(message, 'warning');
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('NuraCare Reminder', { body: message });
+      }
+      updateCheckup(checkup.id, { [flagKey]: true });
+    };
+
+    const interval = setInterval(() => {
+      const now = new Date();
+      checkups.forEach(c => {
+        if (!c.next_visit) return;
+        const [year, month, day] = c.next_visit.split('-');
+        const visitDate = new Date(year, month - 1, day, 9, 0, 0); // 9:00 AM local
+        
+        const diffMs = visitDate.getTime() - now.getTime();
+        const diffDays = diffMs / (1000 * 60 * 60 * 24);
+        const diffHours = diffMs / (1000 * 60 * 60);
+
+        if (diffDays <= 5 && diffDays > 4.5 && !c.reminded_5d) {
+          triggerReminder(c, `Your ${c.name} appointment is in 5 days.`, 'reminded_5d');
+        } else if (diffDays <= 1 && diffDays > 0.5 && !c.reminded_1d) {
+          triggerReminder(c, `Reminder: ${c.name} is tomorrow!`, 'reminded_1d');
+        } else if (diffHours <= 1 && diffHours > 0 && !c.reminded_1h) {
+          triggerReminder(c, `🚨 ${c.name} appointment is in 1 hour!`, 'reminded_1h');
+        }
+      });
+    }, 60000); // 1 minute
+
+    return () => clearInterval(interval);
+  }, [checkups, updateCheckup]);
   
   const [sessionToDelete, setSessionToDelete] = useState(null);
   const [shareSession, setShareSession] = useState(null);
@@ -371,12 +414,15 @@ export default function App() {
     setProfile(p);
   };
 
-  const handleLogout = () => {
-    setProfile(null);
+  const handleLogout = async () => {
+    clearProfile();
+    clearSessions();
     setOnboardingStep(0);
     setActivePage('home');
+    setCurrentSessionId('session-' + Date.now());
     setObName(''); setObAge(''); setObCulturalHeritage('Global'); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
-    signOut();
+    localStorage.removeItem('nuracare_activePage');
+    await signOut();
   };
 
   const handleDeleteSession = (id) => {
@@ -417,7 +463,7 @@ export default function App() {
     setProfileMedsInput(p.medications);
   };
 
-  if (authLoading || profileLoading) {
+  if (authLoading || (user && profileLoading)) {
     return <AppSkeleton />;
   }
 
@@ -940,10 +986,12 @@ function MedTagInput({ tags, setTags, placeholder }) {
 }
 
 function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t = (k)=>k }) {
+  const { addCheckup } = useCheckups();
   const [file, setFile] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [extractedText, setExtractedText] = useState(existingNotes);
   const [classificationResult, setClassificationResult] = useState(null);
+  const [showAppointmentSuggestion, setShowAppointmentSuggestion] = useState(false);
 
   const handleFileChange = async (e) => {
     const selected = e.target.files[0];
@@ -1010,10 +1058,14 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
       if (data.medical) {
         setExtractedText(limitedText);
         setClassificationResult(data.extracted);
+        if (data.extracted.next_visit_date) {
+          setShowAppointmentSuggestion(true);
+        }
         showToast('Medical document identified successfully!', 'success');
       } else {
         setExtractedText('');
         setFile(null);
+        setShowAppointmentSuggestion(false);
         showToast('Not a medical document: ' + (data.reason || 'Please upload lab results or prescriptions.'), 'error');
       }
     } catch (err) {
@@ -1048,6 +1100,31 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
               {classificationResult.conditions?.length > 0 && <div>• Conditions: {classificationResult.conditions.join(', ')}</div>}
               {classificationResult.medications?.length > 0 && <div>• Medications: {classificationResult.medications.join(', ')}</div>}
               {classificationResult.metrics?.length > 0 && <div>• Metrics: {classificationResult.metrics.join(', ')}</div>}
+            </div>
+          )}
+          
+          {showAppointmentSuggestion && classificationResult?.next_visit_date && (
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', padding: 16, borderRadius: 12, marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center', color: 'var(--green-dark)' }}>
+                <Icons.Calendar size={24} />
+                <div>
+                  <strong>Nura detected an upcoming {classificationResult.appointment_type || 'Follow-up'}</strong>
+                  <div style={{ fontSize: 13 }}>Scheduled for: {classificationResult.next_visit_date}</div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                <button className="btn-primary" style={{ padding: '6px 12px', fontSize: 13 }} onClick={async () => {
+                  await addCheckup({
+                    name: classificationResult.appointment_type || 'Follow-up',
+                    doctor: classificationResult.doctor_name || null,
+                    next_visit: classificationResult.next_visit_date,
+                    source: 'medical_file'
+                  });
+                  showToast('Appointment saved to Checkups!', 'success');
+                  setShowAppointmentSuggestion(false);
+                }}>Yes, Save</button>
+                <button className="btn-ghost" style={{ padding: '6px 12px', fontSize: 13 }} onClick={() => setShowAppointmentSuggestion(false)}>Dismiss</button>
+              </div>
             </div>
           )}
           
@@ -1126,7 +1203,7 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
         showToast("Welcome to NuraCare! Let's start with your first daily check-in.", "success");
         localStorage.setItem('nuracare_welcome_done', 'true');
         window.dispatchEvent(new Event('trigger-first-checkin'));
-      }, 4000);
+      }, 12000);
       return () => clearTimeout(t);
     }
   }, [profile]);
@@ -1564,6 +1641,7 @@ function buildCrossSessionMemory(sessions, currentSessionId) {
 
 function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, handleDeleteSession, setShareSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
+  const { addCheckup } = useCheckups();
 
   const [messages, setMessages] = useState(() => {
     try {
@@ -1906,6 +1984,29 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
         }]});
       }
 
+      try {
+        const appointmentRes = await fetch('/api/document', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'extract-appointment', text: accumulated })
+        });
+        if (appointmentRes.ok) {
+          const appointmentData = await appointmentRes.json();
+          if (appointmentData.detected && appointmentData.date) {
+            await addCheckup({
+              name: appointmentData.name || 'AI Suggested Appointment',
+              doctor: appointmentData.doctor || null,
+              next_visit: appointmentData.date,
+              source: 'ai_chat',
+              notes: 'Extracted automatically from your conversation with Nura.'
+            });
+            showToast(`Added ${appointmentData.name || 'appointment'} to Checkups!`, 'success');
+          }
+        }
+      } catch (e) {
+        console.error('Error extracting appointment:', e);
+      }
+
       // Generate smart title if it's the first exchange
       if (updatedMessages.filter(m => m.role === 'user').length === 1) {
         const firstUserMsg = updatedMessages.find(m => m.role === 'user')?.content || '';
@@ -2103,31 +2204,26 @@ Only include the JSON once — after you know symptom + duration + severity.${ch
 
 
 function Checkups({ profile, setActivePage, showToast = alert }) {
-  const [history, setHistory] = useState([]);
+  const { checkups, addCheckup, deleteCheckup, loading } = useCheckups();
+  const [activeTab, setActiveTab] = useState('planner'); // 'planner' or 'history'
   const [modalOpen, setModalOpen] = useState(false);
   const [activeItem, setActiveItem] = useState(null);
   const [doctorName, setDoctorName] = useState('');
   const [notes, setNotes] = useState('');
   const [nextVisit, setNextVisit] = useState('');
+  const [historyFilter, setHistoryFilter] = useState('all');
 
-  useEffect(() => {
-    const data = JSON.parse(localStorage.getItem('nuracare_checkup_history') || '[]');
-    setHistory(data);
-  }, []);
-
-  const handleSaveVisit = () => {
+  const handleSaveVisit = async () => {
     if (!activeItem) return;
     const newVisit = { 
-      id: Date.now(), 
       name: activeItem.name, 
-      doctorName,
-      date: new Date().toLocaleDateString(),
+      doctor: doctorName,
+      date_logged: new Date().toISOString().split('T')[0],
       notes,
-      nextVisit
+      next_visit: nextVisit,
+      source: 'manual'
     };
-    const updated = [newVisit, ...history];
-    setHistory(updated);
-    localStorage.setItem('nuracare_checkup_history', JSON.stringify(updated));
+    await addCheckup(newVisit);
     setModalOpen(false);
     setDoctorName('');
     setNotes('');
@@ -2152,10 +2248,10 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
   };
 
   const createCalendarLink = (visit) => {
-    if (!visit.nextVisit) return '#';
-    const date = visit.nextVisit.replace(/-/g, '');
+    if (!visit.next_visit) return '#';
+    const date = visit.next_visit.replace(/-/g, '');
     const title = encodeURIComponent(`${visit.name} Appointment`);
-    const details = encodeURIComponent(`NuraCare Reminder: Scheduled checkup for ${visit.name}${visit.doctorName ? ` with ${visit.doctorName}` : ''}.`);
+    const details = encodeURIComponent(`NuraCare Reminder: Scheduled checkup for ${visit.name}${visit.doctor ? ` with ${visit.doctor}` : ''}.`);
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${date}T090000Z/${date}T100000Z&details=${details}`;
   };
 
@@ -2167,75 +2263,120 @@ function Checkups({ profile, setActivePage, showToast = alert }) {
     { name: 'Vaccination Review', freq: 'Yearly', desc: 'Flu shot and other recommended boosters.', icon: <Icons.Shield size={24}/> },
   ];
 
+  const filteredHistory = checkups.filter(c => {
+    if (historyFilter === 'upcoming') return c.next_visit && new Date(c.next_visit) >= new Date(new Date().setHours(0,0,0,0));
+    if (historyFilter === 'manual') return c.source === 'manual';
+    if (historyFilter === 'ai') return c.source !== 'manual';
+    return true;
+  });
+
   return (
     <div className="page active" style={{ position: 'relative' }}>
       <div className="page-header">
-        <div><h1 className="page-title">Preventive Health</h1><p className="page-subtitle">Your routine checkup planner</p></div>
+        <div><h1 className="page-title">Checkups</h1><p className="page-subtitle">Your routine checkup planner & log</p></div>
       </div>
       
-      <div className="dash-card card-large" style={{ background: 'var(--green-light)', border: 'none', marginBottom: 24 }}>
-        <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green-dark)' }}>
-          <Icons.ShieldCheck size={20} /> Stay Ahead of Illness
-        </h3>
-        <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.5 }}>
-          Preventive care helps catch problems early when they are most treatable. Use this planner to track your routine visits.
-        </p>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, background: 'var(--bg)', padding: 4, borderRadius: 12 }}>
+        <button className={activeTab === 'planner' ? 'btn-primary' : 'btn-ghost'} style={{ flex: 1, padding: 12, borderRadius: 10 }} onClick={() => setActiveTab('planner')}>Planner</button>
+        <button className={activeTab === 'history' ? 'btn-primary' : 'btn-ghost'} style={{ flex: 1, padding: 12, borderRadius: 10 }} onClick={() => setActiveTab('history')}>History Log</button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 32 }}>
-        {plannerItems.map((item, i) => (
-          <div key={i} style={{ background: 'var(--white)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-            <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, color: 'var(--text)' }}>
-              {item.icon}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{item.name}</h4>
-                <span style={{ fontSize: 12, background: 'var(--green-light)', color: 'var(--green-dark)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.freq}</span>
-              </div>
-              <p style={{ margin: '4px 0 12px 0', fontSize: 13, color: 'var(--text-muted)' }}>{item.desc}</p>
-              <button 
-                onClick={() => openModal(item)}
-                style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
-                Log Visit
-              </button>
-            </div>
+      {activeTab === 'planner' && (
+        <>
+          <div className="dash-card card-large" style={{ background: 'var(--green-light)', border: 'none', marginBottom: 24 }}>
+            <h3 style={{ margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: 8, color: 'var(--green-dark)' }}>
+              <Icons.ShieldCheck size={20} /> Stay Ahead of Illness
+            </h3>
+            <p style={{ margin: 0, color: 'var(--text)', fontSize: 14, lineHeight: 1.5 }}>
+              Preventive care helps catch problems early when they are most treatable. Use this planner to track your routine visits.
+            </p>
           </div>
-        ))}
-      </div>
 
-      {history.length > 0 && (
-        <div>
-          <h3 style={{ marginBottom: 16 }}>Visit History</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
-            {history.map(visit => {
-              const status = getDueStatus(visit.nextVisit);
-              return (
-                <div key={visit.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <span style={{ fontWeight: 600 }}>{visit.name}</span>
-                      {status && <span style={{ fontSize: 11, background: status.bg, color: status.color, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{status.text}</span>}
-                    </div>
-                    <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{visit.date}</span>
-                  </div>
-                  {visit.doctorName && <p style={{ margin: '0 0 4px 0', fontSize: 13, color: 'var(--text-muted)' }}><Icons.User size={12} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> {visit.doctorName}</p>}
-                  {visit.notes && <p style={{ margin: '4px 0 12px 0', fontSize: 14, color: 'var(--text)' }}><strong>Findings:</strong> {visit.notes}</p>}
-                  
-                  {visit.nextVisit && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                      <p style={{ margin: 0, fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}>
-                        <Icons.Calendar size={14} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> Next: {visit.nextVisit}
-                      </p>
-                      <a href={createCalendarLink(visit)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1a73e8', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <Icons.Plus size={12} /> Add to Google Calendar
-                      </a>
-                    </div>
-                  )}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, marginBottom: 32 }}>
+            {plannerItems.map((item, i) => (
+              <div key={i} style={{ background: 'var(--white)', padding: 20, borderRadius: 16, border: '1px solid var(--border)', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+                <div style={{ background: 'var(--bg)', padding: 12, borderRadius: 12, color: 'var(--text)' }}>
+                  {item.icon}
                 </div>
-              );
-            })}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <h4 style={{ margin: 0, fontSize: 16, color: 'var(--text)' }}>{item.name}</h4>
+                    <span style={{ fontSize: 12, background: 'var(--green-light)', color: 'var(--green-dark)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.freq}</span>
+                  </div>
+                  <p style={{ margin: '4px 0 12px 0', fontSize: 13, color: 'var(--text-muted)' }}>{item.desc}</p>
+                  <button 
+                    onClick={() => openModal(item)}
+                    style={{ background: 'transparent', border: '1.5px solid var(--border)', padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}>
+                    Log Visit
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
+        </>
+      )}
+
+      {activeTab === 'history' && (
+        <div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 16, scrollbarWidth: 'none' }}>
+            {['all', 'upcoming', 'manual', 'ai'].map(f => (
+              <button 
+                key={f}
+                onClick={() => setHistoryFilter(f)}
+                style={{
+                  background: historyFilter === f ? 'var(--green-light)' : 'var(--bg)',
+                  color: historyFilter === f ? 'var(--green-dark)' : 'var(--text-muted)',
+                  border: `1px solid ${historyFilter === f ? 'var(--green)' : 'var(--border)'}`,
+                  padding: '6px 14px', borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap'
+                }}>
+                {f === 'ai' ? 'AI-Suggested' : f.charAt(0).toUpperCase() + f.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p style={{ textAlign: 'center', color: 'var(--text-muted)', padding: 20 }}>Loading checkups...</p>
+          ) : filteredHistory.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '40px 20px', background: 'var(--bg)', borderRadius: 16 }}>
+              <Icons.Stethoscope size={48} color="var(--border)" style={{ marginBottom: 16 }} />
+              <p style={{ color: 'var(--text-muted)' }}>No records found in this category.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 12 }}>
+              {filteredHistory.map(visit => {
+                const status = getDueStatus(visit.next_visit);
+                return (
+                  <div key={visit.id} style={{ background: 'var(--white)', padding: 16, borderRadius: 12, border: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <span style={{ fontWeight: 600 }}>{visit.name}</span>
+                        {status && <span style={{ fontSize: 11, background: status.bg, color: status.color, padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{status.text}</span>}
+                        {visit.source === 'medical_file' && <span style={{ fontSize: 11, background: '#e0f2fe', color: '#0ea5e9', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>From File 📄</span>}
+                        {visit.source === 'ai_chat' && <span style={{ fontSize: 11, background: '#f3e8ff', color: '#9333ea', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>From Chat 💬</span>}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>{visit.date_logged}</span>
+                        <button onClick={() => deleteCheckup(visit.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }}><Icons.Trash2 size={16} /></button>
+                      </div>
+                    </div>
+                    {visit.doctor && <p style={{ margin: '0 0 4px 0', fontSize: 13, color: 'var(--text-muted)' }}><Icons.User size={12} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> {visit.doctor}</p>}
+                    {visit.notes && <p style={{ margin: '4px 0 12px 0', fontSize: 14, color: 'var(--text)' }}><strong>Findings:</strong> {visit.notes}</p>}
+                    
+                    {visit.next_visit && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                        <p style={{ margin: 0, fontSize: 13, color: 'var(--green-dark)', fontWeight: 600 }}>
+                          <Icons.Calendar size={14} style={{verticalAlign: 'text-bottom', marginRight: 4}}/> Next: {visit.next_visit}
+                        </p>
+                        <a href={createCalendarLink(visit)} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: '#1a73e8', textDecoration: 'none', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <Icons.Plus size={12} /> Google Calendar
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -2353,10 +2494,13 @@ function Discovery({ t }) {
 
       <div className="section-title">{activeTab === 'local' ? 'Nutritional Breakdown' : 'Articles & Guides'}</div>
       <div className="discovery-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 }}>
-        {feed.filter(i => !i.vid).map((item, i) => (
-          <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden' }}>
-            <img src={item.image} alt={item.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80'}} />
-            <div style={{ padding: 16 }}>
+        {feed.filter(i => !i.vid).map((item, i) => {
+          const keyword = item.name.split(' ')[0].replace(/[^a-zA-Z]/g, '').toLowerCase() || 'health';
+          const dynamicImage = `https://loremflickr.com/400/300/${keyword},food/all`;
+          return (
+            <div key={i} className="dash-card" style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 0, overflow: 'hidden' }}>
+              <img src={dynamicImage} alt={item.name} style={{ width: '100%', height: 160, objectFit: 'cover' }} onError={(e)=>{e.target.src='https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80'}} />
+              <div style={{ padding: 16 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                 <h3 style={{ margin: 0, fontSize: 16 }}>{item.name}</h3>
                 <span style={{ fontSize: 11, background: 'var(--bg)', padding: '4px 8px', borderRadius: 10, fontWeight: 600 }}>{item.category.toUpperCase()}</span>
@@ -2408,6 +2552,7 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
   const [phone, setPhone] = useState('');
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
@@ -2423,7 +2568,8 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
         await signInWithEmail(email, password);
       } else {
         await signUpWithEmail(email, password, name, phone);
-        showToast('Signup successful! Please check your email to verify.', 'success');
+        setSuccessMsg('Signup successful! Please check your email to verify your account.');
+        showToast('Signup successful! Please check your email.', 'success');
       }
     } catch (error) {
       setErrorMsg(error.message);
@@ -2478,6 +2624,7 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
             </div>
 
             {errorMsg && <div style={{color: 'var(--red)', fontSize: 13, marginTop: 12, textAlign: 'center'}}>{errorMsg}</div>}
+            {successMsg && <div style={{color: 'var(--green-dark)', background: 'var(--green-light)', padding: '12px', borderRadius: '8px', fontSize: 13, marginTop: 12, textAlign: 'center', fontWeight: '500'}}>{successMsg}</div>}
             
             <button type="submit" className="btn-primary" style={{width: '100%', marginTop: 24, marginBottom: 16}} disabled={loading}>
               {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Sign Up')}

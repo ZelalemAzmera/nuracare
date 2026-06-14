@@ -76,7 +76,12 @@ export function useSupabaseProfile() {
     }
   };
 
-  return { profile, setProfile: updateProfile, loading };
+  const clearProfile = () => {
+    setProfile(null);
+    setLoading(false);
+  };
+
+  return { profile, setProfile: updateProfile, clearProfile, loading };
 }
 
 export function useSupabaseSessions() {
@@ -144,5 +149,7 @@ export function useSupabaseSessions() {
     }
   };
 
-  return { sessions, saveSession, deleteSession, loading };
+  const clearSessions = () => setSessions([]);
+
+  return { sessions, saveSession, deleteSession, clearSessions, loading };
 }

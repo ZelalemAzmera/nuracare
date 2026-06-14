@@ -112,7 +112,7 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                         <Icons.Watch size={24} color="var(--green-dark)" />
                         <div>
                           {isEditingSleep ? (
-                             <input type="number" autoFocus value={sleepHours} onChange={e => setSleepHours(Number(e.target.value))} onBlur={() => setIsEditingSleep(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingSleep(false)} style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)', width: '70px', background: 'transparent', border: 'none', borderBottom: '2px solid var(--green-dark)', outline: 'none' }} />
+                            <input type="number" autoFocus value={sleepHours} onChange={e => setSleepHours(Number(e.target.value))} onBlur={() => setIsEditingSleep(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingSleep(false)} style={{ fontSize: '16px', fontWeight: '600', color: 'var(--text)', width: '80px', background: 'var(--white)', border: '2px solid var(--green)', borderRadius: '12px', padding: '8px 12px', outline: 'none', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.15)' }} />
                           ) : (
                              <div style={{ fontSize: '18px', fontWeight: '800', color: 'var(--green-dark)' }}>{sleepHours}h 15m</div>
                           )}
@@ -213,7 +213,7 @@ export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = 
                       <Icons.Activity size={24} color="var(--green-dark)" />
                       <div>
                         {isEditingActivity ? (
-                          <input type="text" autoFocus value={plannedActivity} onChange={e => setPlannedActivity(e.target.value)} onBlur={() => setIsEditingActivity(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingActivity(false)} style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)', width: '150px', background: 'transparent', border: 'none', borderBottom: '2px solid var(--green-dark)', outline: 'none' }} />
+                          <input type="text" autoFocus value={plannedActivity} onChange={e => setPlannedActivity(e.target.value)} onBlur={() => setIsEditingActivity(false)} onKeyDown={e => e.key === 'Enter' && setIsEditingActivity(false)} style={{ fontSize: '15px', fontWeight: '600', color: 'var(--text)', width: '180px', background: 'var(--white)', border: '2px solid var(--green)', borderRadius: '12px', padding: '8px 12px', outline: 'none', boxShadow: '0 4px 12px rgba(34, 197, 94, 0.15)' }} />
                         ) : (
                           <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--green-dark)' }}>{plannedActivity}</div>
                         )}

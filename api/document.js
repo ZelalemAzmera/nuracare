@@ -64,7 +64,10 @@ Return JSON:
   "extracted": {
     "conditions": ["list", "of", "conditions"],
     "medications": ["list", "of", "medications"],
-    "metrics": ["list", "of", "metrics like Blood Pressure 120/80"]
+    "metrics": ["list", "of", "metrics like Blood Pressure 120/80"],
+    "next_visit_date": "YYYY-MM-DD or null if not mentioned",
+    "appointment_type": "e.g. Cardiology Follow-up, or null",
+    "doctor_name": "Doctor name or null"
   }
 }
 
@@ -104,6 +107,44 @@ Output ONLY valid JSON wrapped in triple backticks: \`\`\`json { ... } \`\`\``;
   }
 }
 
+async function handleExtractAppointment(req, res) {
+  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  try {
+    const { text } = req.body;
+    const prompt = `Extract appointment details from the following message. If it mentions scheduling or having an appointment, checkup, or doctor visit, extract the info.
+Return JSON ONLY:
+{
+  "detected": true/false,
+  "name": "e.g. Dentist Appointment",
+  "date": "YYYY-MM-DD if specified, else null",
+  "doctor": "Doctor name or null"
+}
+
+Message: "${text}"
+Output ONLY valid JSON wrapped in triple backticks: \`\`\`json { ... } \`\`\``;
+
+    const { text: responseText } = await generateText({
+      model: groq('llama-3.1-8b-instant'),
+      prompt,
+      temperature: 0.1,
+    });
+
+    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/) || responseText.match(/```([\s\S]*?)```/) || [null, responseText];
+    let cleanJson = jsonMatch[1].trim();
+    if (cleanJson.startsWith('{') === false) {
+      const startIndex = cleanJson.indexOf('{');
+      const endIndex = cleanJson.lastIndexOf('}');
+      if (startIndex !== -1 && endIndex !== -1) {
+        cleanJson = cleanJson.substring(startIndex, endIndex + 1);
+      }
+    }
+    return res.status(200).json(JSON.parse(cleanJson));
+  } catch (error) {
+    console.error('Extraction error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+}
+
 export default async function handler(req, res) {
   const action = req.query.action || (req.body && req.body.action);
 
@@ -112,6 +153,8 @@ export default async function handler(req, res) {
       return handleOCR(req, res);
     case 'classify':
       return handleClassify(req, res);
+    case 'extract-appointment':
+      return handleExtractAppointment(req, res);
     default:
       return res.status(400).json({ error: 'Invalid or missing action parameter' });
   }
