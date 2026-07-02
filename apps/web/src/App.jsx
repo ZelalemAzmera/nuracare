@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as Icons from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useSupabaseProfile } from '@/hooks/useSupabase';
+import { useSupabaseProfile, useSupabaseSessions } from '@/hooks/useSupabase';
 import { useCheckups } from '@/hooks/useCheckups';
+import { useTranslation } from '@/hooks/useTranslation';
 import DailyCheckIn from '@/features/wellness/DailyCheckIn';
 import WellnessDashboard from '@/pages/Wellness';
 import LifestyleCoach from '@/pages/Lifestyle';
