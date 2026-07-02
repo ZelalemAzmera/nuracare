@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import * as Icons from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useSupabaseProfile } from '@/hooks/useSupabase';
 import { useCheckups } from '@/hooks/useCheckups';
 import DailyCheckIn from '@/features/wellness/DailyCheckIn';
 import WellnessDashboard from '@/pages/Wellness';
