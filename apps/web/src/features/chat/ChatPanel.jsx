@@ -6,6 +6,7 @@ import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFrom
 import { UrgencyCard } from '@/features/chat/UrgencyCard';
 import { getSessionName, extractSessionMemory, buildCrossSessionMemory } from '@/features/chat/chatMemory';
 import ChatErrorBoundary from '@/features/chat/ChatErrorBoundary';
+import { useCheckups } from '@/hooks/useCheckups';
 function Chat({ profile, saveProfile, sessions, saveSession, deleteSession, handleDeleteSession, setShareSession, currentSessionId, setCurrentSessionId, t = (k)=>k, lang = 'en' }) {
   const firstName = profile?.name?.split(' ')[0] || 'there';
   const { addCheckup } = useCheckups();

@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFromContent } from '@/lib/utils';
 
 import WellnessScore from '@/components/shared/WellnessScore';
+import { getDailyTip } from '@/data/discovery';
 function Home({ profile, setActivePage, t = (k)=>k }) {
   const medsList = Array.isArray(profile.medications) 
     ? profile.medications 

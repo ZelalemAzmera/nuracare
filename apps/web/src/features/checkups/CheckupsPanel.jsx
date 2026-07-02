@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Component } from 'react';
 import * as Icons from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFromContent } from '@/lib/utils';
+import { useCheckups } from '@/hooks/useCheckups';
 
 function Checkups({ profile, setActivePage, showToast = alert }) {
   const { checkups, addCheckup, deleteCheckup, loading } = useCheckups();
