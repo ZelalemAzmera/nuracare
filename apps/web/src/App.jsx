@@ -24,7 +24,7 @@ import Home from '@/pages/Home';
 import CheckinPage from '@/features/wellness/CheckinPage';
 import FloatingLeaves from '@/components/layout/FloatingLeaves';
 import { showToast, formatDate } from '@/lib/utils';
-import { TSOM_TYPES } from '@nuracare/shared';
+import { TSOM_TYPES } from '@/lib/ethiopianCalendar';
 import { supabase } from '@/lib/supabase';
 import { COUNTRIES } from '@/data/countries';
 import { discoveryData } from '@nuracare/shared';
