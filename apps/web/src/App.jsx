@@ -24,10 +24,10 @@ import Home from '@/pages/Home';
 import CheckinPage from '@/features/wellness/CheckinPage';
 import FloatingLeaves from '@/components/layout/FloatingLeaves';
 import { showToast, formatDate } from '@/lib/utils';
-import { TSOM_TYPES } from '@/lib/ethiopianCalendar';
+import { TSOM_TYPES } from '@nuracare/shared';
 import { supabase } from '@/lib/supabase';
 import { COUNTRIES } from '@/data/countries';
-import { discoveryData } from '@/data/discovery';
+import { discoveryData } from '@nuracare/shared';
 import { fetchLocationWithSecurity } from '@/lib/liveApis';
 import ChatErrorBoundary from '@/features/chat/ChatErrorBoundary';
 
@@ -242,7 +242,7 @@ export default function App() {
       );
     }
 
-    if (onboardingStep === 0) {
+    if (onboardingStep === 0 && !user) {
       return (
         <div className="landing-page">
           <FloatingLeaves />
@@ -318,7 +318,7 @@ export default function App() {
         <div className="onboarding-bg-leaf"></div>
         <div className="full-page-form">
           <div className="form-content-box" style={{background: 'rgba(255, 255, 255, 0.85)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', border: '1px solid rgba(255, 255, 255, 0.5)', borderRadius: '28px', padding: '44px 40px', boxShadow: '0 24px 64px rgba(34,197,94,0.12), 0 8px 24px rgba(0,0,0,0.04)'}}>
-            {onboardingStep === 1 && (
+            {(onboardingStep === 1 || (user && onboardingStep === 0)) && (
               <div className="onboarding-step active">
                 <div className="step-header">
                   <button className="btn-back" onClick={() => setOnboardingStep(0)}><Icons.ArrowLeft size={16}/></button>

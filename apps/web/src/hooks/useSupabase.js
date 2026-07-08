@@ -22,11 +22,28 @@ export function useSupabaseProfile() {
         .eq('id', user.id)
         .single();
       
-      if (!error && data) {
+      if (data) {
         const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
         const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
         const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
         setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
+      } else if (error && error.code === 'PGRST116') {
+        const { data: newProfile } = await supabase
+          .from('profiles')
+          .upsert({ id: user.id, name: user.user_metadata?.full_name || '', updated_at: new Date() })
+          .select()
+          .single();
+        if (newProfile) {
+          const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
+          const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
+          const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
+          setProfile({ ...newProfile, medicalNotes: newProfile.medical_notes, fastingMode, culturalHeritage, langPref });
+        } else {
+          setProfile({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
+        }
+      } else {
+        console.error("Error fetching profile", error);
+        setProfile({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
       }
       setLoading(false);
     }
