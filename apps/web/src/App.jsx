@@ -27,7 +27,7 @@ import { showToast, formatDate } from '@/lib/utils';
 import { TSOM_TYPES } from '@/lib/ethiopianCalendar';
 import { supabase } from '@/lib/supabase';
 import { COUNTRIES } from '@/data/countries';
-import { discoveryData } from '@nuracare/shared';
+import { discoveryData } from '@/data/discovery';
 import { fetchLocationWithSecurity } from '@/lib/liveApis';
 import ChatErrorBoundary from '@/features/chat/ChatErrorBoundary';
 

@@ -1,121 +1,240 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useWellnessStore } from '../src/store';
-import { TriageEngine } from '../src/services/ai';
-import { calculateWellnessScore } from '../src/services/wellness/wellnessEngine';
+import { saveCheckin, getProfile, computeWellnessScore, syncWearables } from '@nuracare/shared';
+import { ChevronRight, ChevronLeft, CheckCircle, Smartphone } from 'lucide-react-native';
+
+const TOTAL_STEPS = 5;
 
 export default function CheckInModal() {
-  const { addCheckIn, score, setScore, checkIns } = useWellnessStore();
-  const [mood, setMood] = useState(5);
-  const [energy, setEnergy] = useState(5);
-  const [sleep, setSleep] = useState(7);
+  const { setScore, addCheckIn } = useWellnessStore();
+  const [step, setStep] = useState(1);
+  
+  // State for Step 1: Physical
+  const [painLevel, setPainLevel] = useState(0);
+  const [stiffness, setStiffness] = useState(0);
+  const [activity, setActivity] = useState(30);
+
+  // State for Step 2: Mental
   const [stress, setStress] = useState(5);
-  const [tension, setTension] = useState('None');
+  const [mood, setMood] = useState(5);
+  const [sleep, setSleep] = useState(7);
+
+  // State for Step 3: Nutrition
+  const [meals, setMeals] = useState(3);
+  const [portion, setPortion] = useState('Moderate');
+  const [hydration, setHydration] = useState(5);
+
+  // State for Step 4: Context
+  const [wearableSynced, setWearableSynced] = useState(false);
+
+  const handleSyncWearable = async () => {
+    try {
+      await syncWearables();
+      setWearableSynced(true);
+      Alert.alert("Success", "Wearable data synced successfully.");
+    } catch (err) {
+      Alert.alert("Error", "Could not sync wearables.");
+    }
+  };
 
   const handleSubmit = () => {
-    // Determine urgency using our Mock AI Triage Engine
-    const urgency = TriageEngine.analyzeUrgency(stress, energy, sleep);
+    const profile = getProfile() || {};
     
-    const newCheckIn = {
+    const entry = {
       id: Date.now().toString(),
-      date: new Date().toLocaleDateString(),
-      mood,
-      energy,
-      sleep,
+      date: new Date().toISOString().split('T')[0],
+      timestamp: Date.now(),
+      painLevel,
+      stiffness,
+      activity,
       stress,
-      tension,
-      urgency,
-      tags: [],
+      mood,
+      sleep,
+      meals,
+      portion,
+      hydration,
+      wearableSynced
     };
 
-    // Save to store
-    addCheckIn(newCheckIn);
+    // Use shared engine
+    const savedEntry = saveCheckin(entry);
+    const newScore = computeWellnessScore(profile);
 
-    // Calculate new Wellness Score based on the new checkin
-    // We pass the new checkIn and the previous score to wellnessEngine
-    const newScoreObj = calculateWellnessScore(score, newCheckIn);
-    setScore(newScoreObj.score);
+    addCheckIn(savedEntry);
+    setScore(newScore.score);
 
-    // Close modal
     router.back();
   };
 
-  const renderSlider = (label: string, value: number, setValue: (val: number) => void, max: number = 10) => (
-    <View style={styles.sliderContainer}>
-      <Text style={styles.label}>{label} ({value}/{max})</Text>
+  const renderSlider = (label: string, value: number, setValue: (val: number) => void, max: number = 10, min: number = 0) => (
+    <View style={styles.inputGroup} key={label}>
+      <View style={styles.labelRow}>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.valueText}>{value} / {max}</Text>
+      </View>
       <View style={styles.stepperRow}>
-        <TouchableOpacity style={styles.stepperBtn} onPress={() => setValue(Math.max(0, value - 1))}>
-          <Text style={styles.stepperText}>-</Text>
+        <TouchableOpacity style={styles.stepperBtn} onPress={() => setValue(Math.max(min, value - 1))}>
+          <Text style={styles.stepperIcon}>-</Text>
         </TouchableOpacity>
-        <TextInput 
-          style={styles.numberInput} 
-          value={value.toString()} 
-          onChangeText={(val) => setValue(Number(val) || 0)} 
-          keyboardType="numeric"
-        />
+        <View style={styles.track}>
+          <View style={[styles.fill, { width: `${(value / max) * 100}%` }]} />
+        </View>
         <TouchableOpacity style={styles.stepperBtn} onPress={() => setValue(Math.min(max, value + 1))}>
-          <Text style={styles.stepperText}>+</Text>
+          <Text style={styles.stepperIcon}>+</Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Daily Check-in</Text>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.closeBtn}>Cancel</Text>
-        </TouchableOpacity>
-      </View>
+  const renderStep1 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Physical Well-being</Text>
+      <Text style={styles.stepSubtitle}>How is your body feeling?</Text>
+      {renderSlider('Pain Level', painLevel, setPainLevel, 10)}
+      {renderSlider('Joint Stiffness', stiffness, setStiffness, 10)}
+      {renderSlider('Activity (Minutes)', activity, setActivity, 120, 0)}
+    </View>
+  );
 
-      <Text style={styles.subtitle}>How are you feeling today?</Text>
-
-      {renderSlider('Mood', mood, setMood)}
-      {renderSlider('Energy Level', energy, setEnergy)}
+  const renderStep2 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Mental State</Text>
+      <Text style={styles.stepSubtitle}>Check in with your mind.</Text>
+      {renderSlider('Stress Level', stress, setStress, 10)}
+      {renderSlider('Overall Mood', mood, setMood, 10)}
       {renderSlider('Sleep (Hours)', sleep, setSleep, 12)}
-      {renderSlider('Stress Level', stress, setStress)}
+    </View>
+  );
 
-      <View style={styles.sliderContainer}>
-        <Text style={styles.label}>Physical Tension</Text>
-        <View style={styles.tensionRow}>
-          {['None', 'Neck', 'Back', 'Joints'].map(area => (
-            <TouchableOpacity 
-              key={area}
-              style={[styles.tensionBtn, tension === area && styles.tensionBtnActive]}
-              onPress={() => setTension(area)}
-            >
-              <Text style={[styles.tensionText, tension === area && styles.tensionTextActive]}>{area}</Text>
+  const renderStep3 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Nutrition & Hydration</Text>
+      <Text style={styles.stepSubtitle}>Fueling your body.</Text>
+      {renderSlider('Meals Eaten', meals, setMeals, 6)}
+      {renderSlider('Glasses of Water', hydration, setHydration, 15)}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Portion Size</Text>
+        <View style={styles.chipsRow}>
+          {['Light', 'Moderate', 'Heavy (Overate)'].map(p => (
+            <TouchableOpacity key={p} style={[styles.chip, portion === p && styles.chipActive]} onPress={() => setPortion(p)}>
+              <Text style={[styles.chipText, portion === p && styles.chipTextActive]}>{p}</Text>
             </TouchableOpacity>
           ))}
         </View>
       </View>
+    </View>
+  );
 
-      <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit}>
-        <Text style={styles.submitText}>Save Check-in</Text>
-      </TouchableOpacity>
-    </ScrollView>
+  const renderStep4 = () => (
+    <View style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Context & Biometrics</Text>
+      <Text style={styles.stepSubtitle}>Sync your devices to get a fuller picture.</Text>
+      <View style={styles.syncCard}>
+        <Smartphone size={32} color="#64748b" />
+        <Text style={styles.syncTitle}>Apple Watch / Fitbit</Text>
+        <Text style={styles.syncDesc}>Sync steps, heart rate, and sleep data.</Text>
+        <TouchableOpacity style={[styles.syncBtn, wearableSynced && styles.syncBtnActive]} onPress={handleSyncWearable}>
+          <Text style={[styles.syncBtnText, wearableSynced && styles.syncBtnTextActive]}>
+            {wearableSynced ? 'Synced Successfully' : 'Tap to Sync Device'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+
+  const renderStep5 = () => (
+    <View style={styles.stepContainer}>
+      <View style={styles.successIcon}>
+        <CheckCircle size={48} color="#16a34a" />
+      </View>
+      <Text style={[styles.stepTitle, { textAlign: 'center' }]}>You're all set!</Text>
+      <Text style={[styles.stepSubtitle, { textAlign: 'center' }]}>Your daily check-in is complete. Nura will analyze your data and update your wellness score.</Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.header}>
+        {step > 1 ? (
+          <TouchableOpacity onPress={() => setStep(s => s - 1)} style={styles.iconBtn}>
+            <ChevronLeft size={24} color="#0f172a" />
+          </TouchableOpacity>
+        ) : <View style={styles.iconBtnSpacer} />}
+        
+        <View style={styles.progressWrap}>
+          {[1,2,3,4,5].map(i => (
+            <View key={i} style={[styles.progressDot, step >= i && styles.progressDotActive]} />
+          ))}
+        </View>
+
+        <TouchableOpacity onPress={() => router.back()} style={styles.iconBtn}>
+          <Text style={styles.cancelText}>Skip</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView style={styles.content} contentContainerStyle={styles.contentInner}>
+        {step === 1 && renderStep1()}
+        {step === 2 && renderStep2()}
+        {step === 3 && renderStep3()}
+        {step === 4 && renderStep4()}
+        {step === 5 && renderStep5()}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        {step < TOTAL_STEPS ? (
+          <TouchableOpacity style={styles.primaryBtn} onPress={() => setStep(s => s + 1)}>
+            <Text style={styles.primaryBtnText}>Continue</Text>
+            <ChevronRight size={20} color="#ffffff" />
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity style={styles.primaryBtn} onPress={handleSubmit}>
+            <Text style={styles.primaryBtnText}>Finish</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#ffffff', padding: 20 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
-  title: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
-  closeBtn: { fontSize: 16, color: '#64748b' },
-  subtitle: { fontSize: 16, color: '#475569', marginBottom: 24 },
-  sliderContainer: { marginBottom: 24 },
-  label: { fontSize: 16, fontWeight: '600', color: '#1e293b', marginBottom: 8 },
-  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  stepperBtn: { width: 40, height: 40, backgroundColor: '#f1f5f9', borderRadius: 8, alignItems: 'center', justifyContent: 'center' },
-  stepperText: { fontSize: 20, fontWeight: '600', color: '#1e293b' },
-  numberInput: { flex: 1, height: 40, backgroundColor: '#f8fafc', borderRadius: 8, textAlign: 'center', fontSize: 16, fontWeight: '500' },
-  tensionRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  tensionBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#f1f5f9' },
-  tensionBtnActive: { backgroundColor: '#16a34a' },
-  tensionText: { color: '#475569', fontWeight: '500' },
-  tensionTextActive: { color: '#ffffff' },
-  submitBtn: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 12, marginBottom: 40 },
-  submitText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
+  container: { flex: 1, backgroundColor: '#ffffff' },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, paddingTop: 60, borderBottomWidth: 1, borderColor: '#f1f5f9' },
+  iconBtn: { padding: 8 },
+  iconBtnSpacer: { width: 40 },
+  cancelText: { color: '#64748b', fontSize: 16, fontWeight: '500' },
+  progressWrap: { flexDirection: 'row', gap: 6 },
+  progressDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#e2e8f0' },
+  progressDotActive: { backgroundColor: '#16a34a', width: 24 },
+  content: { flex: 1 },
+  contentInner: { padding: 24 },
+  stepContainer: { flex: 1 },
+  stepTitle: { fontSize: 24, fontWeight: 'bold', color: '#0f172a', marginBottom: 8 },
+  stepSubtitle: { fontSize: 16, color: '#64748b', marginBottom: 32 },
+  inputGroup: { marginBottom: 28 },
+  labelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  label: { fontSize: 16, fontWeight: '600', color: '#1e293b' },
+  valueText: { fontSize: 16, color: '#16a34a', fontWeight: '700' },
+  stepperRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  stepperBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
+  stepperIcon: { fontSize: 24, color: '#475569', fontWeight: '500' },
+  track: { flex: 1, height: 8, backgroundColor: '#e2e8f0', borderRadius: 4, overflow: 'hidden' },
+  fill: { height: '100%', backgroundColor: '#16a34a' },
+  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 8 },
+  chip: { paddingVertical: 10, paddingHorizontal: 16, borderRadius: 20, backgroundColor: '#f1f5f9', borderWidth: 1, borderColor: '#e2e8f0' },
+  chipActive: { backgroundColor: '#dcfce7', borderColor: '#4ade80' },
+  chipText: { color: '#475569', fontWeight: '500' },
+  chipTextActive: { color: '#16a34a', fontWeight: '700' },
+  syncCard: { backgroundColor: '#f8fafc', padding: 24, borderRadius: 16, alignItems: 'center', borderWidth: 1, borderColor: '#e2e8f0' },
+  syncTitle: { fontSize: 18, fontWeight: '600', color: '#0f172a', marginTop: 16, marginBottom: 8 },
+  syncDesc: { fontSize: 14, color: '#64748b', textAlign: 'center', marginBottom: 24 },
+  syncBtn: { backgroundColor: '#e2e8f0', paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
+  syncBtnActive: { backgroundColor: '#dcfce7' },
+  syncBtnText: { color: '#475569', fontWeight: '600' },
+  syncBtnTextActive: { color: '#16a34a' },
+  successIcon: { alignItems: 'center', marginBottom: 24, marginTop: 40 },
+  footer: { padding: 24, borderTopWidth: 1, borderColor: '#f1f5f9', backgroundColor: '#ffffff' },
+  primaryBtn: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  primaryBtnText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
 });

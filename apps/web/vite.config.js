@@ -16,6 +16,7 @@ export default defineConfig({
       '@pages': path.resolve(__dirname, './src/pages'),
       '@context': path.resolve(__dirname, './src/context'),
       '@styles': path.resolve(__dirname, './src/styles'),
+      '@nuracare/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
     }
   },
   build: {

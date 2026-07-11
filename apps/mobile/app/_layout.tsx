@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { useAuthStore, useWellnessStore } from '../src/store';
 import { startBackgroundSyncLoop } from '../src/services/supabase/syncEngine';
 import { initializeAuthListener } from '../src/services/auth';
+import { getProfile } from '../src/storage/profileStorage';
 
 export default function RootLayout() {
   const { user, loadUser } = useAuthStore();
@@ -26,13 +27,19 @@ export default function RootLayout() {
     if (!isReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const profile = getProfile();
+    const needsOnboarding = !profile?.onboardingCompleted;
 
     if (!user && !inAuthGroup) {
       // Redirect to login
       router.replace('/(auth)/login');
-    } else if (user && inAuthGroup) {
-      // Redirect away from login if already signed in
-      router.replace('/(tabs)');
+    } else if (user) {
+      if (needsOnboarding && segments[1] !== 'onboarding') {
+        router.replace('/(auth)/onboarding/step1');
+      } else if (!needsOnboarding && inAuthGroup) {
+        // Redirect away from login/onboarding if already signed in and setup
+        router.replace('/(tabs)');
+      }
     }
   }, [user, segments, isReady]);
 
@@ -41,7 +48,9 @@ export default function RootLayout() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="lifestyle" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="checkin-modal" options={{ presentation: 'modal', headerShown: false }} />
+      <Stack.Screen name="subscription" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>
   );
 }

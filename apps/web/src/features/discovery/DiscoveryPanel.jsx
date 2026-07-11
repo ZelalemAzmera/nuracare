@@ -3,7 +3,7 @@ import * as Icons from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFromContent } from '@/lib/utils';
 
-import { getDiscoveryFeed, getAvailableTags } from '@/lib/discoveryEngine';
+import { getDiscoveryFeed, getAvailableTags } from '@nuracare/shared';
 function Discovery({ t }) {
   const [filters, setFilters] = useState(() => JSON.parse(localStorage.getItem('nuracare_interests') || '[]'));
   const [feed, setFeed] = useState([]);
