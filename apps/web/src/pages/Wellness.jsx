@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import * as Icons from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { getCheckins, computeBurnoutRisk, compute5CoreWellness, getRecoveryRecommendations } from '@nuracare/shared';
+import { getCheckins, computeBurnoutRisk, compute5CoreWellness, getRecoveryRecommendations } from '@/lib/wellnessEngine';
 
 export default function WellnessDashboard() {
   const [checkins, setCheckins] = useState([]);

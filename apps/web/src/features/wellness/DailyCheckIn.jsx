@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
-import { saveCheckin, computeWellnessScore } from '@nuracare/shared';
+import { saveCheckin, computeWellnessScore } from '@/lib/wellnessEngine';
 
 export default function DailyCheckIn({ onComplete, isGlobal = true, forceShow = false }) {
   const [step, setStep] = useState(0); 
