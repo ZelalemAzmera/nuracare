@@ -22,6 +22,8 @@ import Discovery from '@/features/discovery/DiscoveryPanel';
 import AuthPage from '@/features/auth/AuthPage';
 import Home from '@/pages/Home';
 import CheckinPage from '@/features/wellness/CheckinPage';
+import MedTagInput from '@/components/ui/MedTagInput';
+import FileUploadStep from '@/components/shared/FileUploadStep';
 import FloatingLeaves from '@/components/layout/FloatingLeaves';
 import { showToast, formatDate } from '@/lib/utils';
 import { TSOM_TYPES } from '@/lib/ethiopianCalendar';
