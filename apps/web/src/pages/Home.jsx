@@ -5,6 +5,13 @@ import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFrom
 
 import WellnessScore from '@/components/shared/WellnessScore';
 import { getDailyTip } from '@/data/discovery';
+import { LeafSVG, FlowerSVG, DropletSVG } from '@/components/layout/FloatingLeaves';
+
+const DynamicIcon = ({ name, ...props }) => {
+  const IconComponent = Icons[name];
+  return IconComponent ? <IconComponent {...props} /> : <Icons.HelpCircle {...props} />;
+};
+
 function Home({ profile, setActivePage, t = (k)=>k }) {
   const medsList = Array.isArray(profile.medications) 
     ? profile.medications 
