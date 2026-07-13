@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingVi
 import { Send, Bot } from 'lucide-react-native';
 import { useChatStore } from '../../src/store';
 import { getProfile } from '../../src/storage/profileStorage';
-import { nuracareApi } from '../../src/services/api/client';
+import { ChatEngine } from '../../src/services/ai';
 
 import MessageBubble from '../../src/components/chat/MessageBubble';
 import UrgencyCard from '../../src/components/chat/UrgencyCard';
@@ -50,13 +50,13 @@ export default function ChatScreen() {
 
     try {
       // Simulate or make real API call
-      const res = await nuracareApi.chat(userMessage.content, currentMessages.map((m: any) => ({ role: m.role, content: m.content })), profile);
+      const res = await ChatEngine.processMessage(userMessage.content);
       
       const aiMessage = {
         id: `msg_${Date.now() + 1}`,
         session_id: sessionId,
         role: 'assistant',
-        content: res.message,
+        content: res.response,
         metadata: {
           urgency_assessment: res.urgency_assessment,
         },
