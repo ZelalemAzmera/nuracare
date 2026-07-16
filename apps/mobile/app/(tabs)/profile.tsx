@@ -1,26 +1,19 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
-import { router } from 'expo-router';
-import { getProfile, saveProfile, clearProfile } from '../../src/storage/profileStorage';
+import { router, useRouter } from 'expo-router';
 import { useAuthStore, useWellnessStore } from '../../src/store';
-import { User, Activity, Pill, Settings, LogOut, ChevronRight, X, Plus, Star } from 'lucide-react-native';
+import { useProfile } from '../../src/context/ProfileContext';
+import { User, ClipboardList, Watch, LogOut, ChevronRight, X, Plus, CheckCircle2, Circle } from 'lucide-react-native';
+import { TSOM_TYPES } from '../../src/lib/ethiopianCalendar';
 
 export default function ProfileScreen() {
   const { setUser } = useAuthStore();
   const { setScore } = useWellnessStore();
-  const [profile, setLocalProfile] = useState<any>({});
+  const { profile, setProfile, clearProfile } = useProfile();
+  const localRouter = useRouter();
   
   // Meds form
   const [newMed, setNewMed] = useState('');
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const p = getProfile();
-    if (p) setLocalProfile(p);
-  };
 
   const handleLogout = () => {
     Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
@@ -34,24 +27,34 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const addMed = () => {
-    if (newMed.trim()) {
-      const meds = profile.medications || [];
+  const addMed = async () => {
+    if (newMed.trim() && profile) {
+      const meds = profile.medications ? profile.medications.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
       if (!meds.includes(newMed.trim())) {
-        const updated = { ...profile, medications: [...meds, newMed.trim()] };
-        saveProfile(updated);
-        setLocalProfile(updated);
+        const updatedMeds = [...meds, newMed.trim()].join(', ');
+        await setProfile({ medications: updatedMeds });
       }
       setNewMed('');
     }
   };
 
-  const removeMed = (med: string) => {
-    const meds = profile.medications || [];
-    const updated = { ...profile, medications: meds.filter((m: string) => m !== med) };
-    saveProfile(updated);
-    setLocalProfile(updated);
+  const removeMed = async (med: string) => {
+    if (profile) {
+      const meds = profile.medications ? profile.medications.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
+      const updatedMeds = meds.filter((m: string) => m !== med).join(', ');
+      await setProfile({ medications: updatedMeds });
+    }
   };
+
+  const setFastingMode = async (mode: string) => {
+    if (profile) {
+      await setProfile({ fastingMode: mode });
+    }
+  };
+
+  if (!profile) return null;
+
+  const medsList = profile.medications ? profile.medications.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
   return (
     <ScrollView style={styles.container}>
@@ -59,21 +62,55 @@ export default function ProfileScreen() {
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{profile.name ? profile.name[0].toUpperCase() : 'U'}</Text>
         </View>
-        <Text style={styles.name}>{profile.name || 'User Profile'}</Text>
-        <Text style={styles.details}>{profile.age ? `${profile.age} yrs • ` : ''}{profile.location?.country || ''}</Text>
+        <Text style={styles.name}>{profile.name || 'User'}</Text>
+        <Text style={styles.details}>{profile.age ? `${profile.age} yrs old` : ''}</Text>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Conditions</Text>
+        <View style={styles.infoTags}>
+          {profile.conditions && profile.conditions.length > 0 ? (
+            profile.conditions.map((c: string) => (
+              <View key={c} style={styles.infoTag}><Text style={styles.infoTagText}>{c}</Text></View>
+            ))
+          ) : (
+            <Text style={styles.emptyText}>None reported</Text>
+          )}
+        </View>
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Health Records</Text>
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/records')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ padding: 12, backgroundColor: '#f0fdf4', borderRadius: 12 }}>
+              <ClipboardList size={24} color="#16a34a" />
+            </View>
+            <View>
+              <Text style={styles.cardTitle}>Your Historical Vault</Text>
+              <Text style={styles.cardDesc}>Symptom logs and files.</Text>
+            </View>
+          </View>
+          <ChevronRight size={20} color="#cbd5e1" />
+        </TouchableOpacity>
       </View>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Medications</Text>
         <View style={styles.medsCard}>
           <View style={styles.medsInputRow}>
-            <TextInput style={styles.medInput} value={newMed} onChangeText={setNewMed} placeholder="Add new medication..." />
+            <TextInput 
+              style={styles.medInput} 
+              value={newMed} 
+              onChangeText={setNewMed} 
+              placeholder="e.g. Metformin 500mg..." 
+            />
             <TouchableOpacity style={styles.addBtn} onPress={addMed}>
               <Plus size={20} color="#ffffff" />
             </TouchableOpacity>
           </View>
           <View style={styles.medsList}>
-            {(profile.medications || []).map((med: string) => (
+            {medsList.map((med: string) => (
               <View key={med} style={styles.medTag}>
                 <Text style={styles.medText}>{med}</Text>
                 <TouchableOpacity onPress={() => removeMed(med)}>
@@ -81,53 +118,59 @@ export default function ProfileScreen() {
                 </TouchableOpacity>
               </View>
             ))}
+            {medsList.length === 0 && <Text style={styles.emptyText}>None reported</Text>}
           </View>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Health Profile</Text>
-        
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Conditions</Text>
-          <View style={styles.infoTags}>
-            {(profile.conditions || []).map((c: string) => (
-              <View key={c} style={styles.infoTag}><Text style={styles.infoTagText}>{c}</Text></View>
-            ))}
-            {(!profile.conditions || profile.conditions.length === 0) && <Text style={styles.emptyText}>None reported</Text>}
+        <Text style={styles.sectionTitle}>Connected Devices</Text>
+        <TouchableOpacity style={styles.card} onPress={() => router.push('/devices')}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+            <View style={{ padding: 12, backgroundColor: '#f0fdf4', borderRadius: 12 }}>
+              <Watch size={24} color="#16a34a" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.cardTitle}>Wearables & Health Apps</Text>
+              <Text style={styles.cardDesc}>Sync Apple Health, Google Fit, Fitbit...</Text>
+            </View>
           </View>
-        </View>
-        <View style={styles.divider} />
-        
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Fasting Mode</Text>
-          <Text style={styles.infoValue}>{profile.fastingMode || 'Standard'}</Text>
-        </View>
-        <View style={styles.divider} />
+          <ChevronRight size={20} color="#cbd5e1" />
+        </TouchableOpacity>
+      </View>
 
-        <View style={styles.infoRow}>
-          <Text style={styles.infoLabel}>Language</Text>
-          <Text style={styles.infoValue}>{profile.language || 'English'}</Text>
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Diet & Fasting Preferences</Text>
+        <View style={styles.prefsCard}>
+          <TouchableOpacity style={styles.radioRow} onPress={() => setFastingMode(TSOM_TYPES.NONE)}>
+            {profile.fastingMode === TSOM_TYPES.NONE ? <CheckCircle2 size={24} color="#16a34a" /> : <Circle size={24} color="#cbd5e1" />}
+            <Text style={styles.radioText}>Standard Diet (No Restrictions)</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.radioRow} onPress={() => setFastingMode(TSOM_TYPES.ORTHODOX)}>
+            {profile.fastingMode === TSOM_TYPES.ORTHODOX ? <CheckCircle2 size={24} color="#16a34a" /> : <Circle size={24} color="#cbd5e1" />}
+            <Text style={styles.radioText}>Orthodox Christian Fasting (Tsom)</Text>
+          </TouchableOpacity>
+          <View style={styles.divider} />
+          <TouchableOpacity style={styles.radioRow} onPress={() => setFastingMode(TSOM_TYPES.ISLAMIC)}>
+            {profile.fastingMode === TSOM_TYPES.ISLAMIC ? <CheckCircle2 size={24} color="#16a34a" /> : <Circle size={24} color="#cbd5e1" />}
+            <Text style={styles.radioText}>Islamic Fasting (Ramadan)</Text>
+          </TouchableOpacity>
+          <Text style={styles.prefsHint}>NuraCare will adjust nutritional recommendations and athletic tracking based on your active fasting cycle.</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Settings</Text>
-        <TouchableOpacity style={styles.settingRow} onPress={() => router.push('/subscription')}>
-          <Star size={20} color="#f59e0b" />
-          <Text style={styles.settingText}>Nura Premium</Text>
-          <ChevronRight size={20} color="#cbd5e1" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-        <View style={styles.divider} />
-        <TouchableOpacity style={styles.settingRow}>
-          <Settings size={20} color="#64748b" />
-          <Text style={styles.settingText}>Account Settings</Text>
-          <ChevronRight size={20} color="#cbd5e1" style={{ marginLeft: 'auto' }} />
-        </TouchableOpacity>
-        <View style={styles.divider} />
-        <TouchableOpacity style={styles.settingRow} onPress={handleLogout}>
+        <Text style={styles.sectionTitle}>Medical Notes</Text>
+        <View style={styles.notesCard}>
+          <Text style={styles.notesText}>{profile.medicalNotes || 'No notes uploaded yet. Use the web app to upload PDFs or images.'}</Text>
+        </View>
+      </View>
+
+      <View style={[styles.section, { marginBottom: 40 }]}>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
           <LogOut size={20} color="#ef4444" />
-          <Text style={[styles.settingText, { color: '#ef4444' }]}>Sign Out</Text>
+          <Text style={styles.logoutText}>Sign Out</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>
@@ -141,8 +184,19 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 32, fontWeight: 'bold', color: '#ffffff' },
   name: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },
   details: { fontSize: 16, color: '#64748b', marginTop: 4 },
+  
   section: { marginBottom: 24, paddingHorizontal: 20 },
   sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
+  
+  infoTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  infoTag: { backgroundColor: '#f0fdf4', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 12, borderWidth: 1, borderColor: '#bbf7d0' },
+  infoTagText: { color: '#16a34a', fontSize: 14, fontWeight: '600' },
+  emptyText: { color: '#94a3b8', fontStyle: 'italic', fontSize: 15 },
+  
+  card: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  cardTitle: { fontSize: 16, fontWeight: '600', color: '#0f172a' },
+  cardDesc: { fontSize: 13, color: '#64748b', marginTop: 2 },
+  
   medsCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
   medsInputRow: { flexDirection: 'row', gap: 12, marginBottom: 16 },
   medInput: { flex: 1, backgroundColor: '#f1f5f9', padding: 12, borderRadius: 12, fontSize: 16 },
@@ -150,14 +204,16 @@ const styles = StyleSheet.create({
   medsList: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   medTag: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#f1f5f9', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 8 },
   medText: { fontSize: 15, color: '#1e293b', fontWeight: '500' },
-  infoRow: { paddingVertical: 12, backgroundColor: '#ffffff', paddingHorizontal: 16, borderRadius: 16, marginBottom: 8 },
-  infoLabel: { fontSize: 13, color: '#64748b', marginBottom: 4 },
-  infoValue: { fontSize: 16, color: '#0f172a', fontWeight: '500' },
-  infoTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 },
-  infoTag: { backgroundColor: '#f0fdf4', paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, borderWidth: 1, borderColor: '#bbf7d0' },
-  infoTagText: { color: '#16a34a', fontSize: 14, fontWeight: '600' },
-  emptyText: { color: '#94a3b8', fontStyle: 'italic', fontSize: 15 },
-  divider: { height: 1, backgroundColor: '#e2e8f0', marginVertical: 8 },
-  settingRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 16, paddingHorizontal: 16, backgroundColor: '#ffffff', borderRadius: 16 },
-  settingText: { fontSize: 16, color: '#1e293b', fontWeight: '500' }
+  
+  prefsCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#e2e8f0' },
+  radioRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 },
+  radioText: { fontSize: 15, fontWeight: '600', color: '#334155' },
+  divider: { height: 1, backgroundColor: '#f1f5f9' },
+  prefsHint: { fontSize: 13, color: '#64748b', marginTop: 12, lineHeight: 20 },
+  
+  notesCard: { backgroundColor: '#f1f5f9', padding: 16, borderRadius: 16 },
+  notesText: { fontSize: 14, color: '#475569', lineHeight: 22 },
+  
+  logoutBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#fecaca' },
+  logoutText: { fontSize: 16, fontWeight: '600', color: '#ef4444' }
 });

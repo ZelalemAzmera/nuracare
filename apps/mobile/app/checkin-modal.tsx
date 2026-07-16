@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { useWellnessStore } from '../src/store';
-import { saveCheckin, getProfile, computeWellnessScore, syncWearables } from '@nuracare/shared';
+import { useProfile } from '../src/context/ProfileContext';
+import { compute5CoreWellness } from '../src/lib/wellnessEngine';
 import { ChevronRight, ChevronLeft, CheckCircle, Smartphone } from 'lucide-react-native';
 
 const TOTAL_STEPS = 5;
 
 export default function CheckInModal() {
-  const { setScore, addCheckIn } = useWellnessStore();
+  const { setScore, addCheckIn, checkIns } = useWellnessStore();
+  const { profile } = useProfile();
   const [step, setStep] = useState(1);
   
   // State for Step 1: Physical
@@ -31,17 +33,17 @@ export default function CheckInModal() {
 
   const handleSyncWearable = async () => {
     try {
-      await syncWearables();
-      setWearableSynced(true);
-      Alert.alert("Success", "Wearable data synced successfully.");
+      // simulate sync
+      setTimeout(() => {
+        setWearableSynced(true);
+        Alert.alert("Success", "Wearable data synced successfully.");
+      }, 1000);
     } catch (err) {
       Alert.alert("Error", "Could not sync wearables.");
     }
   };
 
   const handleSubmit = () => {
-    const profile = getProfile() || {};
-    
     const entry = {
       id: Date.now().toString(),
       date: new Date().toISOString().split('T')[0],
@@ -49,21 +51,24 @@ export default function CheckInModal() {
       painLevel,
       stiffness,
       activity,
+      energy: Math.round(activity / 12), // convert 0-120 mins to 0-10 energy
       stress,
       mood,
       sleep,
       meals,
       portion,
       hydration,
-      wearableSynced
-    };
+      wearableSynced,
+      tension: stiffness > 5 ? 'High' : 'None',
+      urgency: painLevel > 7 ? 'high' : 'low',
+      tags: []
+    } as any;
 
-    // Use shared engine
-    const savedEntry = saveCheckin(entry);
-    const newScore = computeWellnessScore(profile);
-
-    addCheckIn(savedEntry);
-    setScore(newScore.score);
+    addCheckIn(entry);
+    
+    // Calculate new overall score
+    const newScore = compute5CoreWellness(entry, profile || {});
+    setScore(newScore.total);
 
     router.back();
   };

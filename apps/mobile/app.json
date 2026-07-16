@@ -9,6 +9,10 @@
     },
     "android": {
       "package": "com.darikab71.nuracaremobile"
-    }
+    },
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen"
+    ]
   }
 }

@@ -4,12 +4,19 @@ const CHECKUPS_KEY = 'wellness_checkups';
 
 export function saveCheckup(checkup: any) {
   const checkups = getCheckups();
-  const index = checkups.findIndex((c: any) => c.id === checkup.id);
   
-  if (index >= 0) {
-    checkups[index] = checkup;
+  if (checkup.id) {
+    const index = checkups.findIndex((c: any) => c.id === checkup.id);
+    if (index >= 0) {
+      checkups[index] = checkup;
+    } else {
+      checkups.push(checkup);
+    }
   } else {
-    checkups.push(checkup);
+    checkups.push({
+      ...checkup,
+      id: Date.now().toString()
+    });
   }
   
   storage.set(CHECKUPS_KEY, JSON.stringify(checkups));

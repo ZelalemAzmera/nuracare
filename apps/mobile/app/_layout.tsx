@@ -1,39 +1,36 @@
 import { Stack, router, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useAuthStore, useWellnessStore } from '../src/store';
+import { useWellnessStore } from '../src/store';
 import { startBackgroundSyncLoop } from '../src/services/supabase/syncEngine';
-import { initializeAuthListener } from '../src/services/auth';
-import { getProfile } from '../src/storage/profileStorage';
+import { AuthProvider, useAuth } from '../src/context/AuthContext';
+import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 
-export default function RootLayout() {
-  const { user, loadUser } = useAuthStore();
+function InnerLayout() {
+  const { user, loading: authLoading } = useAuth();
+  const { profile, loading: profileLoading } = useProfile();
   const { loadWellnessData } = useWellnessStore();
   const [isReady, setIsReady] = useState(false);
   const segments = useSegments();
 
   useEffect(() => {
-    // Load cached data
-    loadUser();
     loadWellnessData();
-    
-    // Start listeners and sync
-    initializeAuthListener();
     startBackgroundSyncLoop();
-    
     setIsReady(true);
   }, []);
 
   useEffect(() => {
-    if (!isReady) return;
+    if (!isReady || authLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
-    const profile = getProfile();
-    const needsOnboarding = !profile?.onboardingCompleted;
-
+    
     if (!user && !inAuthGroup) {
       // Redirect to login
       router.replace('/(auth)/login');
     } else if (user) {
+      if (profileLoading) return;
+      
+      const needsOnboarding = !profile || !profile.name || profile._fallback || (Array.isArray(profile.conditions) === false && !profile.age);
+      
       if (needsOnboarding && segments[1] !== 'onboarding') {
         router.replace('/(auth)/onboarding/step1');
       } else if (!needsOnboarding && inAuthGroup) {
@@ -41,7 +38,7 @@ export default function RootLayout() {
         router.replace('/(tabs)');
       }
     }
-  }, [user, segments, isReady]);
+  }, [user, profile, authLoading, profileLoading, segments, isReady]);
 
   return (
     <Stack>
@@ -52,5 +49,15 @@ export default function RootLayout() {
       <Stack.Screen name="checkin-modal" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="subscription" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>
+  );
+}
+
+export default function RootLayout() {
+  return (
+    <AuthProvider>
+      <ProfileProvider>
+        <InnerLayout />
+      </ProfileProvider>
+    </AuthProvider>
   );
 }

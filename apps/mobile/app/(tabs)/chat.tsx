@@ -2,16 +2,32 @@ import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Send, Bot } from 'lucide-react-native';
 import { useChatStore } from '../../src/store';
-import { getProfile } from '../../src/storage/profileStorage';
+import { useProfile } from '../../src/context/ProfileContext';
 import { ChatEngine } from '../../src/services/ai';
 
 import MessageBubble from '../../src/components/chat/MessageBubble';
 import UrgencyCard from '../../src/components/chat/UrgencyCard';
 import SessionSelector from '../../src/components/chat/SessionSelector';
 
+function parseUrgencyFromContent(content: string) {
+  try {
+    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
+    if (jsonMatch && jsonMatch[1]) {
+      return JSON.parse(jsonMatch[1]);
+    }
+  } catch (e) {
+    return null;
+  }
+  return null;
+}
+
+function stripJsonBlock(content: string) {
+  return content.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
+}
+
 export default function ChatScreen() {
   const { messages, addMessage, sessions, addSession } = useChatStore() as any;
-  const profile = getProfile() || {};
+  const { profile, setProfile } = useProfile();
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -49,21 +65,43 @@ export default function ChatScreen() {
     setIsLoading(true);
 
     try {
-      // Simulate or make real API call
-      const res = await ChatEngine.processMessage(userMessage.content);
+      const messagesForAi = currentMessages.concat(userMessage).map((m: any) => ({
+        role: m.role,
+        content: m.content
+      }));
+
+      const rawResponse = await ChatEngine.processMessage(messagesForAi, profile);
+      const urgencyData = parseUrgencyFromContent(rawResponse);
+      const cleanResponse = stripJsonBlock(rawResponse);
       
       const aiMessage = {
         id: `msg_${Date.now() + 1}`,
         session_id: sessionId,
         role: 'assistant',
-        content: res.response,
+        content: cleanResponse,
         metadata: {
-          urgency_assessment: res.urgency_assessment,
+          urgency_assessment: urgencyData,
         },
         created_at: new Date().toISOString(),
       };
+      
       addMessage(aiMessage);
-    } catch (err) {
+
+      if (urgencyData?.urgency) {
+        // Save checkin record if there is an urgency assessment
+        const newRecord = {
+          id: Date.now(),
+          dateStr: new Date().toISOString().split('T')[0],
+          summary: urgencyData.summary || 'Health check',
+          urgency: urgencyData.urgency,
+          action: urgencyData.action || '',
+          natural: urgencyData.naturalRemedies || []
+        };
+        const currentRecords = profile?.records || [];
+        setProfile({ records: [...currentRecords, newRecord] });
+      }
+
+    } catch (err: any) {
       console.error(err);
       addMessage({
         id: `msg_${Date.now() + 1}`,
@@ -120,7 +158,7 @@ export default function ChatScreen() {
         {currentMessages.map((msg: any) => (
           <View key={msg.id}>
             <MessageBubble message={msg} />
-            {msg.metadata?.urgency_assessment && (
+            {msg.metadata?.urgency_assessment?.urgency && (
               <UrgencyCard {...msg.metadata.urgency_assessment} />
             )}
           </View>
