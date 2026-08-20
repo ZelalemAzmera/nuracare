@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { Stack, router, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useWellnessStore } from '../src/store';

@@ -3,8 +3,9 @@
     "name": "NuraCare",
     "slug": "nuracare",
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "fcfeea5f-7ce9-4316-bed2-6499a0944720"
+        "projectId": "49bdada9-81ea-438e-8a45-48ad954ecf49"
       }
     },
     "android": {
