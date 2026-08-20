@@ -22,7 +22,7 @@ Format: Title Case, no quotes, no punctuation.`;
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
       body: JSON.stringify({ 
-        model: 'llama-3.1-8b-instant', 
+        model: 'openai/gpt-oss-20b', 
         messages: [{ role: 'user', content: prompt }], 
         temperature: 0.3, 
         max_tokens: 20, 

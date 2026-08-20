@@ -84,7 +84,7 @@ ${text.slice(0, 3000)}
 Output ONLY valid JSON wrapped in triple backticks: \`\`\`json { ... } \`\`\``;
 
     const { text: responseText } = await generateText({
-      model: groq('llama-3.3-70b-versatile'),
+      model: groq('openai/gpt-oss-120b'),
       prompt,
       temperature: 0.1,
     });
@@ -124,7 +124,7 @@ Message: "${text}"
 Output ONLY valid JSON wrapped in triple backticks: \`\`\`json { ... } \`\`\``;
 
     const { text: responseText } = await generateText({
-      model: groq('llama-3.1-8b-instant'),
+      model: groq('openai/gpt-oss-20b'),
       prompt,
       temperature: 0.1,
     });

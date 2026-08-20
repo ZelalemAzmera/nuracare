@@ -143,7 +143,7 @@ export default async function handler(req) {
         .map(m => ({ role: m.role === 'assistant' ? 'assistant' : 'user', content: m.content }))
     ];
 
-    const modelOptions = ['deepseek-r1-distill-llama-70b', 'llama-3.3-70b-versatile'];
+    const modelOptions = ['openai/gpt-oss-120b', 'openai/gpt-oss-20b', 'qwen/qwen3.6-27b'];
     let groqRes = null;
     
     for (const model of modelOptions) {

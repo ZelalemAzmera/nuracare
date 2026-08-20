@@ -42,7 +42,7 @@ Only include the JSON once — after you know symptom + duration + severity.`;
         'Authorization': `Bearer ${GROQ_KEY}` 
       },
       body: JSON.stringify({ 
-        model: 'llama-3.1-8b-instant', 
+        model: 'openai/gpt-oss-120b', 
         messages: groqMessages, 
         temperature: 0.6, 
         max_tokens: 1000
