@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, Component } from 'react';
 import * as Icons from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFromContent } from '@/lib/utils';
+import DailyCheckIn from './DailyCheckIn';
 import { getCheckins, compute5CoreWellness, getRecoveryRecommendations } from '@/lib/wellnessEngine';
 
 function CoreStat({ label, score, icon }) {
