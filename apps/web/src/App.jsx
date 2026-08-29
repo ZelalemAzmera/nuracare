@@ -25,6 +25,7 @@ import CheckinPage from '@/features/wellness/CheckinPage';
 import MedTagInput from '@/components/ui/MedTagInput';
 import FileUploadStep from '@/components/shared/FileUploadStep';
 import FloatingLeaves from '@/components/layout/FloatingLeaves';
+import DownloadAppModal from '@/components/shared/DownloadAppModal';
 import { showToast, formatDate } from '@/lib/utils';
 import { TSOM_TYPES } from '@/lib/ethiopianCalendar';
 import { supabase } from '@/lib/supabase';
@@ -48,6 +49,7 @@ export default function App() {
   
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [activePage, setActivePage] = useState(() => localStorage.getItem('nuracare_activePage') || 'home');
+  const [downloadModalOpen, setDownloadModalOpen] = useState(false);
   
   useEffect(() => {
     // Handle Payment Redirects
@@ -98,23 +100,13 @@ export default function App() {
     const interval = setInterval(() => {
       const now = new Date();
       checkups.forEach(c => {
-        if (!c.next_visit) return;
-        const [year, month, day] = c.next_visit.split('-');
-        const visitDate = new Date(year, month - 1, day, 9, 0, 0); // 9:00 AM local
-        
-        const diffMs = visitDate.getTime() - now.getTime();
-        const diffDays = diffMs / (1000 * 60 * 60 * 24);
-        const diffHours = diffMs / (1000 * 60 * 60);
-
-        if (diffDays <= 5 && diffDays > 4.5 && !c.reminded_5d) {
-          triggerReminder(c, `Your ${c.name} appointment is in 5 days.`, 'reminded_5d');
-        } else if (diffDays <= 1 && diffDays > 0.5 && !c.reminded_1d) {
-          triggerReminder(c, `Reminder: ${c.name} is tomorrow!`, 'reminded_1d');
-        } else if (diffHours <= 1 && diffHours > 0 && !c.reminded_1h) {
-          triggerReminder(c, `🚨 ${c.name} appointment is in 1 hour!`, 'reminded_1h');
+        if (!c.reminderAt) return;
+        const remTime = new Date(c.reminderAt);
+        if (now >= remTime && !c.isNotified) {
+          triggerReminder(c, `Reminder: Follow-up checkup for ${c.chiefComplaint || 'your recent symptom'}`, 'isNotified');
         }
       });
-    }, 60000); // 1 minute
+    }, 15000);
 
     return () => clearInterval(interval);
   }, [checkups, updateCheckup]);
@@ -144,8 +136,8 @@ export default function App() {
   const [profileMedsInput, setProfileMedsInput] = useState([]);
 
   useEffect(() => {
-    if (user && !profile && !profileLoading && onboardingStep <= 0) {
-      setOnboardingStep(1);
+    if (!user && !profile && !profileLoading && onboardingStep === 0) {
+      // Allow visitor access without auto-redirecting to /auth
     }
   }, [user, profile, profileLoading, onboardingStep]);
 
@@ -247,25 +239,53 @@ export default function App() {
     if (onboardingStep === 0 && !user) {
       return (
         <div className="landing-page">
+          {downloadModalOpen && <DownloadAppModal onClose={() => setDownloadModalOpen(false)} />}
           <FloatingLeaves />
           <div className="hero-section">
             <div className="hero-icon-wrap"><Icons.Leaf /></div>
             <h1 className="hero-title">NuraCare</h1>
             <p className="hero-subtitle">Your calm, natural health companion.</p>
-            <button className="btn-primary btn-large mb-4" onClick={() => {
-              if (user) {
-                setOnboardingStep(1);
-              } else {
-                setOnboardingStep(-1);
-              }
-            }}>
-              {user ? (
-                <>Complete your profile <Icons.ArrowRight size={20} style={{marginLeft: 8}}/></>
-              ) : (
-                <>Start your session <Icons.ArrowRight size={20} style={{marginLeft: 8}}/></>
-              )}
-            </button>
-            <div style={{height: 40}}></div>
+            
+            <div style={{ display: 'flex', gap: '14px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '24px' }}>
+              <button className="btn-primary btn-large" onClick={() => {
+                if (user) {
+                  setOnboardingStep(1);
+                } else {
+                  setOnboardingStep(-1);
+                }
+              }}>
+                {user ? (
+                  <>Complete your profile <Icons.ArrowRight size={20} style={{marginLeft: 8}}/></>
+                ) : (
+                  <>Start your session <Icons.ArrowRight size={20} style={{marginLeft: 8}}/></>
+                )}
+              </button>
+
+              <button 
+                className="btn-outline-sm" 
+                style={{ 
+                  padding: '14px 22px', 
+                  fontSize: '15px', 
+                  borderRadius: '16px', 
+                  display: 'inline-flex', 
+                  alignItems: 'center', 
+                  gap: '8px',
+                  background: 'rgba(255, 255, 255, 0.85)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1.5px solid var(--green, #22c55e)',
+                  color: 'var(--green-dark, #15803d)',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 14px rgba(34, 197, 94, 0.15)'
+                }}
+                onClick={() => setDownloadModalOpen(true)}
+              >
+                <Icons.Smartphone size={19} color="var(--green, #22c55e)" />
+                Download App (APK)
+              </button>
+            </div>
+
+            <div style={{height: 20}}></div>
             <img src="/hero.png" alt="Natural Wellness" className="hero-media" />
           </div>
 
@@ -543,6 +563,7 @@ export default function App() {
             <option value="am">አማርኛ</option>
           </select>
           <NavItem icon={Icons.User} label={t("profile")} active={activePage === 'profile'} onClick={() => { setActivePage('profile'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Smartphone} label="📱 Get Mobile App" active={false} onClick={() => { setDownloadModalOpen(true); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Star} label={t("upgrade_premium")} active={activePage === 'upgrade'} onClick={() => { setActivePage('upgrade'); setSidebarOpen(false); }} />
           <div style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 16, display: 'flex', flexDirection: 'column', gap: 10, paddingLeft: 8 }}>
             <a href="#" onClick={(e) => { e.preventDefault(); setActivePage('privacy'); setSidebarOpen(false); }} style={{ fontSize: 12, color: 'var(--text-muted)', textDecoration: 'none' }}>Privacy Policy</a>
@@ -559,7 +580,7 @@ export default function App() {
       </div>
 
       <main className="content-area">
-        {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} />}
+        {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} onOpenDownloadModal={() => setDownloadModalOpen(true)} />}
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'records' && <MedicalRecords profile={profile} onBack={() => setActivePage('profile')} />}
@@ -701,6 +722,10 @@ export default function App() {
         isOpen={!!shareSession} 
         onClose={() => setShareSession(null)} 
         session={shareSession} 
+      />
+      <DownloadAppModal 
+        isOpen={downloadModalOpen} 
+        onClose={() => setDownloadModalOpen(false)} 
       />
       <ToastContainer />
     </div>

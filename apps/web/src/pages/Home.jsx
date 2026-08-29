@@ -12,7 +12,7 @@ const DynamicIcon = ({ name, ...props }) => {
   return IconComponent ? <IconComponent {...props} /> : <Icons.HelpCircle {...props} />;
 };
 
-function Home({ profile, setActivePage, t = (k)=>k }) {
+function Home({ profile, setActivePage, t = (k)=>k, onOpenDownloadModal = () => {} }) {
   const medsList = Array.isArray(profile.medications) 
     ? profile.medications 
     : (profile.medications ? profile.medications.split(',').map(m => m.trim()).filter(Boolean) : []);
@@ -47,6 +47,58 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
           )}
         </div>
         <div className="date-badge">{formatDate(new Date())}</div>
+      </div>
+
+      {/* Mobile App Download Banner */}
+      <div style={{
+        background: 'linear-gradient(135deg, #15803d 0%, #166534 100%)',
+        borderRadius: '20px',
+        padding: '18px 24px',
+        color: 'white',
+        marginBottom: '24px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        flexWrap: 'wrap',
+        gap: '16px',
+        boxShadow: '0 10px 25px -5px rgba(22, 101, 52, 0.3)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <div style={{
+            background: 'rgba(255, 255, 255, 0.2)',
+            borderRadius: '12px',
+            width: '44px',
+            height: '44px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <Icons.Smartphone size={24} color="#ffffff" />
+          </div>
+          <div>
+            <h4 style={{ margin: '0 0 2px 0', fontSize: '16px', fontWeight: 700 }}>NuraCare on Mobile</h4>
+            <p style={{ margin: 0, fontSize: '13px', opacity: 0.9 }}>Download the direct Android APK to your phone today.</p>
+          </div>
+        </div>
+        <button 
+          onClick={onOpenDownloadModal}
+          style={{
+            background: '#ffffff',
+            color: '#15803d',
+            border: 'none',
+            padding: '10px 18px',
+            borderRadius: '12px',
+            fontWeight: 700,
+            fontSize: '13px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+          }}
+        >
+          <Icons.Download size={16} /> Download APK
+        </button>
       </div>
 
       <div className="tip-card-home">
@@ -131,6 +183,7 @@ function Home({ profile, setActivePage, t = (k)=>k }) {
         <button className="quick-btn" onClick={() => setActivePage('chat')}><Icons.MessageCircle size={18} color="var(--green)"/> Check Symptoms</button>
         <button className="quick-btn" onClick={() => setActivePage('discovery')}><Icons.Compass size={18} color="var(--green)"/> Explore Tips</button>
         <button className="quick-btn" onClick={() => setActivePage('wellness')}><Icons.Activity size={18} color="var(--green)"/> Wellness Score</button>
+        <button className="quick-btn" onClick={onOpenDownloadModal}><Icons.Smartphone size={18} color="var(--green)"/> Get Mobile App</button>
       </div>
     </div>
   );
