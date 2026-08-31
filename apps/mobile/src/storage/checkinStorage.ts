@@ -1,5 +1,5 @@
 import { storage } from './mmkv';
-import type { CheckIn } from '@nuracare/shared';
+import type { CheckIn } from '../shared';
 
 const CHECKINS_KEY = 'wellness_checkins';
 

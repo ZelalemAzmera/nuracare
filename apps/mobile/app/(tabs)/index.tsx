@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../../src/context/ProfileContext';
-import { getDailyTip } from '@nuracare/shared';
+import { getDailyTip } from '../../src/shared';
 import { Leaf, Activity, Pill, HeartPulse, Calendar, MessageCircle, Play, Compass, Zap, TrendingUp } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 

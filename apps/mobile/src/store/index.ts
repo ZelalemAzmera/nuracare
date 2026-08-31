@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, CheckIn, Message } from '@nuracare/shared';
+import { User, CheckIn, Message } from '../shared';
 import { getCachedData, cacheData } from '../storage/mmkv';
 import { useSyncStore } from './syncStore';
 

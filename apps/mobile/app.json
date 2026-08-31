@@ -2,10 +2,11 @@
   "expo": {
     "name": "NuraCare",
     "slug": "nuracare",
+    "owner": "darikab71",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "49bdada9-81ea-438e-8a45-48ad954ecf49"
+        "projectId": "c8ef278f-9fa4-426b-b682-73785a5bea8d"
       }
     },
     "android": {
