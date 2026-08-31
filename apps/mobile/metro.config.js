@@ -14,4 +14,15 @@ if (fs.existsSync(rootNodeModules)) {
   ];
 }
 
+// Fix for react-freeze 1.0.4 missing src/index.tsx
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (moduleName === 'react-freeze') {
+    return {
+      type: 'sourceFile',
+      filePath: require.resolve('react-freeze/dist/index.js')
+    };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;
