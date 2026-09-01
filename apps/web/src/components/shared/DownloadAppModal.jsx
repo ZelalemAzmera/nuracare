@@ -7,9 +7,7 @@ export default function DownloadAppModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const apkUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/nuracare.apk`
-    : '/nuracare.apk';
+  const apkUrl = "https://expo.dev/artifacts/eas/C-UgZsC__wqw56esa8iN1OXISQYLfOgSFNiqU0O70lY.apk";
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(apkUrl)}&color=166534&bgcolor=f0fdf4`;
 
@@ -146,7 +144,7 @@ export default function DownloadAppModal({ isOpen, onClose }) {
               {/* Download Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: '1', minWidth: '180px' }}>
                 <a 
-                  href="/nuracare.apk" 
+                  href={apkUrl} 
                   download="nuracare.apk"
                   style={{
                     display: 'flex',
