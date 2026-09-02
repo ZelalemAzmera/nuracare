@@ -1,8 +1,9 @@
 {
   "expo": {
-    "name": "NuraCare",
+    "name": "Nura",
     "slug": "nuracare",
     "scheme": "nuracare",
+    "icon": "./assets/images/icon.png",
     "owner": "darikab71",
     "extra": {
       "router": {},

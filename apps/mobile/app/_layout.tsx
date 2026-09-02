@@ -46,6 +46,8 @@ function InnerLayout() {
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="index" options={{ headerShown: false }} />
+      <Stack.Screen name="profile" options={{ headerShown: false }} />
+      <Stack.Screen name="chat" options={{ headerShown: false }} />
       <Stack.Screen name="checkin-modal" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="subscription" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>

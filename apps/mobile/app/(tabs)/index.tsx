@@ -114,17 +114,17 @@ export default function HomeScreen() {
 
       <Text style={styles.sectionTitle}>Quick Actions</Text>
       <View style={styles.actionsGrid}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/chat')}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/chat')}>
           <MessageCircle size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Check Symptoms</Text>
+          <Text style={styles.actionText}>Nura Chat</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/discovery')}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/profile')}>
           <Compass size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Explore Tips</Text>
+          <Text style={styles.actionText}>Profile</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/wellness')}>
+        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/community')}>
           <Activity size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Log Wellness</Text>
+          <Text style={styles.actionText}>Community</Text>
         </TouchableOpacity>
       </View>
     </ScrollView>

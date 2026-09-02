@@ -1,0 +1,9 @@
+★ eas-cli@23.0.0 is now available.
+To upgrade, run:
+npm install -g eas-cli
+Proceeding with outdated version.
+
+C:\Users\darik\Downloads\nuracare-v2\node_modules\expo\bin\cli config --json exited with non-zero code: 1
+    Error: build command failed.
+
+Child process exited with code 1

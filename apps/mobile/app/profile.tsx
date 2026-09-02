@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router, useRouter } from 'expo-router';
-import { useAuthStore, useWellnessStore } from '../../src/store';
-import { useProfile } from '../../src/context/ProfileContext';
+import { useAuthStore, useWellnessStore } from '../src/store';
+import { useProfile } from '../src/context/ProfileContext';
 import { User, ClipboardList, Watch, LogOut, ChevronRight, X, Plus, CheckCircle2, Circle } from 'lucide-react-native';
-import { TSOM_TYPES } from '../../src/lib/ethiopianCalendar';
+import { TSOM_TYPES } from '../src/lib/ethiopianCalendar';
 
 export default function ProfileScreen() {
   const { setUser } = useAuthStore();

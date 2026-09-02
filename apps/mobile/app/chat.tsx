@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
 import { Send, Bot } from 'lucide-react-native';
-import { useChatStore } from '../../src/store';
-import { useProfile } from '../../src/context/ProfileContext';
-import { ChatEngine } from '../../src/services/ai';
+import { useChatStore } from '../src/store';
+import { useProfile } from '../src/context/ProfileContext';
+import { ChatEngine } from '../src/services/ai';
 
-import MessageBubble from '../../src/components/chat/MessageBubble';
-import UrgencyCard from '../../src/components/chat/UrgencyCard';
-import SessionSelector from '../../src/components/chat/SessionSelector';
+import MessageBubble from '../src/components/chat/MessageBubble';
+import UrgencyCard from '../src/components/chat/UrgencyCard';
+import SessionSelector from '../src/components/chat/SessionSelector';
 
 function parseUrgencyFromContent(content: string) {
   try {
