@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, MessageCircle, Activity, Calendar, Compass, User } from 'lucide-react-native';
+import { Home, Calendar, Heart, Users, User } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -15,31 +15,24 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="chat"
-        options={{
-          title: 'Nura Chat',
-          tabBarIcon: ({ color }) => <MessageCircle size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="wellness"
-        options={{
-          title: 'Wellness',
-          tabBarIcon: ({ color }) => <Activity size={24} color={color} />,
-        }}
-      />
-      <Tabs.Screen
         name="checkups"
         options={{
-          title: 'Checkups',
+          title: 'Checkup',
           tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="discovery"
+        name="lifestyle"
         options={{
-          title: 'Discovery',
-          tabBarIcon: ({ color }) => <Compass size={24} color={color} />,
+          title: 'Lifestyle',
+          tabBarIcon: ({ color }) => <Heart size={24} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ color }) => <Users size={24} color={color} />,
         }}
       />
       <Tabs.Screen

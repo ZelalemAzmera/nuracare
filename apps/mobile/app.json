@@ -2,6 +2,7 @@
   "expo": {
     "name": "NuraCare",
     "slug": "nuracare",
+    "scheme": "nuracare",
     "owner": "darikab71",
     "extra": {
       "router": {},

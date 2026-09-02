@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Image } from 'rea
 import { router } from 'expo-router';
 import { X, PlayCircle, Dumbbell, Coffee, Clock, HeartPulse } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
-import { getProfile } from '../src/storage/profileStorage';
+import { getProfile } from '../../src/storage/profileStorage';
 
 const EXERCISES = [
   { title: "Eskesta Cardio", duration: "15 min", desc: "Traditional Ethiopian shoulder dance for upper body mobility.", icon: <HeartPulse size={24} color="#ef4444" />, url: "https://youtube.com/results?search_query=Eskesta+workout" },
@@ -29,9 +29,6 @@ export default function LifestyleCoachScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Lifestyle Coach</Text>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <X size={24} color="#64748b" />
-        </TouchableOpacity>
       </View>
 
       <View style={styles.tabs}>

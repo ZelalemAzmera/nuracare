@@ -84,7 +84,7 @@ export default function DiscoveryScreen() {
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Lifestyle & Nutrition</Text>
+        <Text style={styles.title}>Community Network</Text>
         <Text style={styles.subtitle}>AI-driven habits, workouts, and natural remedies</Text>
       </View>
 
