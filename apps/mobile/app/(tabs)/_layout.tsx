@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Home, Calendar, Heart, Users, User, Activity } from 'lucide-react-native';
+import { Home, Calendar, Heart, Users, Activity } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -17,7 +17,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="checkups"
         options={{
-          title: 'Checkup',
+          title: 'Daily Checkup',
           tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
         }}
       />

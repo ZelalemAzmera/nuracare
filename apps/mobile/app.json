@@ -12,7 +12,11 @@
       }
     },
     "android": {
-      "package": "com.darikab71.nuracaremobile"
+      "package": "com.darikab71.nuracaremobile",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#ffffff"
+      }
     },
     "plugins": [
       "expo-router",
