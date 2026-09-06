@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req, res) {
-  // Optional: Add a CRON secret check to prevent unauthorized execution
+  // Require CRON_SECRET to prevent unauthorized execution and SSRF amplification
+  const expectedSecret = process.env.CRON_SECRET;
   const authHeader = req.headers.authorization;
-  if (process.env.CRON_SECRET && authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
-    return res.status(401).json({ error: 'Unauthorized' });
+  if (!expectedSecret || authHeader !== `Bearer ${expectedSecret}`) {
+    return res.status(401).json({ error: 'Unauthorized: Valid CRON_SECRET bearer token required' });
   }
 
   const supabaseUrl = process.env.VITE_SUPABASE_URL;

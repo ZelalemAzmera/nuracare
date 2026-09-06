@@ -10,9 +10,21 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing userId or provider' });
   }
 
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+    return res.status(401).json({ error: 'Unauthorized: Missing authorization header' });
+  }
+  const token = authHeader.replace('Bearer ', '');
+
   const supabaseUrl = process.env.VITE_SUPABASE_URL;
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
   const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // Validate calling user's identity
+  const { data: { user: authUser }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authUser || authUser.id !== userId) {
+    return res.status(403).json({ error: 'Forbidden: Cannot modify syncing devices for another user' });
+  }
 
   try {
     // Fetch existing profile

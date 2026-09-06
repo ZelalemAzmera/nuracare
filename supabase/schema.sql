@@ -42,11 +42,27 @@ CREATE TABLE IF NOT EXISTS public.sessions (
 -- Enable RLS for sessions
 ALTER TABLE public.sessions ENABLE ROW LEVEL SECURITY;
 
--- Public can read shared sessions
-CREATE POLICY "Public can view shared sessions."
-  ON public.sessions FOR SELECT
-  TO anon
-  USING (share_token IS NOT NULL);
+-- Public access to shared sessions is strictly mediated via get_shared_session RPC to prevent mass data harvesting
+-- Direct SELECT on sessions table is restricted to authenticated owners only
+CREATE OR REPLACE FUNCTION public.get_shared_session(p_share_token TEXT)
+RETURNS TABLE (
+  name TEXT,
+  messages JSONB,
+  shared_at TIMESTAMP WITH TIME ZONE
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT name, messages, shared_at
+  FROM public.sessions
+  WHERE share_token = p_share_token
+    AND share_token IS NOT NULL
+  LIMIT 1;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_shared_session(TEXT) FROM public;
+GRANT EXECUTE ON FUNCTION public.get_shared_session(TEXT) TO anon, authenticated;
 
 CREATE POLICY "Users can view their own sessions."
   ON public.sessions FOR SELECT
@@ -139,4 +155,95 @@ ALTER TABLE public.checkups ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can CRUD own checkups."
   ON public.checkups FOR ALL USING (auth.uid() = user_id);
+
+-- Medications Table
+CREATE TABLE IF NOT EXISTS public.medications (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  name             TEXT NOT NULL,
+  dosage           TEXT NOT NULL,
+  frequency        TEXT NOT NULL,
+  times            JSONB NOT NULL DEFAULT '[]'::jsonb,
+  with_food        BOOLEAN DEFAULT FALSE,
+  category         TEXT DEFAULT 'Prescription',
+  instructions     TEXT,
+  reminder_enabled BOOLEAN DEFAULT TRUE,
+  start_date       DATE NOT NULL DEFAULT CURRENT_DATE,
+  end_date         DATE,
+  created_at       TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.medications ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can CRUD own medications."
+  ON public.medications FOR ALL USING (auth.uid() = user_id);
+
+-- Medication Adherence Logs Table
+CREATE TABLE IF NOT EXISTS public.medication_logs (
+  id               UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id          UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  medication_id    UUID REFERENCES public.medications ON DELETE CASCADE NOT NULL,
+  medication_name  TEXT NOT NULL,
+  dosage           TEXT NOT NULL,
+  scheduled_date   DATE NOT NULL,
+  scheduled_time   TEXT NOT NULL,
+  status           TEXT NOT NULL CHECK (status IN ('taken', 'skipped', 'snoozed')),
+  action_timestamp TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+  notes            TEXT
+);
+
+ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Users can CRUD own medication logs."
+  ON public.medication_logs FOR ALL USING (auth.uid() = user_id);
+
+-- Community Posts Table
+CREATE TABLE IF NOT EXISTS public.community_posts (
+  id             UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id        UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  author_name    TEXT NOT NULL,
+  content        TEXT NOT NULL,
+  category       TEXT NOT NULL DEFAULT 'General',
+  likes_count    INTEGER DEFAULT 0,
+  comments_count INTEGER DEFAULT 0,
+  created_at     TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.community_posts ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Authenticated users can read community posts."
+  ON public.community_posts FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can create own community posts."
+  ON public.community_posts FOR INSERT WITH CHECK (auth.uid() = user_id);
+CREATE POLICY "Users can delete own community posts."
+  ON public.community_posts FOR DELETE USING (auth.uid() = user_id);
+
+-- Community Groups Table
+CREATE TABLE IF NOT EXISTS public.community_groups (
+  id            UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  name          TEXT NOT NULL,
+  description   TEXT,
+  members_count INTEGER DEFAULT 1,
+  category      TEXT DEFAULT 'Wellness',
+  icon          TEXT,
+  created_at    TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.community_groups ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Authenticated users can read community groups."
+  ON public.community_groups FOR SELECT TO authenticated USING (true);
+
+-- Community Group Messages Table
+CREATE TABLE IF NOT EXISTS public.community_messages (
+  id          UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  group_id    UUID REFERENCES public.community_groups ON DELETE CASCADE NOT NULL,
+  user_id     UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  sender_name TEXT NOT NULL,
+  text        TEXT NOT NULL,
+  created_at  TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+ALTER TABLE public.community_messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Authenticated users can read messages in groups."
+  ON public.community_messages FOR SELECT TO authenticated USING (true);
+CREATE POLICY "Users can send messages to groups."
+  ON public.community_messages FOR INSERT WITH CHECK (auth.uid() = user_id);
+
 

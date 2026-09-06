@@ -10,7 +10,8 @@ export const syncLocalDataToCloud = async () => {
   const syncStore = useSyncStore.getState();
   const { user } = useAuthStore.getState();
   
-  if (!user) return; // Cannot sync if not authenticated
+  const isUUID = (str: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
+  if (!user || !user.id || user.id.startsWith('guest_') || !isUUID(user.id)) return; // Guest/offline mode does not sync to cloud
   if (syncStore.isSyncing) return;
   if (syncStore.pendingCheckIns.length === 0 && syncStore.pendingMessages.length === 0) return;
 

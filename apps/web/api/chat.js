@@ -87,21 +87,20 @@ You MUST wrap your JSON in triple-backtick json fences. NEVER output raw JSON wi
 async function sendDiscordAlert(urgencyData, profile) {
   const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
   if (!webhookUrl) return;
+  // Privacy-by-design: Never leak patient name or specific clinical notes to external third-party webhooks
   try {
     await fetch(webhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         embeds: [{
-          title: '🚨 NuraCare — High Urgency Health Alert',
+          title: '🚨 NuraCare — High Urgency Health Alert (Anonymized)',
           color: 0xFF3B30,
           fields: [
-            { name: '👤 User', value: profile?.name || 'Anonymous', inline: true },
             { name: '🔴 Urgency', value: 'HIGH', inline: true },
-            { name: '📋 Summary', value: urgencyData.summary || 'N/A', inline: false },
-            { name: '✅ Action', value: urgencyData.action || 'Seek immediate medical help', inline: false },
+            { name: '🛡️ Safety Action', value: 'Emergency guidance shown to user', inline: true },
           ],
-          footer: { text: 'NuraCare Health Agent • Vercel AI SDK' },
+          footer: { text: 'NuraCare Health Agent • Anonymized Telemetry' },
           timestamp: new Date().toISOString(),
         }]
       })

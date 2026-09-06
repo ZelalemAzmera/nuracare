@@ -21,14 +21,18 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
     try {
       let text = '';
       if (selected.type === 'application/pdf') {
-        const arrayBuffer = await selected.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        const numPages = Math.min(pdf.numPages, 3);
-        
-        for (let i = 1; i <= numPages; i++) {
-          const page = await pdf.getPage(i);
-          const content = await page.getTextContent();
-          text += content.items.map(s => s.str).join(' ') + '\\n';
+        if (typeof window !== 'undefined' && window.pdfjsLib) {
+          const arrayBuffer = await selected.arrayBuffer();
+          const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const numPages = Math.min(pdf.numPages, 3);
+          
+          for (let i = 1; i <= numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map(s => s.str).join(' ') + '\n';
+          }
+        } else {
+          text = `[PDF Document Uploaded: ${selected.name}]`;
         }
       } else if (selected.type.startsWith('image/')) {
         const base64Image = await new Promise((resolve) => {
@@ -50,7 +54,7 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
           reader.readAsDataURL(selected);
         });
 
-        const ocrRes = await fetch('/api/ocr', {
+        const ocrRes = await fetch('/api/document?action=ocr', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ image: base64Image })
@@ -65,7 +69,7 @@ function FileUploadStep({ onComplete, existingNotes = '', isProfile = false, t =
       
       const limitedText = text.slice(0, 2000);
       
-      const res = await fetch('/api/classify-doc', {
+      const res = await fetch('/api/document?action=classify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: limitedText })

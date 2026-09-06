@@ -13,11 +13,10 @@ export default async function handler(req, res) {
   // Use anon key for public fetching
   const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-  const { data: session, error } = await supabase
-    .from('sessions')
-    .select('name, messages, shared_at')
-    .eq('share_token', token)
-    .single();
+  const { data, error } = await supabase
+    .rpc('get_shared_session', { p_share_token: token });
+
+  const session = Array.isArray(data) ? data[0] : data;
 
   if (error || !session) {
     return res.status(404).json({ error: 'Shared session not found or revoked' });
