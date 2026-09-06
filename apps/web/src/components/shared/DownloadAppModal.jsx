@@ -7,17 +7,20 @@ export default function DownloadAppModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
+  const cloudBuildUrl = 'https://expo.dev/accounts/darikab71/projects/nuracare/builds/604f3daa-4dd7-42ed-aad9-b6af35962498';
+  
   const apkUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/nuracare.apk`
     : '/nuracare.apk';
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(apkUrl)}&color=166534&bgcolor=f0fdf4`;
+  // QR code directly opens the official cloud installer on their phone
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(cloudBuildUrl)}&color=166534&bgcolor=f0fdf4`;
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(apkUrl);
+      navigator.clipboard.writeText(cloudBuildUrl);
       setCopied(true);
-      showToast('Download link copied to clipboard!', 'success');
+      showToast('Install link copied to clipboard!', 'success');
       setTimeout(() => setCopied(false), 2500);
     }
   };
@@ -147,7 +150,7 @@ export default function DownloadAppModal({ isOpen, onClose }) {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: '1', minWidth: '180px' }}>
                 <a 
                   href={apkUrl} 
-                  download="nuracare.apk"
+                  download="nura.apk"
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -167,7 +170,30 @@ export default function DownloadAppModal({ isOpen, onClose }) {
                   onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#16a34a'}
                 >
                   <Icons.Download size={18} />
-                  <span>Download .APK (Android)</span>
+                  <span>Download .APK (Direct)</span>
+                </a>
+
+                <a 
+                  href="https://expo.dev/accounts/darikab71/projects/nuracare/builds/604f3daa-4dd7-42ed-aad9-b6af35962498" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    backgroundColor: '#f0fdf4',
+                    color: '#15803d',
+                    padding: '10px 16px',
+                    borderRadius: '12px',
+                    border: '1px solid #bbf7d0',
+                    fontWeight: 600,
+                    fontSize: '13px',
+                    textDecoration: 'none'
+                  }}
+                >
+                  <Icons.ExternalLink size={16} />
+                  <span>Cloud Install Mirror</span>
                 </a>
 
                 <button 
@@ -188,7 +214,7 @@ export default function DownloadAppModal({ isOpen, onClose }) {
                   }}
                 >
                   {copied ? <Icons.Check size={16} color="#16a34a" /> : <Icons.Copy size={16} />}
-                  <span>{copied ? 'Link Copied!' : 'Copy Direct Link'}</span>
+                  <span>{copied ? 'Link Copied!' : 'Copy Download Link'}</span>
                 </button>
               </div>
             </div>

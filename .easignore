@@ -1,0 +1,7 @@
+node_modules/
+.git/
+apps/web/public/*.apk
+apps/web/dist/
+apps/mobile/dist/
+*.apk
+*.log

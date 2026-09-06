@@ -17,6 +17,7 @@ export default defineConfig({
       '@context': path.resolve(__dirname, './src/context'),
       '@styles': path.resolve(__dirname, './src/styles'),
       '@nuracare/shared': path.resolve(__dirname, '../../packages/shared/src/index.ts'),
+      'decimal.js-light': path.resolve(__dirname, '../../node_modules/decimal.js-light/decimal.js'),
     }
   },
   build: {

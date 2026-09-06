@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert 
 import { router, useRouter } from 'expo-router';
 import { useAuthStore, useWellnessStore } from '../src/store';
 import { useProfile } from '../src/context/ProfileContext';
-import { User, ClipboardList, Watch, LogOut, ChevronRight, X, Plus, CheckCircle2, Circle } from 'lucide-react-native';
+import { User, ClipboardList, Watch, LogOut, ChevronRight, X, Plus, CheckCircle2, Circle, ArrowLeft } from 'lucide-react-native';
 import { TSOM_TYPES } from '../src/lib/ethiopianCalendar';
 
 export default function ProfileScreen() {
@@ -57,7 +57,15 @@ export default function ProfileScreen() {
   const medsList = profile.medications ? profile.medications.split(',').map((s: string) => s.trim()).filter(Boolean) : [];
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      <View style={styles.topNav}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <ArrowLeft size={22} color="#0f172a" />
+        </TouchableOpacity>
+        <Text style={styles.topNavTitle}>My Profile</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Text style={styles.avatarText}>{profile.name ? profile.name[0].toUpperCase() : 'U'}</Text>
@@ -179,7 +187,10 @@ export default function ProfileScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { alignItems: 'center', padding: 24, paddingTop: 60, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
+  topNav: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 50, paddingBottom: 12, backgroundColor: '#ffffff' },
+  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center' },
+  topNavTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
+  header: { alignItems: 'center', padding: 24, paddingTop: 16, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#e2e8f0', marginBottom: 24 },
   avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
   avatarText: { fontSize: 32, fontWeight: 'bold', color: '#ffffff' },
   name: { fontSize: 24, fontWeight: 'bold', color: '#0f172a' },

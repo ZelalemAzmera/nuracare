@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
-import { Send, Bot } from 'lucide-react-native';
+import { Send, Bot, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { useChatStore } from '../src/store';
 import { useProfile } from '../src/context/ProfileContext';
 import { ChatEngine } from '../src/services/ai';
@@ -127,8 +128,13 @@ export default function ChatScreen() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <View style={styles.header}>
-        <Bot size={24} color="#16a34a" />
-        <View>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <ArrowLeft size={22} color="#0f172a" />
+        </TouchableOpacity>
+        <View style={styles.botBadge}>
+          <Bot size={22} color="#ffffff" />
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
           <Text style={styles.headerTitle}>Nura AI Assistant</Text>
           <Text style={styles.headerSubtitle}>Medical guidance & triage</Text>
         </View>
@@ -195,9 +201,11 @@ export default function ChatScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 20, paddingTop: 60, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#e2e8f0' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  headerSubtitle: { fontSize: 13, color: '#64748b' },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, paddingTop: 52, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#e2e8f0' },
+  backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
+  botBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  headerSubtitle: { fontSize: 12, color: '#64748b' },
   chatArea: { flex: 1 },
   chatContent: { padding: 16, paddingBottom: 24 },
   emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 100 },
