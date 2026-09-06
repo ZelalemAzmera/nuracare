@@ -241,7 +241,7 @@ export default function App() {
     if (onboardingStep === 0 && !user) {
       return (
         <div className="landing-page">
-          {downloadModalOpen && <DownloadAppModal onClose={() => setDownloadModalOpen(false)} />}
+          {downloadModalOpen && <DownloadAppModal isOpen={downloadModalOpen} onClose={() => setDownloadModalOpen(false)} />}
           <FloatingLeaves />
           <div className="hero-section">
             <div className="hero-icon-wrap"><Icons.Leaf /></div>
