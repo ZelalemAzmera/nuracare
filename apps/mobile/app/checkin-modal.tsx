@@ -28,8 +28,12 @@ export default function CheckInModal() {
   const [portion, setPortion] = useState('Moderate');
   const [hydration, setHydration] = useState(5);
 
-  // State for Step 4: Context
+  // State for Step 4: Context, Digital Wellness & Burnout Quick Check
   const [wearableSynced, setWearableSynced] = useState(false);
+  const [phoneStrain, setPhoneStrain] = useState<'Draining' | 'Neutral' | 'Restorative'>('Neutral');
+  const [workDrain, setWorkDrain] = useState(5); // 0-10
+  const [canDisconnect, setCanDisconnect] = useState<'Easily' | 'With effort' | 'Cannot'>('With effort');
+  const [screenTimeEstHours, setScreenTimeEstHours] = useState(4);
 
   const handleSyncWearable = async () => {
     try {
@@ -59,6 +63,10 @@ export default function CheckInModal() {
       portion,
       hydration,
       wearableSynced,
+      phoneStrain,
+      workDrain,
+      canDisconnect,
+      screenTimeEstHours,
       tension: stiffness > 5 ? 'High' : 'None',
       urgency: painLevel > 7 ? 'high' : 'low',
       tags: []
@@ -134,30 +142,101 @@ export default function CheckInModal() {
 
   const renderStep4 = () => (
     <View style={styles.stepContainer}>
-      <Text style={styles.stepTitle}>Context & Biometrics</Text>
-      <Text style={styles.stepSubtitle}>Sync your devices to get a fuller picture.</Text>
+      <Text style={styles.stepTitle}>Context & Digital Wellness</Text>
+      <Text style={styles.stepSubtitle}>Check your workload strain and screen relationship.</Text>
+      
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Today's Phone Use Feeling</Text>
+        <View style={styles.chipsRow}>
+          {(['Restorative', 'Neutral', 'Draining'] as const).map(item => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.chip, phoneStrain === item && styles.chipActive]}
+              onPress={() => setPhoneStrain(item)}
+            >
+              <Text style={[styles.chipText, phoneStrain === item && styles.chipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {renderSlider('Work / Study Strain', workDrain, setWorkDrain, 10)}
+      {renderSlider('Estimated Screen Time (Hours)', screenTimeEstHours, setScreenTimeEstHours, 14, 0)}
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Ability to Disconnect This Evening</Text>
+        <View style={styles.chipsRow}>
+          {(['Easily', 'With effort', 'Cannot'] as const).map(item => (
+            <TouchableOpacity
+              key={item}
+              style={[styles.chip, canDisconnect === item && styles.chipActive]}
+              onPress={() => setCanDisconnect(item)}
+            >
+              <Text style={[styles.chipText, canDisconnect === item && styles.chipTextActive]}>{item}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
       <View style={styles.syncCard}>
-        <Smartphone size={32} color="#64748b" />
-        <Text style={styles.syncTitle}>Apple Watch / Fitbit</Text>
-        <Text style={styles.syncDesc}>Sync steps, heart rate, and sleep data.</Text>
+        <Smartphone size={24} color="#64748b" />
+        <View style={{ flex: 1, marginLeft: 12 }}>
+          <Text style={styles.syncTitle}>Wearable & Digital Sensor</Text>
+          <Text style={styles.syncDesc}>Sync heart rate variability, steps & background focus logs.</Text>
+        </View>
         <TouchableOpacity style={[styles.syncBtn, wearableSynced && styles.syncBtnActive]} onPress={handleSyncWearable}>
           <Text style={[styles.syncBtnText, wearableSynced && styles.syncBtnTextActive]}>
-            {wearableSynced ? 'Synced Successfully' : 'Tap to Sync Device'}
+            {wearableSynced ? 'Synced' : 'Sync'}
           </Text>
         </TouchableOpacity>
       </View>
     </View>
   );
 
-  const renderStep5 = () => (
-    <View style={styles.stepContainer}>
-      <View style={styles.successIcon}>
-        <CheckCircle size={48} color="#16a34a" />
+  const renderStep5 = () => {
+    const digitalBalanceEstimate = Math.max(20, Math.min(98, 100 - (screenTimeEstHours * 8) - (phoneStrain === 'Draining' ? 15 : 0)));
+    const recoveryReadinessEstimate = Math.max(25, Math.min(96, Math.round((sleep * 7) + ((10 - stress) * 3) - (workDrain * 2))));
+
+    return (
+      <View style={styles.stepContainer}>
+        <View style={styles.successIcon}>
+          <CheckCircle size={48} color="#16a34a" />
+        </View>
+        <Text style={[styles.stepTitle, { textAlign: 'center' }]}>You're all set!</Text>
+        <Text style={[styles.stepSubtitle, { textAlign: 'center', marginBottom: 20 }]}>
+          Your daily check-in is complete. Nura has updated your 5-dimensional wellness balance.
+        </Text>
+
+        {/* 5-Dimensional Multi-Score Summary */}
+        <View style={styles.summaryBox}>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryItemLabel}>Physical</Text>
+            <Text style={styles.summaryItemVal}>{Math.max(10, 100 - (painLevel * 8))}%</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryItemLabel}>Mental</Text>
+            <Text style={styles.summaryItemVal}>{Math.max(10, (mood * 10))}%</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryItemLabel}>Sleep</Text>
+            <Text style={styles.summaryItemVal}>{Math.min(100, Math.round(sleep * 12.5))}%</Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryItemLabel}>Digital Balance</Text>
+            <Text style={[styles.summaryItemVal, { color: digitalBalanceEstimate > 70 ? '#16a34a' : '#f59e0b' }]}>
+              {digitalBalanceEstimate}
+            </Text>
+          </View>
+          <View style={styles.summaryItem}>
+            <Text style={styles.summaryItemLabel}>Recovery</Text>
+            <Text style={[styles.summaryItemVal, { color: recoveryReadinessEstimate > 70 ? '#16a34a' : '#6366f1' }]}>
+              {recoveryReadinessEstimate}%
+            </Text>
+          </View>
+        </View>
       </View>
-      <Text style={[styles.stepTitle, { textAlign: 'center' }]}>You're all set!</Text>
-      <Text style={[styles.stepSubtitle, { textAlign: 'center' }]}>Your daily check-in is complete. Nura will analyze your data and update your wellness score.</Text>
-    </View>
-  );
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -239,6 +318,10 @@ const styles = StyleSheet.create({
   syncBtnText: { color: '#475569', fontWeight: '600' },
   syncBtnTextActive: { color: '#16a34a' },
   successIcon: { alignItems: 'center', marginBottom: 24, marginTop: 40 },
+  summaryBox: { backgroundColor: '#f8fafc', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#e2e8f0', gap: 10, marginTop: 12 },
+  summaryItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 4 },
+  summaryItemLabel: { fontSize: 14, color: '#64748b', fontWeight: '500' },
+  summaryItemVal: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
   footer: { padding: 24, borderTopWidth: 1, borderColor: '#f1f5f9', backgroundColor: '#ffffff' },
   primaryBtn: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   primaryBtnText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }

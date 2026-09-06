@@ -47,7 +47,7 @@ export const chatFlow = [
 ];
 
 export function getDailyTip() {
-  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 1000 / 60 / 60 / 24);
+  const dayOfYear = Math.floor((new Date().getTime() - new Date(new Date().getFullYear(), 0, 0).getTime()) / 1000 / 60 / 60 / 24);
   const allTips = [...discoveryData.herbs, ...discoveryData.foods, ...discoveryData.tips];
   return allTips[dayOfYear % allTips.length];
 }

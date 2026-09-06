@@ -1,4 +1,4 @@
-﻿import test from 'node:test';
+import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -136,4 +136,52 @@ test('8. AI Safety Classifier: Red-flag emergency detection across languages', (
   assert.equal(classify('እባክዎን እርዱኝ የደረት ህመም አለብኝ').isEmergency, true);
   assert.equal(classify('Dhukkubbi qoma cimaatu natti dhagahama').isEmergency, true);
   assert.equal(classify('What herbal tea can help with relaxation before bedtime?').isEmergency, false);
+});
+
+test('9. Digital Wellness Engine: Digital Balance scoring and PIN hashing', async () => {
+  const enginePath = path.join(rootDir, 'apps', 'mobile', 'src', 'lib', 'digitalWellnessEngine.ts');
+  const engineCode = fs.readFileSync(enginePath, 'utf8');
+
+  assert.ok(
+    engineCode.includes('computeDigitalBalanceScore'),
+    'FAIL: digitalWellnessEngine must export computeDigitalBalanceScore!'
+  );
+  assert.ok(
+    engineCode.includes('hashStrictPin'),
+    'FAIL: digitalWellnessEngine must export hashStrictPin!'
+  );
+  assert.ok(
+    engineCode.includes('verifyStrictPin'),
+    'FAIL: digitalWellnessEngine must export verifyStrictPin!'
+  );
+  assert.ok(
+    engineCode.includes('FOCUS_PRESETS'),
+    'FAIL: digitalWellnessEngine must export FOCUS_PRESETS!'
+  );
+});
+
+test('10. Burnout Prevention & Recovery Engine: Maslach matrix & 4 recovery states', async () => {
+  const enginePath = path.join(rootDir, 'apps', 'mobile', 'src', 'lib', 'burnoutRecoveryEngine.ts');
+  const engineCode = fs.readFileSync(enginePath, 'utf8');
+
+  assert.ok(
+    engineCode.includes('evaluateBurnoutAndRecovery'),
+    'FAIL: burnoutRecoveryEngine must export evaluateBurnoutAndRecovery!'
+  );
+  assert.ok(
+    engineCode.includes('MASLACH_AREAS'),
+    'FAIL: burnoutRecoveryEngine must include MASLACH_AREAS!'
+  );
+  assert.ok(
+    engineCode.includes('RECOVERY_INTERVENTIONS'),
+    'FAIL: burnoutRecoveryEngine must export RECOVERY_INTERVENTIONS!'
+  );
+  assert.ok(
+    engineCode.includes('THREE_DAY_RECOVERY_PLAN'),
+    'FAIL: burnoutRecoveryEngine must export THREE_DAY_RECOVERY_PLAN!'
+  );
+  assert.ok(
+    engineCode.includes('High Strain') && engineCode.includes('Recovery Needed'),
+    'FAIL: burnoutRecoveryEngine must evaluate high strain and recovery needed states!'
+  );
 });

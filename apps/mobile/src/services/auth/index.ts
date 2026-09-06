@@ -1,6 +1,6 @@
 import { supabase } from '../supabase/client';
 import { useAuthStore } from '../../store';
-import { User } from '../../contracts/types';
+import { User } from '../../shared';
 
 export const initializeAuthListener = () => {
   supabase.auth.onAuthStateChange(async (event, session) => {

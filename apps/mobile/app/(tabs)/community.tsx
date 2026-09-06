@@ -139,6 +139,23 @@ const INITIAL_POSTS: CommunityPost[] = [
     likes: 41,
     comments: 5,
   },
+  {
+    id: 'post-5',
+    type: 'challenge',
+    author: 'NuraCare Recovery Lab',
+    authorBadge: 'Official',
+    avatarColor: '#6366f1',
+    timeAgo: '4h ago',
+    title: '7-Day Screen-Free Evening Sanctuary',
+    content: 'Disconnect all entertainment screens 45 minutes before sleep for 7 consecutive days. Protect stage N3 deep sleep and nervous system restoration. (Privacy protected: your personal screen time is never shared).',
+    likes: 76,
+    comments: 19,
+    challengeData: {
+      participants: 489,
+      progressPercent: 65,
+      joined: true,
+    },
+  },
 ];
 
 const INITIAL_GROUPS: CommunityGroup[] = [
@@ -211,6 +228,16 @@ const INITIAL_GROUPS: CommunityGroup[] = [
     description: 'Holistic wellness tips, restorative sleep routines, and sustainable lifestyle habit changes.',
     privacy: 'Public',
     joined: false,
+  },
+  {
+    id: 'grp-8',
+    name: 'Digital Reset & Sanctuary 📵',
+    category: 'Digital Wellness',
+    icon: '📵',
+    membersCount: '5.2K',
+    description: 'Intentional phone use, bedtime digital wind-down, focus sessions, and burnout recovery support.',
+    privacy: 'Public',
+    joined: true,
   },
 ];
 

@@ -10,7 +10,7 @@ export function saveCheckin(entry: CheckIn) {
   const newEntry = {
     ...entry,
     date: dateStr,
-    timestamp: entry.timestamp || Date.now()
+    timestamp: (entry as any).timestamp || Date.now()
   };
 
   const existingIndex = checkins.findIndex(c => c.date === dateStr);

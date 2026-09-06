@@ -31,7 +31,7 @@ export const syncLocalDataToCloud = async () => {
         .single();
         
       if (!profileError) {
-        let remoteRecords = [];
+        let remoteRecords: any[] = [];
         if (profile?.records) {
           // ensure it's an array
           remoteRecords = Array.isArray(profile.records) ? profile.records : [];
@@ -43,7 +43,10 @@ export const syncLocalDataToCloud = async () => {
 
         // Merge keeping unique IDs
         const combined = [...localRecordsToPush, ...remoteRecords];
-        const uniqueRecordsMap = new Map(combined.map(r => [r.id, r]));
+        const uniqueRecordsMap = new Map<string, any>();
+        combined.forEach(r => {
+          if (r && r.id) uniqueRecordsMap.set(r.id, r);
+        });
         const mergedRecords = Array.from(uniqueRecordsMap.values());
 
         const { error: updateError } = await supabase
@@ -77,7 +80,7 @@ export const syncLocalDataToCloud = async () => {
         .eq('id', mobileSessionId)
         .single();
 
-      let remoteMessages = [];
+      let remoteMessages: any[] = [];
       if (!sessionError && session?.messages) {
         remoteMessages = Array.isArray(session.messages) ? session.messages : [];
       }
@@ -87,7 +90,10 @@ export const syncLocalDataToCloud = async () => {
         .filter(Boolean);
 
       const combinedMessages = [...remoteMessages, ...localMessagesToPush];
-      const uniqueMessagesMap = new Map(combinedMessages.map(m => [m.id, m]));
+      const uniqueMessagesMap = new Map<string, any>();
+      combinedMessages.forEach(m => {
+        if (m && m.id) uniqueMessagesMap.set(m.id, m);
+      });
       const mergedMessages = Array.from(uniqueMessagesMap.values());
 
       const { error: upsertError } = await supabase

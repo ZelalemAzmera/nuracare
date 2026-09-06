@@ -183,7 +183,7 @@ export function compute5CoreWellness(checkin, profile = {}) {
   if (checkin.hydration) nutrition = Math.round(nutrition * 0.5 + checkin.hydration * 5);
 
   // 5. Preventive Maintenance
-  let preventive = profile.records && profile.records.length > 0 ? 90 : 60;
+  let preventive = (profile as any).records && (profile as any).records.length > 0 ? 90 : 60;
 
   physical = Math.min(100, Math.max(0, physical));
   mental = Math.min(100, Math.max(0, mental));
@@ -203,7 +203,7 @@ export function compute5CoreWellness(checkin, profile = {}) {
 export function getRecoveryRecommendations(checkins) {
   if (!checkins || checkins.length === 0) return ["Complete a daily check-in to get personalized recommendations."];
 
-  const recommendations = [];
+  const recommendations: string[] = [];
   const latest = checkins[checkins.length - 1];
   const burnout = computeBurnoutRisk(latest);
 

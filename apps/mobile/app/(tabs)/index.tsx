@@ -6,7 +6,10 @@ import { useWellnessStore } from '../../src/store';
 import { useRemoteConfigStore } from '../../src/store/remoteConfigStore';
 import DynamicSectionRenderer from '../../src/components/dynamic/DynamicSectionRenderer';
 import FloatingNatureBackground from '../../src/components/ambient/FloatingNatureBackground';
-import { User, MessageCircle, Sparkles, ChevronRight, RefreshCw } from 'lucide-react-native';
+import { User, MessageCircle, Sparkles, ChevronRight, RefreshCw, Smartphone, ShieldCheck, HeartHandshake } from 'lucide-react-native';
+import { getDigitalUsage } from '../../src/storage/digitalWellnessStorage';
+import { evaluateBurnoutAndRecovery } from '../../src/lib/burnoutRecoveryEngine';
+import { computeDigitalBalanceScore } from '../../src/lib/digitalWellnessEngine';
 
 export default function AdaptiveHomeScreen() {
   const router = useRouter();
@@ -68,6 +71,31 @@ export default function AdaptiveHomeScreen() {
   const activeSections = useMemo(() => {
     return getSortedSections(timeOfDay, biometrics.recoveryScore);
   }, [getSortedSections, timeOfDay, biometrics.recoveryScore, config]);
+
+  const digitalUsage = useMemo(() => {
+    return getDigitalUsage();
+  }, []);
+
+  const digitalScore = useMemo(() => {
+    return computeDigitalBalanceScore(digitalUsage);
+  }, [digitalUsage]);
+
+  const burnoutAssessment = useMemo(() => {
+    const recentCheckin = checkIns.length > 0 ? checkIns[0] : null;
+    return evaluateBurnoutAndRecovery({
+      dailyCheckin: recentCheckin ? {
+        sleep: recentCheckin.sleep || 7,
+        stress: recentCheckin.stress || 5,
+        energy: recentCheckin.energy || 6,
+        mood: recentCheckin.mood || 6,
+      } : undefined,
+      digitalUsage: {
+        totalScreenMinutes: digitalUsage.totalScreenMinutes,
+        socialMediaMinutes: digitalUsage.socialMediaMinutes,
+        lateNightMinutes: digitalUsage.lateNightMinutes,
+      }
+    });
+  }, [checkIns, digitalUsage]);
 
   return (
     <FloatingNatureBackground showSoundToggle={true}>
@@ -138,6 +166,50 @@ export default function AdaptiveHomeScreen() {
           <Text style={styles.aiPromptText}>Ask about your recovery, sleep, or Ethiopian fasting...</Text>
           <View style={styles.aiSparkleIcon}>
             <Sparkles size={14} color="#ffffff" />
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* Adaptive Digital Wellness & Recovery Intelligence Card */}
+      <TouchableOpacity
+        style={styles.digitalRecoveryCard}
+        onPress={() => router.push('/(tabs)/lifestyle')}
+        activeOpacity={0.88}
+      >
+        <View style={styles.digitalCardTop}>
+          <View style={styles.digitalBadgeIcon}>
+            <Smartphone size={18} color="#4338ca" />
+          </View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={styles.digitalCardTitle}>Digital & Recovery Balance</Text>
+            <Text style={styles.digitalCardSub}>
+              {digitalUsage.totalScreenMinutes > 240
+                ? 'Elevated screen exposure detected today'
+                : 'Balanced screen use & healthy disconnection'}
+            </Text>
+          </View>
+          <View style={styles.scorePill}>
+            <Text style={styles.scorePillText}>Score {digitalScore.score}</Text>
+          </View>
+        </View>
+        <View style={styles.digitalCardBottom}>
+          <View style={styles.digitalStatCol}>
+            <Text style={styles.digitalStatLabel}>Screen Time</Text>
+            <Text style={styles.digitalStatVal}>
+              {Math.floor(digitalUsage.totalScreenMinutes / 60)}h {digitalUsage.totalScreenMinutes % 60}m
+            </Text>
+          </View>
+          <View style={styles.digitalDivider} />
+          <View style={styles.digitalStatCol}>
+            <Text style={styles.digitalStatLabel}>Recovery State</Text>
+            <Text style={[styles.digitalStatVal, { color: burnoutAssessment.stateColor }]}>
+              {burnoutAssessment.state}
+            </Text>
+          </View>
+          <View style={styles.digitalDivider} />
+          <View style={styles.digitalStatCol}>
+            <Text style={styles.digitalStatLabel}>App Opens</Text>
+            <Text style={styles.digitalStatVal}>{digitalUsage.appOpensCount} pickups</Text>
           </View>
         </View>
       </TouchableOpacity>
@@ -283,5 +355,80 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 8
+  },
+  digitalRecoveryCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e7ff',
+    shadowColor: '#4f46e5',
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2
+  },
+  digitalCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  digitalBadgeIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#e0e7ff',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  digitalCardTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  digitalCardSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2
+  },
+  scorePill: {
+    backgroundColor: '#eef2ff',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8
+  },
+  scorePillText: {
+    color: '#4f46e5',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  digitalCardBottom: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 8
+  },
+  digitalStatCol: {
+    alignItems: 'center',
+    flex: 1
+  },
+  digitalStatLabel: {
+    fontSize: 11,
+    color: '#64748b',
+    fontWeight: '500',
+    marginBottom: 2
+  },
+  digitalStatVal: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0f172a'
+  },
+  digitalDivider: {
+    width: 1,
+    height: 24,
+    backgroundColor: '#e2e8f0'
   }
 });

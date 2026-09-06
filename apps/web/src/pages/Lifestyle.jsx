@@ -167,6 +167,8 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
   if (activeSection === 'yoga') return <YogaDashboard onBack={() => setActiveSection('overview')} recent={recentData} />;
   if (activeSection === 'gym') return <GymDashboard onBack={() => setActiveSection('overview')} recent={recentData} profile={profile} connectBluetoothDevice={connectBluetoothDevice} />;
   if (activeSection === 'nutrition') return <NutritionDashboard onBack={() => setActiveSection('overview')} profile={profile} />;
+  if (activeSection === 'digital') return <DigitalWellnessDashboard onBack={() => setActiveSection('overview')} />;
+  if (activeSection === 'recovery') return <BurnoutRecoveryDashboard onBack={() => setActiveSection('overview')} recent={recentData} profile={profile} />;
 
   return (
     <div className="page active">
@@ -249,6 +251,18 @@ export default function LifestyleCoach({ profile, t = (k)=>k }) {
           title="Yoga Flow" desc="Guided sessions based on your body tension."
           icon={<Icons.Flower2 size={28} color="var(--green-dark)" />}
           onClick={() => setActiveSection('yoga')}
+        />
+
+        <OverviewCard 
+          title="Digital Wellness" desc="Screen limits, focus blocks, safe browsing & bedtime pause."
+          icon={<Icons.Smartphone size={28} color="#4338ca" />}
+          onClick={() => setActiveSection('digital')}
+        />
+
+        <OverviewCard 
+          title="Burnout & Recovery" desc="Maslach strain evaluation, 3-day reset & nervous system calming."
+          icon={<Icons.HeartHandshake size={28} color="#dc2626" />}
+          onClick={() => setActiveSection('recovery')}
         />
       </div>
 
@@ -1081,6 +1095,311 @@ function NutritionDashboard({ onBack, profile }) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DigitalWellnessDashboard({ onBack }) {
+  const [subTab, setSubTab] = useState('today');
+  const [screenTime, setScreenTime] = useState({ total: 258, social: 102, pickups: 48, balanceScore: 78 });
+  const [limits, setLimits] = useState([
+    { id: '1', name: 'Instagram & TikTok', type: 'social', limitMinutes: 45, usedMinutes: 38, enabled: true },
+    { id: '2', name: 'YouTube', type: 'entertainment', limitMinutes: 60, usedMinutes: 25, enabled: true },
+    { id: '3', name: 'Evening Wind-Down', type: 'bedtime', limitMinutes: 30, usedMinutes: 10, enabled: true },
+  ]);
+  const [activeFocus, setActiveFocus] = useState(null);
+  const [focusTimer, setFocusTimer] = useState(0);
+
+  const toggleLimit = (id) => {
+    setLimits(prev => prev.map(l => l.id === id ? { ...l, enabled: !l.enabled } : l));
+  };
+
+  const startFocus = (title, duration) => {
+    setActiveFocus(title);
+    setFocusTimer(duration);
+  };
+
+  return (
+    <div className="page active">
+      <DashHeader title="Digital Wellness Hub" icon={<Icons.Smartphone size={24} color="#4338ca" />} onBack={onBack} />
+
+      {/* Segmented Sub-Navigation */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+        {[
+          { id: 'today', label: 'Today', icon: <Icons.Clock size={16} /> },
+          { id: 'limits', label: 'Limits & Blocking', icon: <Icons.ShieldCheck size={16} /> },
+          { id: 'focus', label: 'Focus Sessions', icon: <Icons.Zap size={16} /> },
+          { id: 'web', label: 'Safe Browsing', icon: <Icons.Globe size={16} /> },
+          { id: 'insights', label: 'Insights', icon: <Icons.BarChart2 size={16} /> },
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setSubTab(tab.id)}
+            style={{
+              padding: '10px 18px',
+              borderRadius: 20,
+              border: 'none',
+              background: subTab === tab.id ? '#4338ca' : 'var(--bg)',
+              color: subTab === tab.id ? '#ffffff' : 'var(--text-muted)',
+              fontWeight: 600,
+              fontSize: 14,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              transition: 'all 0.2s ease'
+            }}
+          >
+            {tab.icon}
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {subTab === 'today' && (
+        <div>
+          {/* Today's Hero Card */}
+          <div className="dash-card" style={{ background: 'linear-gradient(135deg, #4338ca 0%, #312e81 100%)', color: '#ffffff', padding: 28, borderRadius: 20, marginBottom: 24 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+              <div>
+                <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', opacity: 0.8, textTransform: 'uppercase' }}>Daily Screen Exposure</span>
+                <h2 style={{ fontSize: 36, fontWeight: 800, margin: '8px 0 4px', color: '#ffffff' }}>4h 18m</h2>
+                <p style={{ margin: 0, fontSize: 14, opacity: 0.85 }}>Balanced day • 32m below your daily ceiling</p>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,0.15)', padding: '12px 20px', borderRadius: 16, textAlign: 'center' }}>
+                <span style={{ fontSize: 11, opacity: 0.8, textTransform: 'uppercase' }}>Digital Balance</span>
+                <div style={{ fontSize: 28, fontWeight: 800 }}>{screenTime.balanceScore} / 100</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
+            <div className="dash-card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+                <Icons.Share2 size={16} color="#ec4899" /> Social Media
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>1h 42m</div>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>40% of total usage</span>
+            </div>
+
+            <div className="dash-card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+                <Icons.Unlock size={16} color="#3b82f6" /> Screen Pickups
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>48 pickups</div>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>First pickup: 7:15 AM</span>
+            </div>
+
+            <div className="dash-card" style={{ padding: 20 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-muted)', fontSize: 13, marginBottom: 8 }}>
+                <Icons.ShieldCheck size={16} color="#16a34a" /> Intentional Pause
+              </div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#16a34a' }}>Active (3s)</div>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Calming prompt before launch</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === 'limits' && (
+        <div className="dash-card" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Active App & Website Limits</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {limits.map(l => (
+              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 16, background: 'var(--bg)', borderRadius: 14, border: '1px solid var(--border)' }}>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 15 }}>{l.name}</div>
+                  <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 2 }}>
+                    Used {l.usedMinutes}m / {l.limitMinutes}m limit
+                  </div>
+                </div>
+                <button
+                  onClick={() => toggleLimit(l.id)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 10,
+                    border: 'none',
+                    background: l.enabled ? 'var(--green)' : 'var(--border)',
+                    color: l.enabled ? 'white' : 'var(--text-muted)',
+                    fontWeight: 700,
+                    fontSize: 13,
+                    cursor: 'pointer'
+                  }}
+                >
+                  {l.enabled ? 'Active' : 'Disabled'}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'focus' && (
+        <div className="dash-card" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Guided Focus Sessions</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
+            {[
+              { title: 'Deep Work Session', dur: 25, desc: 'Dampen all non-urgent incoming alerts.' },
+              { title: 'Mental Reset', dur: 15, desc: 'Audio breathwork and offline pause.' },
+              { title: 'Bedtime Sanctuary', dur: 45, desc: 'Block social media before sleep.' },
+              { title: 'Digital Detox', dur: 60, desc: 'Full screen isolation during recovery.' },
+            ].map((f, i) => (
+              <div key={i} style={{ background: 'var(--bg)', padding: 18, borderRadius: 14, border: '1px solid var(--border)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 6px 0', fontSize: 16 }}>{f.title}</h4>
+                  <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>{f.desc}</p>
+                </div>
+                <button
+                  onClick={() => startFocus(f.title, f.dur)}
+                  style={{ marginTop: 16, background: '#4338ca', color: 'white', border: 'none', padding: '10px', borderRadius: 10, fontWeight: 700, cursor: 'pointer' }}
+                >
+                  Start ({f.dur} min)
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {subTab === 'web' && (
+        <div className="dash-card" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Safe Browsing & Distraction Guard</h3>
+          <p style={{ fontSize: 14, color: 'var(--text-muted)', marginBottom: 20 }}>
+            Blocks infinite scroll reels, algorithmic distraction loops, and predatory adult/gambling domains.
+          </p>
+          <div style={{ padding: 16, background: '#ecfdf5', borderRadius: 12, border: '1px solid #a7f3d0', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <Icons.ShieldCheck size={24} color="#16a34a" />
+            <div>
+              <div style={{ fontWeight: 700, color: '#065f46', fontSize: 15 }}>Safe Browsing Protection Active</div>
+              <div style={{ color: '#047857', fontSize: 13 }}>36 distraction attempts filtered today.</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {subTab === 'insights' && (
+        <div className="dash-card" style={{ padding: 24 }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>Digital Balance Correlation</h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontSize: 14, color: 'var(--text-muted)' }}>
+            <div style={{ padding: 14, background: 'var(--bg)', borderRadius: 12 }}>
+              💡 Days with under 1 hour of social media show a <strong>24% improvement in Stage N3 deep sleep</strong>.
+            </div>
+            <div style={{ padding: 14, background: 'var(--bg)', borderRadius: 12 }}>
+              💡 Disconnecting screens 45 minutes prior to bedtime reduces sleep onset latency by <strong>18 minutes</strong>.
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BurnoutRecoveryDashboard({ onBack, recent, profile }) {
+  const [activePlanDay, setActivePlanDay] = useState(1);
+  const recoveryReadiness = recent?.energy ? Math.min(100, recent.energy * 10 + 15) : 76;
+
+  return (
+    <div className="page active">
+      <DashHeader title="Burnout Prevention & Recovery" icon={<Icons.HeartHandshake size={24} color="#dc2626" />} onBack={onBack} />
+
+      {/* Recovery State Banner */}
+      <div className="dash-card" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', color: '#ffffff', padding: 28, borderRadius: 20, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16 }}>
+          <div>
+            <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '0.05em', opacity: 0.8, textTransform: 'uppercase' }}>Evidence-Informed Recovery State</span>
+            <h2 style={{ fontSize: 32, fontWeight: 800, margin: '8px 0 4px', color: '#34d399' }}>🟢 Balanced Recovery</h2>
+            <p style={{ margin: 0, fontSize: 14, opacity: 0.85 }}>Your cognitive workload and physical rest cycles are currently well aligned.</p>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.15)', padding: '12px 20px', borderRadius: 16, textAlign: 'center' }}>
+            <span style={{ fontSize: 11, opacity: 0.8, textTransform: 'uppercase' }}>Recovery Readiness</span>
+            <div style={{ fontSize: 28, fontWeight: 800 }}>{recoveryReadiness}%</div>
+          </div>
+        </div>
+      </div>
+
+      {/* What Do You Need Right Now? 6-Action Grid */}
+      <div className="section-title" style={{ marginBottom: 16 }}>What do you need right now?</div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14, marginBottom: 28 }}>
+        {[
+          { title: 'Rest', icon: <Icons.Moon size={20} color="#6366f1" />, desc: 'Power nap or zero-screen eye rest' },
+          { title: 'Clear Head', icon: <Icons.Wind size={20} color="#0ea5e9" />, desc: '4-7-8 parasympathetic breathwork' },
+          { title: 'Offline Mode', icon: <Icons.BellOff size={20} color="#4338ca" />, desc: 'Quiet Mode with reduced notifications' },
+          { title: 'Movement', icon: <Icons.Footprints size={20} color="#16a34a" />, desc: 'Gentle walking or hip release' },
+          { title: 'Connect', icon: <Icons.Users size={20} color="#ec4899" />, desc: 'Call a trusted friend or family' },
+          { title: 'Wind Down', icon: <Icons.Coffee size={20} color="#f59e0b" />, desc: 'Herbal tea & warm shower protocol' },
+        ].map((act, i) => (
+          <div key={i} className="dash-card" style={{ padding: 18, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+              {act.icon}
+              <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>{act.title}</h4>
+            </div>
+            <p style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>{act.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      {/* 3-Day Evidence-Informed Recovery Plan */}
+      <div className="dash-card" style={{ padding: 24, marginBottom: 24 }}>
+        <h3 style={{ margin: '0 0 16px 0', fontSize: 18 }}>3-Day Recovery Acceleration Plan</h3>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+          {[1, 2, 3].map(day => (
+            <button
+              key={day}
+              onClick={() => setActivePlanDay(day)}
+              style={{
+                padding: '8px 18px',
+                borderRadius: 12,
+                border: 'none',
+                background: activePlanDay === day ? '#dc2626' : 'var(--bg)',
+                color: activePlanDay === day ? 'white' : 'var(--text-muted)',
+                fontWeight: 700,
+                cursor: 'pointer'
+              }}
+            >
+              Day {day}
+            </button>
+          ))}
+        </div>
+
+        <div style={{ background: 'var(--bg)', padding: 20, borderRadius: 16, border: '1px solid var(--border)' }}>
+          {activePlanDay === 1 && (
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Day 1: Acute Nervous System Down-Regulation</h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--text-muted)' }}>
+                Cease optional commitments. Complete the physiological stress cycle with 15 minutes of gentle walking or progressive muscle relaxation.
+              </p>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                <li>Phone placed in another room 60 minutes before bedtime.</li>
+                <li>Warm shower or herbal tea 30 minutes before sleep.</li>
+              </ul>
+            </div>
+          )}
+          {activePlanDay === 2 && (
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Day 2: Cognitive Boundaries & Restoration</h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--text-muted)' }}>
+                Practice saying no to non-essential inputs. Take three intentional 10-minute micro-breaks during the work day.
+              </p>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                <li>No multitasking during meals.</li>
+                <li>Spend 20 minutes in natural daylight without earphones.</li>
+              </ul>
+            </div>
+          )}
+          {activePlanDay === 3 && (
+            <div>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: 16 }}>Day 3: Re-Anchoring & Sustainable Pacing</h4>
+              <p style={{ margin: '0 0 12px 0', fontSize: 14, color: 'var(--text-muted)' }}>
+                Reflect on Maslach workload mismatches. Set a firm finish line for work hours and celebrate boundary maintenance.
+              </p>
+              <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                <li>Review weekly schedule to block 90-minute sacred recovery time.</li>
+                <li>Log your evening checkup with Nura to seal recovery progress.</li>
+              </ul>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

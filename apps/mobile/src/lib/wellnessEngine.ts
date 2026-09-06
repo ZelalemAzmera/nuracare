@@ -66,7 +66,7 @@ export function compute5CoreWellness(checkin: any, profile: any = {}) {
 export function getRecoveryRecommendations(checkins: any[]) {
   if (!checkins || checkins.length === 0) return ["Complete a daily check-in to get personalized recommendations."];
 
-  const recommendations = [];
+  const recommendations: string[] = [];
   const latest = checkins[checkins.length - 1];
   const burnout = computeBurnoutRisk(latest);
 

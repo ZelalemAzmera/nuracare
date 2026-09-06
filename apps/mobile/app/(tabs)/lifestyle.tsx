@@ -28,10 +28,13 @@ import {
   Info,
   Clock,
   Calendar,
+  Smartphone,
 } from 'lucide-react-native';
 import { useWellnessStore } from '../../src/store';
 import { getProfile } from '../../src/storage/profileStorage';
 import { computeBurnoutRisk, compute5CoreWellness } from '../../src/lib/wellnessEngine';
+import DigitalWellnessHub from '../../src/components/lifestyle/DigitalWellnessHub';
+import BurnoutRecoveryHub from '../../src/components/lifestyle/BurnoutRecoveryHub';
 
 const NUTRITION_ITEMS = [
   {
@@ -100,7 +103,7 @@ export default function LifestyleScreen() {
   const profile = getProfile() || {};
   const { checkIns } = useWellnessStore();
 
-  const [activeSubTab, setActiveSubTab] = useState<'nutrition' | 'movement' | 'recovery' | 'hydration' | 'mindfulness'>('nutrition');
+  const [activeSubTab, setActiveSubTab] = useState<'nutrition' | 'movement' | 'recovery' | 'hydration' | 'mindfulness' | 'digital'>('nutrition');
 
   // Hydration local tracker
   const [waterCups, setWaterCups] = useState(5);
@@ -186,6 +189,14 @@ export default function LifestyleScreen() {
         >
           <Moon size={15} color={activeSubTab === 'recovery' ? '#16a34a' : '#64748b'} />
           <Text style={[styles.subTabText, activeSubTab === 'recovery' && styles.subTabTextActive]}>Recovery & 5-Core</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.subTabBtn, activeSubTab === 'digital' && styles.subTabBtnActive]}
+          onPress={() => setActiveSubTab('digital')}
+        >
+          <Smartphone size={15} color={activeSubTab === 'digital' ? '#16a34a' : '#64748b'} />
+          <Text style={[styles.subTabText, activeSubTab === 'digital' && styles.subTabTextActive]}>Digital Wellness</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -275,68 +286,14 @@ export default function LifestyleScreen() {
           </View>
         )}
 
-        {/* SUB-HUB 3: RECOVERY & 5-CORE WELLNESS */}
+        {/* SUB-HUB 3: RECOVERY & BURNOUT INTELLIGENCE */}
         {activeSubTab === 'recovery' && (
-          <View>
-            {/* 5-Core Score & Burnout Risk Summary */}
-            <View style={styles.scoreRow}>
-              <View style={styles.scoreCard}>
-                <Text style={styles.scoreCardLabel}>5-CORE WELLNESS</Text>
-                <Text style={[styles.scoreCardVal, { color: wellness.color }]}>{wellness.total}</Text>
-                <Text style={[styles.scoreCardStatus, { color: wellness.color }]}>{wellness.label}</Text>
-              </View>
+          <BurnoutRecoveryHub />
+        )}
 
-              <View style={[styles.scoreCard, { backgroundColor: burnout.score > 60 ? '#fef2f2' : '#ffffff' }]}>
-                <Text style={styles.scoreCardLabel}>BURNOUT RISK</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginVertical: 4 }}>
-                  <Flame size={24} color={burnout.color} />
-                  <Text style={[styles.scoreCardVal, { color: burnout.color, marginVertical: 0 }]}>
-                    {burnout.score}%
-                  </Text>
-                </View>
-                <Text style={[styles.scoreCardStatus, { color: burnout.color }]}>{burnout.label}</Text>
-              </View>
-            </View>
-
-            {/* 5-Core Dimension Breakdown */}
-            <Text style={styles.sectionHeading}>5-Core Resilience Dimensions</Text>
-            <View style={styles.breakdownBox}>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Physical Vitality</Text>
-                <Text style={styles.breakdownVal}>{wellness.cores.physical}%</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Mental Resilience</Text>
-                <Text style={styles.breakdownVal}>{wellness.cores.mental}%</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Recovery & Rest</Text>
-                <Text style={styles.breakdownVal}>{wellness.cores.recovery}%</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Nutrition & Balance</Text>
-                <Text style={styles.breakdownVal}>{wellness.cores.nutrition}%</Text>
-              </View>
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>Preventive Maintenance</Text>
-                <Text style={styles.breakdownVal}>{wellness.cores.preventive}%</Text>
-              </View>
-            </View>
-
-            {/* Restorative Sleep Routine */}
-            <Text style={styles.sectionHeading}>Restorative Sleep Hygiene</Text>
-            <View style={styles.sleepCard}>
-              <Moon size={22} color="#6366f1" />
-              <View style={{ flex: 1, marginLeft: 10 }}>
-                <Text style={styles.sleepTitle}>Wind-Down Protocol</Text>
-                <Text style={styles.sleepDesc}>
-                  • Dim artificial lights 45 minutes before sleep.{'\n'}
-                  • Avoid heavy or high-sodium meals after 8:00 PM.{'\n'}
-                  • Keep room temperature slightly cool for deep stage N3 sleep.
-                </Text>
-              </View>
-            </View>
-          </View>
+        {/* SUB-HUB: DIGITAL WELLNESS */}
+        {activeSubTab === 'digital' && (
+          <DigitalWellnessHub />
         )}
 
         {/* SUB-HUB 4: HYDRATION */}

@@ -32,7 +32,7 @@ function InnerLayout() {
       
       const needsOnboarding = !profile || !profile.name || profile._fallback || (Array.isArray(profile.conditions) === false && !profile.age);
       
-      if (needsOnboarding && segments[1] !== 'onboarding') {
+      if (needsOnboarding && (segments as any)[1] !== 'onboarding') {
         router.replace('/(auth)/onboarding/step1');
       } else if (!needsOnboarding && inAuthGroup) {
         // Redirect away from login/onboarding if already signed in and setup
