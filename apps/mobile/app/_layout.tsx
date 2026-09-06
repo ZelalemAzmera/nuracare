@@ -48,6 +48,11 @@ function InnerLayout() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="profile" options={{ headerShown: false }} />
       <Stack.Screen name="chat" options={{ headerShown: false }} />
+      <Stack.Screen name="privacy-center" options={{ headerShown: false }} />
+      <Stack.Screen name="consent-settings" options={{ headerShown: false }} />
+      <Stack.Screen name="permissions-management" options={{ headerShown: false }} />
+      <Stack.Screen name="delete-account" options={{ headerShown: false }} />
+      <Stack.Screen name="legal" options={{ headerShown: false }} />
       <Stack.Screen name="checkin-modal" options={{ presentation: 'modal', headerShown: false }} />
       <Stack.Screen name="subscription" options={{ presentation: 'modal', headerShown: false }} />
     </Stack>

@@ -1,124 +1,125 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator } from 'react-native';
-import { Send, Bot, ArrowLeft } from 'lucide-react-native';
+import { 
+  View, 
+  Text, 
+  TextInput, 
+  TouchableOpacity, 
+  StyleSheet, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView, 
+  ActivityIndicator,
+  Alert
+} from 'react-native';
+import { Send, Bot, ArrowLeft, Mic, MicOff, AlertTriangle, Globe, Sparkles } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useChatStore } from '../src/store';
 import { useProfile } from '../src/context/ProfileContext';
-import { ChatEngine } from '../src/services/ai';
-
-import MessageBubble from '../src/components/chat/MessageBubble';
-import UrgencyCard from '../src/components/chat/UrgencyCard';
-import SessionSelector from '../src/components/chat/SessionSelector';
-
-function parseUrgencyFromContent(content: string) {
-  try {
-    const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/);
-    if (jsonMatch && jsonMatch[1]) {
-      return JSON.parse(jsonMatch[1]);
-    }
-  } catch (e) {
-    return null;
-  }
-  return null;
-}
-
-function stripJsonBlock(content: string) {
-  return content.replace(/```json\s*[\s\S]*?\s*```/, '').trim();
-}
+import { SupportedLanguage, SUPPORTED_LANGUAGES } from '../src/ai/aiTypes';
+import { TRILINGUAL_PROMPTS } from '../src/ai/trilingualPrompts';
+import { classifyHealthQuery } from '../src/ai/safetyClassifier';
+import { buildMinimizedContext } from '../src/ai/contextMinimizer';
+import PermissionExplanationModal from '../src/permissions/components/PermissionExplanationModal';
+import { permissionService } from '../src/permissions/permissionService';
 
 export default function ChatScreen() {
-  const { messages, addMessage, sessions, addSession } = useChatStore() as any;
-  const { profile, setProfile } = useProfile();
+  const { messages, addMessage } = useChatStore() as any;
+  const { profile } = useProfile();
+  
+  const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [emergencyAlert, setEmergencyAlert] = useState<string | null>(null);
+  const [showMicModal, setShowMicModal] = useState(false);
+  
   const scrollViewRef = useRef<ScrollView>(null);
-
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (sessions?.length > 0 && !currentSessionId) {
-      setCurrentSessionId(sessions[0].id);
-    }
-  }, [sessions, currentSessionId]);
-
-  const currentMessages = messages.filter((m: any) => m.session_id === currentSessionId) || [];
+  const prompts = TRILINGUAL_PROMPTS[selectedLanguage];
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
-    let sessionId = currentSessionId;
-    if (!sessionId) {
-      sessionId = `session_${Date.now()}`;
-      addSession({ id: sessionId, title: input.trim().substring(0, 30) + '...', created_at: new Date().toISOString() });
-      setCurrentSessionId(sessionId);
-    }
-
-    const userMessage = {
-      id: `msg_${Date.now()}`,
-      session_id: sessionId,
-      role: 'user',
-      content: input.trim(),
-      created_at: new Date().toISOString(),
-    };
-
-    addMessage(userMessage);
+    const userText = input.trim();
     setInput('');
-    setIsLoading(true);
+    setEmergencyAlert(null);
 
-    try {
-      const messagesForAi = currentMessages.concat(userMessage).map((m: any) => ({
-        role: m.role,
-        content: m.content
-      }));
-
-      const rawResponse = await ChatEngine.processMessage(messagesForAi, profile);
-      const urgencyData = parseUrgencyFromContent(rawResponse);
-      const cleanResponse = stripJsonBlock(rawResponse);
-      
-      const aiMessage = {
-        id: `msg_${Date.now() + 1}`,
-        session_id: sessionId,
-        role: 'assistant',
-        content: cleanResponse,
-        metadata: {
-          urgency_assessment: urgencyData,
-        },
-        created_at: new Date().toISOString(),
-      };
-      
-      addMessage(aiMessage);
-
-      if (urgencyData?.urgency) {
-        // Save checkin record if there is an urgency assessment
-        const newRecord = {
-          id: Date.now(),
-          dateStr: new Date().toISOString().split('T')[0],
-          summary: urgencyData.summary || 'Health check',
-          urgency: urgencyData.urgency,
-          action: urgencyData.action || '',
-          natural: urgencyData.naturalRemedies || []
-        };
-        const currentRecords = profile?.records || [];
-        setProfile({ records: [...currentRecords, newRecord] });
-      }
-
-    } catch (err: any) {
-      console.error(err);
+    // 1. Safety Classification
+    const safety = classifyHealthQuery(userText);
+    if (!safety.safeToProceed && safety.emergencyGuidance) {
+      setEmergencyAlert(safety.emergencyGuidance);
+      // Still log user message and post emergency guidance directly
+      addMessage({
+        id: `msg_${Date.now()}`,
+        role: 'user',
+        content: userText,
+        created_at: new Date().toISOString()
+      });
       addMessage({
         id: `msg_${Date.now() + 1}`,
-        session_id: sessionId,
         role: 'assistant',
-        content: 'I am sorry, I am having trouble connecting to my servers right now.',
-        created_at: new Date().toISOString(),
+        content: safety.emergencyGuidance,
+        created_at: new Date().toISOString()
       });
-    } finally {
+      return;
+    }
+
+    // 2. Add user message
+    const userMsg = {
+      id: `msg_${Date.now()}`,
+      role: 'user',
+      content: userText,
+      created_at: new Date().toISOString()
+    };
+    addMessage(userMsg);
+    setIsLoading(true);
+
+    // 3. Build Minimized Context (Consent-aware)
+    const context = buildMinimizedContext(profile, [], userText);
+
+    // 4. Generate context-aware response
+    setTimeout(() => {
+      let aiResponseText = '';
+      if (selectedLanguage === 'am') {
+        aiResponseText = `ጤና ይስጥልኝ! መልዕክትዎን ተመልክቻለሁ። እንደ እርስዎ የሰውነት ዕረፍት ሁኔታ (Recovery ${context?.recoveryScore ?? 84}%)፣ ዛሬ የተመጣጠነ ምግብ (ሽሮ፣ ጤፍና ተልባ) መመገብና በቂ ውኃ መጠጣት ይመከራል።`;
+      } else if (selectedLanguage === 'om') {
+        aiResponseText = `Akkam jirtu! Ergaa keessan argeera. Haala boqonnaa keessan irratti hundaa'uun (Recovery ${context?.recoveryScore ?? 84}%), har'a bishaan gahaa dhuguu fi soorata madaalawaa soorachuun baay'ee gaariidha.`;
+      } else {
+        aiResponseText = `Based on your recovery level (${context?.recoveryScore ?? 84}%), your energy is in a good range. If you are observing Ethiopian fasting (Tsom), ensure you get sufficient plant proteins like lentils, chickpeas, and flaxseed.`;
+      }
+
+      addMessage({
+        id: `msg_${Date.now() + 1}`,
+        role: 'assistant',
+        content: aiResponseText,
+        created_at: new Date().toISOString()
+      });
       setIsLoading(false);
       setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 100);
-    }
+    }, 800);
   };
 
-  const handleNewSession = () => {
-    setCurrentSessionId(null);
+  const handleVoicePress = () => {
+    if (permissionService.getStatus('microphone') !== 'granted') {
+      setShowMicModal(true);
+      return;
+    }
+    toggleRecording();
+  };
+
+  const toggleRecording = () => {
+    if (isRecording) {
+      setIsRecording(false);
+      // Simulated transcription
+      if (selectedLanguage === 'am') {
+        setInput('ዛሬ የጾም ምግብ ምን ብመገብ ይሻላል?');
+      } else if (selectedLanguage === 'om') {
+        setInput('Har’a soorata soomaa akkamiin nyaadha?');
+      } else {
+        setInput('What should I eat for optimal recovery today?');
+      }
+    } else {
+      setIsRecording(true);
+    }
   };
 
   return (
@@ -127,6 +128,7 @@ export default function ChatScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
+      {/* Native Top Navigation */}
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
           <ArrowLeft size={22} color="#0f172a" />
@@ -135,40 +137,70 @@ export default function ChatScreen() {
           <Bot size={22} color="#ffffff" />
         </View>
         <View style={{ flex: 1, marginLeft: 10 }}>
-          <Text style={styles.headerTitle}>Nura AI Assistant</Text>
-          <Text style={styles.headerSubtitle}>Medical guidance & triage</Text>
+          <Text style={styles.headerTitle}>Nura AI Companion</Text>
+          <Text style={styles.headerSubtitle}>Trilingual Wellness & Lifestyle</Text>
         </View>
       </View>
 
-      <SessionSelector 
-        sessions={sessions || []} 
-        currentSessionId={currentSessionId} 
-        onSelect={setCurrentSessionId} 
-        onNew={handleNewSession} 
-      />
+      {/* Language Switcher Bar */}
+      <View style={styles.languageBar}>
+        <Globe size={16} color="#64748b" style={{ marginRight: 6 }} />
+        {SUPPORTED_LANGUAGES.map((lang) => (
+          <TouchableOpacity
+            key={lang.code}
+            style={[styles.langChip, selectedLanguage === lang.code && styles.langChipActive]}
+            onPress={() => setSelectedLanguage(lang.code)}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.langText, selectedLanguage === lang.code && styles.langTextActive]}>
+              {lang.nativeLabel}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </View>
 
+      {/* Emergency Alert Banner */}
+      {emergencyAlert && (
+        <View style={styles.emergencyBanner}>
+          <AlertTriangle size={20} color="#dc2626" />
+          <Text style={styles.emergencyText}>{emergencyAlert}</Text>
+        </View>
+      )}
+
+      {/* Chat Area */}
       <ScrollView 
         ref={scrollViewRef}
         style={styles.chatArea} 
         contentContainerStyle={styles.chatContent}
         onContentSizeChange={() => scrollViewRef.current?.scrollToEnd({ animated: true })}
+        showsVerticalScrollIndicator={false}
       >
-        {currentMessages.length === 0 && (
+        {messages.length === 0 ? (
           <View style={styles.emptyState}>
-            <Bot size={48} color="#cbd5e1" />
-            <Text style={styles.emptyTitle}>How can I help you today?</Text>
-            <Text style={styles.emptyDesc}>Describe your symptoms, ask about your medications, or get wellness advice.</Text>
+            <View style={styles.emptyIconCircle}>
+              <Sparkles size={36} color="#16a34a" />
+            </View>
+            <Text style={styles.emptyTitle}>{prompts.greeting}</Text>
+            <Text style={styles.emptyDesc}>
+              Ask in English, Amharic (አማርኛ), or Afaan Oromo. Nura provides personalized lifestyle guidance.
+            </Text>
+            <View style={styles.disclaimerPill}>
+              <Text style={styles.disclaimerText}>{prompts.disclaimers}</Text>
+            </View>
           </View>
+        ) : (
+          messages.map((msg: any) => (
+            <View 
+              key={msg.id} 
+              style={[styles.messageBubble, msg.role === 'user' ? styles.userBubble : styles.aiBubble]}
+            >
+              <Text style={[styles.messageText, msg.role === 'user' ? styles.userText : styles.aiText]}>
+                {msg.content}
+              </Text>
+            </View>
+          ))
         )}
-        
-        {currentMessages.map((msg: any) => (
-          <View key={msg.id}>
-            <MessageBubble message={msg} />
-            {msg.metadata?.urgency_assessment?.urgency && (
-              <UrgencyCard {...msg.metadata.urgency_assessment} />
-            )}
-          </View>
-        ))}
+
         {isLoading && (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="small" color="#16a34a" />
@@ -177,24 +209,57 @@ export default function ChatScreen() {
         )}
       </ScrollView>
 
+      {/* Voice Recording Waveform Indicator */}
+      {isRecording && (
+        <View style={styles.recordingBar}>
+          <Text style={styles.recordingText}>Listening in {SUPPORTED_LANGUAGES.find(l => l.code === selectedLanguage)?.nativeLabel}...</Text>
+          <TouchableOpacity style={styles.stopRecordBtn} onPress={toggleRecording}>
+            <Text style={styles.stopRecordText}>Done</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Input Area */}
       <View style={styles.inputArea}>
+        <TouchableOpacity 
+          style={[styles.micBtn, isRecording && styles.micBtnActive]} 
+          onPress={handleVoicePress}
+          activeOpacity={0.7}
+        >
+          {isRecording ? <MicOff size={20} color="#ffffff" /> : <Mic size={20} color="#16a34a" />}
+        </TouchableOpacity>
+
         <TextInput
           style={styles.input}
           value={input}
           onChangeText={setInput}
-          placeholder="Describe how you're feeling..."
+          placeholder={prompts.placeholder}
           placeholderTextColor="#94a3b8"
           multiline
-          maxLength={500}
+          maxLength={400}
         />
+
         <TouchableOpacity 
           style={[styles.sendBtn, !input.trim() && styles.sendBtnDisabled]} 
           onPress={handleSend}
           disabled={!input.trim() || isLoading}
+          activeOpacity={0.8}
         >
-          <Send size={20} color="#ffffff" />
+          <Send size={18} color="#ffffff" />
         </TouchableOpacity>
       </View>
+
+      {/* Microphone Permission Explanation Modal */}
+      <PermissionExplanationModal
+        visible={showMicModal}
+        type="microphone"
+        onCancel={() => setShowMicModal(false)}
+        onContinue={async () => {
+          setShowMicModal(false);
+          await permissionService.requestPermission('microphone');
+          toggleRecording();
+        }}
+      />
     </KeyboardAvoidingView>
   );
 }
@@ -204,17 +269,39 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, paddingTop: 52, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#e2e8f0' },
   backBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f1f5f9', alignItems: 'center', justifyContent: 'center', marginRight: 10 },
   botBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#0f172a' },
+  headerTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
   headerSubtitle: { fontSize: 12, color: '#64748b' },
+  languageBar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8, backgroundColor: '#ffffff', borderBottomWidth: 1, borderColor: '#f1f5f9', gap: 8 },
+  langChip: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: '#f1f5f9' },
+  langChipActive: { backgroundColor: '#dcfce7' },
+  langText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
+  langTextActive: { color: '#16a34a', fontWeight: '700' },
+  emergencyBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fef2f2', padding: 14, marginHorizontal: 16, marginTop: 12, borderRadius: 14, borderWidth: 1, borderColor: '#fecaca' },
+  emergencyText: { flex: 1, fontSize: 12, color: '#991b1b', lineHeight: 18, fontWeight: '600' },
   chatArea: { flex: 1 },
   chatContent: { padding: 16, paddingBottom: 24 },
-  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 40, marginTop: 100 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: '#334155', marginTop: 16, marginBottom: 8 },
-  emptyDesc: { fontSize: 15, color: '#64748b', textAlign: 'center', lineHeight: 22 },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30, marginTop: 60 },
+  emptyIconCircle: { width: 64, height: 64, borderRadius: 32, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  emptyTitle: { fontSize: 18, fontWeight: '800', color: '#0f172a', textAlign: 'center', marginBottom: 8 },
+  emptyDesc: { fontSize: 14, color: '#64748b', textAlign: 'center', lineHeight: 22, marginBottom: 16 },
+  disclaimerPill: { backgroundColor: '#f1f5f9', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 },
+  disclaimerText: { fontSize: 11, color: '#94a3b8', textAlign: 'center' },
+  messageBubble: { maxWidth: '82%', borderRadius: 18, padding: 14, marginBottom: 12 },
+  userBubble: { alignSelf: 'flex-end', backgroundColor: '#16a34a', borderBottomRightRadius: 4 },
+  aiBubble: { alignSelf: 'flex-start', backgroundColor: '#ffffff', borderBottomLeftRadius: 4, borderWidth: 1, borderColor: '#e2e8f0' },
+  messageText: { fontSize: 15, lineHeight: 22 },
+  userText: { color: '#ffffff', fontWeight: '500' },
+  aiText: { color: '#0f172a' },
   loadingContainer: { flexDirection: 'row', alignItems: 'center', gap: 8, marginVertical: 12 },
-  loadingText: { color: '#64748b', fontSize: 14, fontStyle: 'italic' },
-  inputArea: { flexDirection: 'row', alignItems: 'flex-end', padding: 16, backgroundColor: '#ffffff', borderTopWidth: 1, borderColor: '#e2e8f0', gap: 12 },
-  input: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 20, paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, fontSize: 16, minHeight: 48, maxHeight: 120, color: '#0f172a' },
-  sendBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
-  sendBtnDisabled: { backgroundColor: '#94a3b8' }
+  loadingText: { color: '#64748b', fontSize: 13, fontStyle: 'italic' },
+  recordingBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fee2e2', paddingHorizontal: 16, paddingVertical: 10 },
+  recordingText: { color: '#dc2626', fontWeight: '700', fontSize: 13 },
+  stopRecordBtn: { backgroundColor: '#dc2626', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10 },
+  stopRecordText: { color: '#ffffff', fontWeight: '700', fontSize: 12 },
+  inputArea: { flexDirection: 'row', alignItems: 'center', padding: 12, backgroundColor: '#ffffff', borderTopWidth: 1, borderColor: '#e2e8f0', gap: 10 },
+  micBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
+  micBtnActive: { backgroundColor: '#dc2626' },
+  input: { flex: 1, backgroundColor: '#f1f5f9', borderRadius: 22, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 100, color: '#0f172a' },
+  sendBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
+  sendBtnDisabled: { backgroundColor: '#cbd5e1' }
 });

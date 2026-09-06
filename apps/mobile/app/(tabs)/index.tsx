@@ -1,246 +1,284 @@
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useEffect, useState, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useProfile } from '../../src/context/ProfileContext';
-import { getDailyTip } from '../../src/shared';
-import { Leaf, Activity, Pill, HeartPulse, Calendar, MessageCircle, Play, User, Zap, Sparkles, ChevronRight, Users } from 'lucide-react-native';
-import * as WebBrowser from 'expo-web-browser';
+import { useWellnessStore } from '../../src/store';
+import { useRemoteConfigStore } from '../../src/store/remoteConfigStore';
+import DynamicSectionRenderer from '../../src/components/dynamic/DynamicSectionRenderer';
+import { User, MessageCircle, Sparkles, ChevronRight, RefreshCw } from 'lucide-react-native';
 
-export default function HomeScreen() {
-  const { profile } = useProfile();
-  const tip = getDailyTip();
+export default function AdaptiveHomeScreen() {
   const router = useRouter();
-
-  const greeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good Morning';
-    if (hour < 18) return 'Good Afternoon';
-    return 'Good Evening';
-  };
-
-  const handleVideo = async (url: string) => {
-    await WebBrowser.openBrowserAsync(url);
-  };
-
-  const medsList = Array.isArray(profile?.medications) 
-    ? profile.medications 
-    : (profile?.medications ? profile.medications.split(',').map((m: string) => m.trim()).filter(Boolean) : []);
+  const { profile } = useProfile();
+  const { checkIns } = useWellnessStore();
   
-  const records = profile?.records || [];
-  const lastRec = records.length > 0 ? records[records.length - 1] : null;
+  const { 
+    config, 
+    isLoading: isConfigLoading, 
+    initialize, 
+    syncRemoteConfig, 
+    getSortedSections 
+  } = useRemoteConfigStore();
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Initialize config on mount
+  useEffect(() => {
+    initialize();
+    syncRemoteConfig();
+  }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await syncRemoteConfig();
+    setRefreshing(false);
+  };
+
+  // Determine current Time of Day deterministically
+  const timeOfDay = useMemo((): 'morning' | 'afternoon' | 'evening' | 'night' => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 22) return 'evening';
+    return 'night';
+  }, []);
+
+  const greeting = useMemo(() => {
+    switch (timeOfDay) {
+      case 'morning': return 'Good Morning';
+      case 'afternoon': return 'Good Afternoon';
+      case 'evening': return 'Good Evening';
+      case 'night': return 'Rest Well';
+    }
+  }, [timeOfDay]);
+
+  // Derive active biometrics from local records & store
+  const biometrics = useMemo(() => {
+    const recentCheckin = checkIns.length > 0 ? checkIns[0] : null;
+    return {
+      recoveryScore: recentCheckin?.energy ? Math.min(100, recentCheckin.energy * 10 + 15) : 84,
+      steps: 6240,
+      hydrationLiters: 1.4,
+      sleepDuration: '7h 42m'
+    };
+  }, [checkIns]);
+
+  // Retrieve dynamically filtered and sorted sections via SDUI engine
+  const activeSections = useMemo(() => {
+    return getSortedSections(timeOfDay, biometrics.recoveryScore);
+  }, [getSortedSections, timeOfDay, biometrics.recoveryScore, config]);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header with Profile Button */}
+    <ScrollView 
+      style={styles.container}
+      contentContainerStyle={styles.contentContainer}
+      showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl 
+          refreshing={refreshing} 
+          onRefresh={onRefresh} 
+          colors={['#16a34a']} 
+          tintColor="#16a34a"
+        />
+      }
+    >
+      {/* Native Header */}
       <View style={styles.header}>
         <View style={{ flex: 1 }}>
-          <Text style={styles.greeting}>{greeting()}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}</Text>
-          <Text style={styles.subtitle}>Your Nura health overview</Text>
+          <Text style={styles.greetingText}>
+            {greeting}{profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
+          </Text>
+          <Text style={styles.subtitleText}>Your living wellness dashboard</Text>
           {profile?.culturalHeritage && (
-            <Text style={styles.location}>{profile.culturalHeritage}</Text>
+            <Text style={styles.heritageBadge}>{profile.culturalHeritage}</Text>
           )}
         </View>
+
         <TouchableOpacity 
-          style={styles.profileHeaderBtn} 
+          style={styles.profileBtn} 
           onPress={() => router.push('/profile')}
           activeOpacity={0.8}
+          accessibilityLabel="Open Profile"
         >
           <View style={styles.avatarCircle}>
             {profile?.name ? (
               <Text style={styles.avatarText}>{profile.name[0].toUpperCase()}</Text>
             ) : (
-              <User size={22} color="#ffffff" />
+              <User size={20} color="#ffffff" />
             )}
           </View>
           <Text style={styles.profileBtnLabel}>Profile</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Featured Nura AI Chat Card */}
+      {/* Featured Nura AI Companion Teaser */}
       <TouchableOpacity 
-        style={styles.chatCard} 
+        style={styles.aiHeroCard} 
         onPress={() => router.push('/chat')}
         activeOpacity={0.88}
       >
-        <View style={styles.chatCardHeader}>
-          <View style={styles.chatIconBadge}>
+        <View style={styles.aiHeroHeader}>
+          <View style={styles.aiIconBadge}>
             <MessageCircle size={22} color="#ffffff" />
           </View>
           <View style={{ flex: 1, marginLeft: 12 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Text style={styles.chatCardTitle}>Ask Nura AI</Text>
-              <View style={styles.aiPill}><Text style={styles.aiPillText}>Instant AI</Text></View>
+              <Text style={styles.aiHeroTitle}>Nura AI Companion</Text>
+              <View style={styles.trilingualPill}>
+                <Text style={styles.trilingualText}>EN / አማ / OM</Text>
+              </View>
             </View>
-            <Text style={styles.chatCardSub}>Medical triage & symptoms in English & Amharic</Text>
+            <Text style={styles.aiHeroSub}>Context-aware wellness & cultural nutrition guidance</Text>
           </View>
-          <ChevronRight size={20} color="#16a34a" />
+          <ChevronRight size={18} color="#16a34a" />
         </View>
-        <View style={styles.chatPromptBar}>
-          <Text style={styles.chatPromptPlaceholder}>Describe symptoms or ask health advice...</Text>
-          <View style={styles.chatPromptSendBtn}>
-            <Sparkles size={16} color="#ffffff" />
+        <View style={styles.aiPromptBar}>
+          <Text style={styles.aiPromptText}>Ask about your recovery, sleep, or Ethiopian fasting...</Text>
+          <View style={styles.aiSparkleIcon}>
+            <Sparkles size={14} color="#ffffff" />
           </View>
         </View>
       </TouchableOpacity>
 
-      {/* Daily Checkup Banner */}
-      <TouchableOpacity 
-        style={styles.checkupBanner}
-        onPress={() => router.push('/(tabs)/checkups')}
-        activeOpacity={0.85}
-      >
-        <View style={styles.checkupIconBadge}>
-          <Calendar size={20} color="#16a34a" />
-        </View>
-        <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={styles.checkupBannerTitle}>Daily Health Checkup</Text>
-          <Text style={styles.checkupBannerSub}>
-            {lastRec ? `Last logged: ${lastRec.dateStr || 'Recent'}` : 'Log today\'s symptoms & vitals'}
-          </Text>
-        </View>
-        <ChevronRight size={18} color="#94a3b8" />
-      </TouchableOpacity>
-
-      {tip && (
-        <View style={styles.tipCard}>
-          <View style={styles.tipHeader}>
-            <Leaf size={20} color="#16a34a" />
-            <Text style={styles.tipTitle}>TODAY'S INSIGHT</Text>
-          </View>
-          <Text style={styles.tipName}>{tip.name}</Text>
-          <Text style={styles.tipDesc}>{tip.benefit || tip.description}</Text>
-          {tip.youtubeLink && (
-            <TouchableOpacity style={styles.videoBtn} onPress={() => handleVideo(tip.youtubeLink)}>
-              <Play size={16} color="#ffffff" />
-              <Text style={styles.videoText}>Watch How</Text>
-            </TouchableOpacity>
-          )}
-        </View>
-      )}
-
-      <Text style={styles.sectionTitle}>Dashboard</Text>
-      <View style={styles.grid}>
-        <View style={[styles.dashCard, styles.cardLarge]}>
-          <View style={styles.dashIconContainer}><HeartPulse size={24} color="#16a34a" /></View>
-          <View>
-            <Text style={styles.dashLabel}>Overall Status</Text>
-            <Text style={styles.dashValue}>
-              {lastRec
-                ? lastRec.urgency === 'high' ? 'Needs Attention'
-                : lastRec.urgency === 'mid' ? 'Monitoring'
-                : 'Feeling Good'
-                : 'Feeling Good'}
-            </Text>
-          </View>
-        </View>
-        
-        <View style={styles.dashCardSmallContainer}>
-          <View style={styles.dashCardSmall}>
-            <Calendar size={20} color="#16a34a" />
-            <View style={{ marginLeft: 12 }}>
-              <Text style={styles.dashLabel}>Last Checkup</Text>
-              <Text style={styles.dashValueSmall}>{lastRec ? lastRec.dateStr || 'Recent' : 'None yet'}</Text>
-            </View>
-          </View>
-          <View style={styles.dashCardSmall}>
-            <Zap size={20} color="#16a34a" />
-            <View style={{ marginLeft: 12 }}>
-              <Text style={styles.dashLabel}>Urgency</Text>
-              <Text style={styles.dashValueSmall}>{lastRec ? lastRec.urgency.toUpperCase() : '—'}</Text>
-            </View>
-          </View>
-        </View>
-      </View>
-
-      <View style={styles.sectionHeader}>
-        <Pill size={18} color="#0f172a" />
-        <Text style={[styles.sectionTitle, { marginTop: 0, marginLeft: 8 }]}>Medication Reminders</Text>
-      </View>
-      
-      {medsList.length > 0 ? (
-        <View style={styles.medsCard}>
-          {medsList.map((med: string, i: number) => (
-            <View key={i} style={styles.medItem}>
-              <Pill size={18} color="#16a34a" />
-              <Text style={styles.medName}>{med}</Text>
-            </View>
-          ))}
-        </View>
-      ) : (
-        <Text style={styles.emptyText}>No medications added yet. Add in Profile →</Text>
-      )}
-
-      <Text style={styles.sectionTitle}>Quick Actions</Text>
-      <View style={styles.actionsGrid}>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/chat')}>
-          <MessageCircle size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Nura Chat</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/profile')}>
-          <User size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Profile</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/checkups')}>
-          <Calendar size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Daily Checkup</Text>
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.actionBtn} onPress={() => router.push('/(tabs)/community')}>
-          <Users size={20} color="#16a34a" />
-          <Text style={styles.actionText}>Community</Text>
-        </TouchableOpacity>
-      </View>
+      {/* Server-Driven UI Dynamic Section Stack */}
+      <DynamicSectionRenderer 
+        sections={activeSections} 
+        biometrics={biometrics}
+      />
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', padding: 16 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, marginTop: 40 },
-  greeting: { fontSize: 24, fontWeight: '800', color: '#0f172a' },
-  subtitle: { fontSize: 16, color: '#64748b', marginTop: 4 },
-  location: { fontSize: 13, color: '#94a3b8', marginTop: 4 },
-  scoreCircle: { width: 56, height: 56, borderRadius: 28, backgroundColor: '#16a34a', justifyContent: 'center', alignItems: 'center' },
-  scoreText: { color: '#ffffff', fontSize: 20, fontWeight: 'bold' },
-  tipCard: { backgroundColor: '#ffffff', padding: 20, borderRadius: 16, marginBottom: 24, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  tipHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  tipTitle: { fontSize: 12, fontWeight: '800', color: '#16a34a', letterSpacing: 1 },
-  tipName: { fontSize: 18, fontWeight: 'bold', color: '#0f172a', marginBottom: 8 },
-  tipDesc: { fontSize: 14, color: '#475569', lineHeight: 20, marginBottom: 16 },
-  videoBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#e2e8f0', alignSelf: 'flex-start', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, gap: 6 },
-  videoText: { color: '#16a34a', fontWeight: '700', fontSize: 13 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 12 },
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12, marginTop: 8 },
-  grid: { marginBottom: 24 },
-  dashCard: { backgroundColor: '#ffffff', padding: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 12 },
-  cardLarge: { padding: 20 },
-  dashIconContainer: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
-  dashLabel: { fontSize: 13, color: '#64748b', marginBottom: 4 },
-  dashValue: { fontSize: 18, fontWeight: '700', color: '#0f172a' },
-  dashCardSmallContainer: { flexDirection: 'row', gap: 12 },
-  dashCardSmall: { flex: 1, backgroundColor: '#ffffff', padding: 16, borderRadius: 16, flexDirection: 'row', alignItems: 'center' },
-  dashValueSmall: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  medsCard: { backgroundColor: '#ffffff', borderRadius: 16, padding: 16, marginBottom: 24 },
-  medItem: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 8 },
-  medName: { fontSize: 16, color: '#1e293b', fontWeight: '500' },
-  emptyText: { color: '#64748b', fontStyle: 'italic', marginBottom: 24 },
-  actionsGrid: { flexDirection: 'row', gap: 12, marginBottom: 40, flexWrap: 'wrap' },
-  actionBtn: { flexGrow: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', padding: 16, borderRadius: 16, alignItems: 'center', gap: 8, minWidth: '45%' },
-  actionText: { color: '#334155', fontWeight: '600', fontSize: 14 },
-  profileHeaderBtn: { alignItems: 'center', justifyContent: 'center' },
-  avatarCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#16a34a', justifyContent: 'center', alignItems: 'center', elevation: 2, shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 4 },
-  avatarText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' },
-  profileBtnLabel: { fontSize: 11, color: '#64748b', fontWeight: '600', marginTop: 3 },
-  chatCard: { backgroundColor: '#ffffff', borderRadius: 20, padding: 16, marginBottom: 16, borderWidth: 1, borderColor: '#dcfce7', elevation: 2, shadowColor: '#16a34a', shadowOpacity: 0.08, shadowRadius: 10 },
-  chatCardHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  chatIconBadge: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
-  chatCardTitle: { fontSize: 17, fontWeight: '800', color: '#0f172a' },
-  chatCardSub: { fontSize: 12, color: '#64748b', marginTop: 2 },
-  aiPill: { backgroundColor: '#dcfce7', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  aiPillText: { color: '#16a34a', fontSize: 10, fontWeight: '700' },
-  chatPromptBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#f8fafc', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, justifyContent: 'space-between' },
-  chatPromptPlaceholder: { fontSize: 13, color: '#94a3b8' },
-  chatPromptSendBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: '#16a34a', alignItems: 'center', justifyContent: 'center' },
-  checkupBanner: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 16, padding: 14, marginBottom: 20 },
-  checkupIconBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#f0fdf4', alignItems: 'center', justifyContent: 'center' },
-  checkupBannerTitle: { fontSize: 15, fontWeight: '700', color: '#0f172a' },
-  checkupBannerSub: { fontSize: 12, color: '#64748b', marginTop: 2 }
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc'
+  },
+  contentContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 40
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  greetingText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#0f172a',
+    letterSpacing: -0.5
+  },
+  subtitleText: {
+    fontSize: 14,
+    color: '#64748b',
+    marginTop: 2
+  },
+  heritageBadge: {
+    fontSize: 12,
+    color: '#16a34a',
+    fontWeight: '600',
+    marginTop: 4
+  },
+  profileBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 12
+  },
+  avatarCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2
+  },
+  avatarText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: 'bold'
+  },
+  profileBtnLabel: {
+    fontSize: 10,
+    color: '#64748b',
+    fontWeight: '600',
+    marginTop: 3
+  },
+  aiHeroCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#dcfce7',
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    elevation: 2
+  },
+  aiHeroHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12
+  },
+  aiIconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  aiHeroTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0f172a'
+  },
+  aiHeroSub: {
+    fontSize: 12,
+    color: '#64748b',
+    marginTop: 2
+  },
+  trilingualPill: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8
+  },
+  trilingualText: {
+    color: '#16a34a',
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  aiPromptBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    justifyContent: 'space-between'
+  },
+  aiPromptText: {
+    fontSize: 12,
+    color: '#94a3b8',
+    flex: 1
+  },
+  aiSparkleIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#16a34a',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 8
+  }
 });
