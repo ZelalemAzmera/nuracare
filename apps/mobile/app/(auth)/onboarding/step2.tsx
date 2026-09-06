@@ -1,38 +1,46 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput, ActivityIndicator, KeyboardAvoidingView, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+} from 'react-native';
 import { router } from 'expo-router';
 import { useProfile } from '../../../src/context/ProfileContext';
-import { ArrowLeft, Activity, Heart, Wind, Bone, Brain, Sparkles, PenLine } from 'lucide-react-native';
+import { ArrowLeft, ArrowRight, Activity, Heart, Wind, Bone, Brain, Sparkles, Clock } from 'lucide-react-native';
+import FloatingNatureBackground from '../../../src/components/ambient/FloatingNatureBackground';
 
 const CONDITIONS = [
   { id: 'diabetes', label: 'Diabetes', icon: Activity },
-  { id: 'hypertension', label: 'Hypertension', icon: Heart },
-  { id: 'asthma', label: 'Asthma', icon: Wind },
-  { id: 'arthritis', label: 'Arthritis', icon: Bone },
-  { id: 'anxiety', label: 'Anxiety', icon: Brain },
-  { id: 'none', label: 'None', icon: Sparkles },
+  { id: 'hypertension', label: 'Blood Pressure', icon: Heart },
+  { id: 'asthma', label: 'Respiratory / Asthma', icon: Wind },
+  { id: 'joint', label: 'Joint & Bone Mobility', icon: Bone },
+  { id: 'stress', label: 'High Stress / Burnout', icon: Brain },
+  { id: 'none', label: 'General Vitality', icon: Sparkles },
+];
+
+const FASTING_OPTIONS = [
+  { id: 'Orthodox Christian (Tsom)', label: 'Orthodox Christian (Tsom)', desc: 'Wed/Fri and fasting seasons without animal products' },
+  { id: 'Islamic (Ramadan)', label: 'Islamic (Ramadan / Sunnah)', desc: 'Dawn to sunset fasting with Suhoor and Iftar meals' },
+  { id: 'Intermittent Fasting (16:8)', label: 'Intermittent Fasting (16:8)', desc: '16 hours fasting, 8 hours eating window' },
+  { id: 'none', label: 'Standard Nutrition', desc: 'No structured fasting routine' },
 ];
 
 export default function OnboardingStep2() {
   const { profile, setProfile } = useProfile();
-  const [conditions, setConditions] = useState<string[]>([]);
-  const [otherCondition, setOtherCondition] = useState('');
-  const [fastingMode, setFastingMode] = useState('none');
+  const [conditions, setConditions] = useState<string[]>(['none']);
+  const [fastingMode, setFastingMode] = useState('Orthodox Christian (Tsom)');
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (profile) {
-      if (Array.isArray(profile.conditions)) {
-        const standard = CONDITIONS.map(c => c.id);
-        const hasOther = profile.conditions.find((c: string) => !standard.includes(c));
-        const matched = profile.conditions.filter((c: string) => standard.includes(c));
-        
-        const newConds = [...matched];
-        if (hasOther) {
-          newConds.push('other');
-          setOtherCondition(hasOther);
-        }
-        setConditions(newConds);
+      if (Array.isArray(profile.conditions) && profile.conditions.length > 0) {
+        setConditions(profile.conditions);
       }
       if (profile.fastingMode) {
         setFastingMode(profile.fastingMode);
@@ -43,12 +51,11 @@ export default function OnboardingStep2() {
   const toggleCondition = (c: string) => {
     if (c === 'none') {
       setConditions(['none']);
-      setOtherCondition('');
       return;
     }
     const filtered = conditions.filter(x => x !== 'none');
     if (filtered.includes(c)) {
-      setConditions(filtered.filter(x => x !== c));
+      setConditions(filtered.length === 1 ? ['none'] : filtered.filter(x => x !== c));
     } else {
       setConditions([...filtered, c]);
     }
@@ -56,142 +63,197 @@ export default function OnboardingStep2() {
 
   const handleNext = async () => {
     setLoading(true);
-    const baseConditions = conditions.filter(c => c !== 'none' && c !== 'other');
-    const allConditions = conditions.includes('other') && otherCondition.trim()
-      ? [...baseConditions, otherCondition.trim()]
-      : baseConditions;
-
-    await setProfile({ 
-      conditions: allConditions, 
-      fastingMode: profile?.culturalHeritage === 'Ethiopia' ? fastingMode : 'none' 
+    await setProfile({
+      conditions,
+      fastingMode,
     });
     setLoading(false);
     router.push('/(auth)/onboarding/step3');
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={styles.container} contentContainerStyle={{ paddingBottom: 40 }}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-            <ArrowLeft size={24} color="#0f172a" />
-          </TouchableOpacity>
-          <Text style={styles.stepIndicator}>2 of 3</Text>
-        </View>
-
-        <Text style={styles.title}>Your health baseline</Text>
-        <Text style={styles.subtitle}>Do you have any of these common conditions? (Optional)</Text>
-
-        <View style={styles.form}>
-          <View style={styles.chipContainer}>
-            {CONDITIONS.map(c => (
-              <TouchableOpacity 
-                key={c.id} 
-                style={[styles.chip, conditions.includes(c.id) && styles.chipActive]} 
-                onPress={() => toggleCondition(c.id)}
-              >
-                <c.icon size={18} color={conditions.includes(c.id) ? '#ffffff' : '#16a34a'} />
-                <Text style={[styles.chipText, conditions.includes(c.id) && styles.chipTextActive]}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity 
-              style={[styles.chip, conditions.includes('other') && styles.chipActive, { flexBasis: '100%' }]} 
-              onPress={() => toggleCondition('other')}
-            >
-              <PenLine size={18} color={conditions.includes('other') ? '#ffffff' : '#16a34a'} />
-              <Text style={[styles.chipText, conditions.includes('other') && styles.chipTextActive]}>Other</Text>
+    <FloatingNatureBackground showSoundToggle={true}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+              <ArrowLeft size={22} color="#0f172a" />
             </TouchableOpacity>
+            <View style={styles.stepPill}>
+              <Text style={styles.stepText}>Step 2 of 4</Text>
+            </View>
           </View>
 
-          {conditions.includes('other') && (
-            <TextInput 
-              style={[styles.input, { marginTop: 16 }]} 
-              value={otherCondition}
-              onChangeText={setOtherCondition}
-              placeholder="e.g. Celiac disease, PCOS..." 
-              autoFocus
-            />
-          )}
+          <View style={styles.titleSection}>
+            <Text style={styles.title}>Health Focus & Fasting</Text>
+            <Text style={styles.subtitle}>
+              Customize AI nutrition and checkup advice to your biological rhythms.
+            </Text>
+          </View>
 
-          {profile?.culturalHeritage === 'Ethiopia' && (
-            <View style={{ marginTop: 32 }}>
-              <Text style={styles.label}>Track Religious Fasting Calendars?</Text>
-              <View style={styles.verticalOptions}>
-                <TouchableOpacity style={[styles.optionCard, fastingMode === 'none' && styles.optionCardActive]} onPress={() => setFastingMode('none')}>
-                  <View style={[styles.radio, fastingMode === 'none' && styles.radioActive]} />
-                  <View style={styles.optionTextContainer}>
-                    <Text style={[styles.optionText, fastingMode === 'none' && styles.optionTextActive]}>None</Text>
-                    <Text style={styles.optionSubtext}>Track balanced global nutrition macros.</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.optionCard, fastingMode === 'orthodox' && styles.optionCardActive]} onPress={() => setFastingMode('orthodox')}>
-                  <View style={[styles.radio, fastingMode === 'orthodox' && styles.radioActive]} />
-                  <View style={styles.optionTextContainer}>
-                    <Text style={[styles.optionText, fastingMode === 'orthodox' && styles.optionTextActive]}>Orthodox Christian</Text>
-                    <Text style={styles.optionSubtext}>Adjusts for Wednesday/Friday and major Tsom periods.</Text>
-                  </View>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={[styles.optionCard, fastingMode === 'islamic' && styles.optionCardActive]} onPress={() => setFastingMode('islamic')}>
-                  <View style={[styles.radio, fastingMode === 'islamic' && styles.radioActive]} />
-                  <View style={styles.optionTextContainer}>
-                    <Text style={[styles.optionText, fastingMode === 'islamic' && styles.optionTextActive]}>Islamic (Ramadan)</Text>
-                    <Text style={styles.optionSubtext}>Adjusts for daily fasting windows and macros.</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.card}>
+            <Text style={styles.label}>Health Focus Areas</Text>
+            <View style={styles.conditionsGrid}>
+              {CONDITIONS.map((item) => {
+                const Icon = item.icon;
+                const active = conditions.includes(item.id);
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[styles.conditionBtn, active && styles.conditionBtnActive]}
+                    onPress={() => toggleCondition(item.id)}
+                  >
+                    <Icon size={18} color={active ? '#16a34a' : '#64748b'} />
+                    <Text style={[styles.conditionBtnText, active && styles.conditionBtnTextActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
-          )}
-        </View>
 
-        <TouchableOpacity 
-          style={styles.nextBtn} 
-          onPress={handleNext}
-          disabled={loading}
-        >
-          {loading ? <ActivityIndicator color="#fff" /> : <Text style={styles.nextText}>Continue</Text>}
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <Text style={[styles.label, { marginTop: 18 }]}>Fasting Schedule (Tsom / Routine)</Text>
+            {FASTING_OPTIONS.map((opt) => (
+              <TouchableOpacity
+                key={opt.id}
+                style={[styles.fastingCard, fastingMode === opt.id && styles.fastingCardActive]}
+                onPress={() => setFastingMode(opt.id)}
+              >
+                <View style={styles.fastingRadio}>
+                  {fastingMode === opt.id && <View style={styles.fastingRadioDot} />}
+                </View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={[styles.fastingName, fastingMode === opt.id && styles.fastingNameActive]}>
+                    {opt.label}
+                  </Text>
+                  <Text style={styles.fastingDesc}>{opt.desc}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNext} disabled={loading}>
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <View style={styles.btnRow}>
+                  <Text style={styles.nextBtnText}>Continue</Text>
+                  <ArrowRight size={18} color="#ffffff" />
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </FloatingNatureBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc', padding: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 40, marginBottom: 24 },
-  backBtn: { padding: 8, marginLeft: -8 },
-  stepIndicator: { color: '#64748b', fontWeight: '600', fontSize: 16 },
-  title: { fontSize: 32, fontWeight: '800', color: '#0f172a' },
-  subtitle: { fontSize: 16, color: '#64748b', marginTop: 8, marginBottom: 32 },
-  form: { flex: 1 },
-  label: { fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 },
-  input: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, fontSize: 16 },
-  chipContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  chip: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    gap: 8, 
-    backgroundColor: '#ffffff', 
-    borderWidth: 1, 
-    borderColor: '#e2e8f0', 
-    borderRadius: 12, 
-    paddingVertical: 12, 
-    paddingHorizontal: 16,
-    flexGrow: 1
+  container: { flex: 1 },
+  content: {
+    paddingHorizontal: 20,
+    paddingTop: Platform.OS === 'ios' ? 60 : 44,
+    paddingBottom: 40,
   },
-  chipActive: { backgroundColor: '#16a34a', borderColor: '#16a34a' },
-  chipText: { color: '#475569', fontWeight: '600', fontSize: 15 },
-  chipTextActive: { color: '#ffffff' },
-  verticalOptions: { gap: 12 },
-  optionCard: { backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 12, padding: 16, flexDirection: 'row', alignItems: 'center', gap: 16 },
-  optionCardActive: { borderColor: '#16a34a', backgroundColor: '#f0fdf4' },
-  radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, borderColor: '#cbd5e1' },
-  radioActive: { borderColor: '#16a34a', backgroundColor: '#16a34a' },
-  optionTextContainer: { flex: 1 },
-  optionText: { fontSize: 16, color: '#1e293b', fontWeight: '600', marginBottom: 4 },
-  optionTextActive: { color: '#16a34a' },
-  optionSubtext: { fontSize: 13, color: '#64748b' },
-  nextBtn: { backgroundColor: '#16a34a', padding: 16, borderRadius: 12, alignItems: 'center', marginTop: 40 },
-  nextText: { color: '#ffffff', fontSize: 18, fontWeight: 'bold' }
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#ffffff',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  stepPill: {
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 16,
+  },
+  stepText: { fontSize: 12, fontWeight: '700', color: '#16a34a' },
+  titleSection: { marginBottom: 20 },
+  title: { fontSize: 26, fontWeight: '900', color: '#0f172a' },
+  subtitle: { fontSize: 13, color: '#64748b', marginTop: 4, lineHeight: 19 },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 20,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  label: { fontSize: 12, fontWeight: '700', color: '#334155', marginBottom: 10 },
+  conditionsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  conditionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: '#f8fafc',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    gap: 6,
+  },
+  conditionBtnActive: {
+    backgroundColor: '#dcfce7',
+    borderColor: '#16a34a',
+  },
+  conditionBtnText: { fontSize: 12, fontWeight: '600', color: '#64748b' },
+  conditionBtnTextActive: { color: '#16a34a', fontWeight: '800' },
+  fastingCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f8fafc',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  fastingCardActive: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#16a34a',
+  },
+  fastingRadio: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#94a3b8',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  fastingRadioDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#16a34a',
+  },
+  fastingName: { fontSize: 13, fontWeight: '700', color: '#0f172a' },
+  fastingNameActive: { color: '#16a34a' },
+  fastingDesc: { fontSize: 11, color: '#64748b', marginTop: 2 },
+  nextBtn: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+  },
+  btnRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nextBtnText: { color: '#ffffff', fontSize: 15, fontWeight: '800' },
 });

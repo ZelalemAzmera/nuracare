@@ -5,6 +5,7 @@ import { useProfile } from '../../src/context/ProfileContext';
 import { useWellnessStore } from '../../src/store';
 import { useRemoteConfigStore } from '../../src/store/remoteConfigStore';
 import DynamicSectionRenderer from '../../src/components/dynamic/DynamicSectionRenderer';
+import FloatingNatureBackground from '../../src/components/ambient/FloatingNatureBackground';
 import { User, MessageCircle, Sparkles, ChevronRight, RefreshCw } from 'lucide-react-native';
 
 export default function AdaptiveHomeScreen() {
@@ -69,10 +70,11 @@ export default function AdaptiveHomeScreen() {
   }, [getSortedSections, timeOfDay, biometrics.recoveryScore, config]);
 
   return (
-    <ScrollView 
-      style={styles.container}
-      contentContainerStyle={styles.contentContainer}
-      showsVerticalScrollIndicator={false}
+    <FloatingNatureBackground showSoundToggle={true}>
+      <ScrollView 
+        style={styles.container}
+        contentContainerStyle={styles.contentContainer}
+        showsVerticalScrollIndicator={false}
       refreshControl={
         <RefreshControl 
           refreshing={refreshing} 
@@ -145,7 +147,8 @@ export default function AdaptiveHomeScreen() {
         sections={activeSections} 
         biometrics={biometrics}
       />
-    </ScrollView>
+      </ScrollView>
+    </FloatingNatureBackground>
   );
 }
 

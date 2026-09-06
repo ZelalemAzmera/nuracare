@@ -1,12 +1,24 @@
-import { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Leaf } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { Leaf, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { useAuth } from '../../src/context/AuthContext';
+import { useAuthStore } from '../../src/store';
 import { router } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
+import FloatingNatureBackground from '../../src/components/ambient/FloatingNatureBackground';
 
 export default function LoginScreen() {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
+  const { setUser } = useAuthStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,13 +31,12 @@ export default function LoginScreen() {
       setError('Please fill in all fields.');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     try {
       if (isSignUp) {
         await signUpWithEmail(email, password, name);
-        // User should be navigated automatically by RootLayout once auth state changes
       } else {
         await signInWithEmail(email, password);
       }
@@ -48,213 +59,352 @@ export default function LoginScreen() {
     }
   };
 
+  // Instant guest preview mode for smooth evaluation
+  const handleGuestPreview = () => {
+    setUser({
+      id: 'guest_' + Date.now(),
+      name: 'Guest Explorer',
+      fastingMode: 'Orthodox Christian (Tsom)',
+    });
+    router.replace('/(tabs)');
+  };
+
   return (
-    <KeyboardAvoidingView 
-      style={{ flex: 1 }} 
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        <View style={styles.header}>
-          <View style={styles.logoContainer}>
-            <Leaf size={40} color="#16a34a" />
-          </View>
-          <Text style={styles.title}>NuraCare</Text>
-          <Text style={styles.subtitle}>
-            {isSignUp ? 'Create an account to begin' : 'Welcome back to your wellness journey'}
-          </Text>
-        </View>
-
-        <View style={styles.form}>
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          {isSignUp && (
-            <TextInput
-              style={styles.input}
-              placeholder="Full Name"
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-          )}
-
-          <TextInput
-            style={styles.input}
-            placeholder="Email Address"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-
-          <TextInput
-            style={styles.input}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-
-          {isSignUp && (
-            <Text style={styles.termsText}>
-              By signing up, you agree to our{' '}
-              <Text style={styles.link} onPress={() => router.push('/terms')}>Terms of Service</Text>
-              {' '}and{' '}
-              <Text style={styles.link} onPress={() => router.push('/privacy')}>Privacy Policy</Text>.
+    <FloatingNatureBackground showSoundToggle={true}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Brand Header */}
+          <View style={styles.brandHeader}>
+            <View style={styles.logoBadge}>
+              <Leaf size={38} color="#16a34a" />
+            </View>
+            <Text style={styles.brandTitle}>NuraCare</Text>
+            <Text style={styles.brandSubtitle}>
+              {isSignUp
+                ? 'Begin your personalized, calm wellness journey'
+                : 'Welcome back to your natural health companion'}
             </Text>
-          )}
+          </View>
 
-          <TouchableOpacity 
-            style={styles.submitBtn} 
-            onPress={handleSubmit} 
-            disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.submitText}>{isSignUp ? 'Sign Up' : 'Sign In'}</Text>
+          {/* Aesthetic Glassmorphic Card */}
+          <View style={styles.card}>
+            {error && (
+              <View style={styles.errorBox}>
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
             )}
-          </TouchableOpacity>
 
-          <View style={styles.divider}>
-            <View style={styles.dividerLine} />
-            <Text style={styles.dividerText}>or</Text>
-            <View style={styles.dividerLine} />
+            {isSignUp && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Full Name</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Abebe Bikila"
+                  placeholderTextColor="#94a3b8"
+                  value={name}
+                  onChangeText={setName}
+                  autoCapitalize="words"
+                />
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Email Address</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="name@example.com"
+                placeholderTextColor="#94a3b8"
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+              />
+            </View>
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Password</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="••••••••"
+                placeholderTextColor="#94a3b8"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry
+              />
+            </View>
+
+            {isSignUp && (
+              <Text style={styles.termsNotice}>
+                By signing up, you agree to NuraCare's{' '}
+                <Text style={styles.termsLink} onPress={() => router.push('/legal')}>
+                  Privacy & Terms
+                </Text>
+                .
+              </Text>
+            )}
+
+            {/* Primary Action Button */}
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={handleSubmit}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <View style={styles.btnRow}>
+                  <Text style={styles.primaryBtnText}>
+                    {isSignUp ? 'Create Account' : 'Sign In'}
+                  </Text>
+                  <ArrowRight size={18} color="#ffffff" />
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.dividerRow}>
+              <View style={styles.dividerLine} />
+              <Text style={styles.dividerLabel}>or</Text>
+              <View style={styles.dividerLine} />
+            </View>
+
+            {/* Google OAuth Button */}
+            <TouchableOpacity
+              style={styles.googleBtn}
+              onPress={handleGoogle}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.googleBtnText}>Continue with Google</Text>
+            </TouchableOpacity>
+
+            {/* Toggle Sign Up / Sign In */}
+            <TouchableOpacity
+              onPress={() => {
+                setIsSignUp(!isSignUp);
+                setError(null);
+              }}
+              style={styles.toggleRow}
+            >
+              <Text style={styles.toggleText}>
+                {isSignUp
+                  ? 'Already have an account? '
+                  : "Don't have an account yet? "}
+                <Text style={styles.toggleHighlight}>
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* Instant Explorer / Preview Button */}
+            <TouchableOpacity
+              style={styles.exploreBtn}
+              onPress={handleGuestPreview}
+              activeOpacity={0.7}
+            >
+              <Sparkles size={16} color="#16a34a" />
+              <Text style={styles.exploreBtnText}>Explore NuraCare (Guest Mode)</Text>
+            </TouchableOpacity>
           </View>
 
-          <TouchableOpacity 
-            style={styles.googleBtn} 
-            onPress={handleGoogle} 
-            disabled={loading}
-          >
-            <Text style={styles.googleText}>Continue with Google</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setError(null); }} style={styles.toggleBtn}>
-            <Text style={styles.toggleText}>
-              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+          {/* Privacy Safeguard Strip */}
+          <View style={styles.footerShield}>
+            <ShieldCheck size={14} color="#16a34a" />
+            <Text style={styles.footerShieldText}>
+              Protected by Ethiopian Data Protection Proclamation No. 1321/2024
             </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </FloatingNatureBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  scrollContainer: {
     flexGrow: 1,
-    backgroundColor: '#f8fafc',
     justifyContent: 'center',
-    padding: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 50,
   },
-  header: {
+  brandHeader: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: 24,
   },
-  logoContainer: {
-    backgroundColor: '#f0fdf4',
-    padding: 16,
-    borderRadius: 24,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#0f172a',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748b',
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  form: {
+  logoBadge: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     backgroundColor: '#ffffff',
-    padding: 24,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.05,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.15,
     shadowRadius: 16,
     elevation: 3,
+    marginBottom: 12,
+  },
+  brandTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#0f172a',
+    letterSpacing: -0.5,
+  },
+  brandSubtitle: {
+    fontSize: 13,
+    color: '#64748b',
+    textAlign: 'center',
+    marginTop: 4,
+    maxWidth: 280,
+  },
+  card: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 14,
+    elevation: 2,
+  },
+  errorBox: {
+    backgroundColor: '#fef2f2',
+    padding: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#fecaca',
+    marginBottom: 14,
   },
   errorText: {
-    color: '#ef4444',
-    marginBottom: 16,
-    textAlign: 'center',
-    backgroundColor: '#fef2f2',
-    padding: 12,
-    borderRadius: 8,
+    color: '#b91c1c',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  inputGroup: {
+    marginBottom: 14,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    marginBottom: 6,
   },
   input: {
     backgroundColor: '#f8fafc',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    fontSize: 16,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-  },
-  termsText: {
-    fontSize: 12,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 16,
-    lineHeight: 18,
-  },
-  link: {
-    color: '#16a34a',
-    fontWeight: '600',
-  },
-  submitBtn: {
-    backgroundColor: '#16a34a',
-    padding: 16,
     borderRadius: 12,
-    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#0f172a',
   },
-  submitText: {
-    color: '#ffffff',
-    fontSize: 16,
+  termsNotice: {
+    fontSize: 11,
+    color: '#64748b',
+    marginBottom: 14,
+    lineHeight: 16,
+  },
+  termsLink: {
+    color: '#16a34a',
     fontWeight: '700',
   },
-  divider: {
+  primaryBtn: {
+    backgroundColor: '#16a34a',
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6,
+    shadowColor: '#16a34a',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  btnRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 24,
+    gap: 8,
+  },
+  primaryBtnText: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 18,
+    gap: 10,
   },
   dividerLine: {
     flex: 1,
     height: 1,
     backgroundColor: '#e2e8f0',
   },
-  dividerText: {
+  dividerLabel: {
+    fontSize: 12,
     color: '#94a3b8',
-    paddingHorizontal: 16,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   googleBtn: {
     backgroundColor: '#ffffff',
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  googleText: {
-    color: '#334155',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 12,
-  },
-  toggleBtn: {
-    marginTop: 24,
+    borderColor: '#cbd5e1',
+    paddingVertical: 13,
+    borderRadius: 14,
     alignItems: 'center',
+  },
+  googleBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  toggleRow: {
+    alignItems: 'center',
+    marginTop: 18,
   },
   toggleText: {
+    fontSize: 13,
+    color: '#64748b',
+  },
+  toggleHighlight: {
     color: '#16a34a',
-    fontSize: 14,
-    fontWeight: '600',
-  }
+    fontWeight: '800',
+  },
+  exploreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f0fdf4',
+    borderWidth: 1,
+    borderColor: '#bbf7d0',
+    borderRadius: 12,
+    paddingVertical: 10,
+    marginTop: 16,
+    gap: 6,
+  },
+  exploreBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#16a34a',
+  },
+  footerShield: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 20,
+    gap: 6,
+  },
+  footerShieldText: {
+    fontSize: 11,
+    color: '#64748b',
+  },
 });

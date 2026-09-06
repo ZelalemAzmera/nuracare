@@ -11,6 +11,8 @@ import WearableHub from '@/pages/Wearables';
 import MedicalRecords, { ExpandableRecordCard } from '@/pages/Records';
 import SubscriptionPage from '@/pages/Subscription';
 import EnterpriseDashboard from '@/pages/Enterprise';
+import CommunityPage from '@/pages/Community';
+import MedicationPage from '@/pages/Medication';
 import { PrivacyPolicy, TermsOfService, MedicalDisclaimer } from '@/pages/Legal';
 import ToastContainer from '@/components/ui/Toast';
 import AppSkeleton from '@/components/ui/AppSkeleton';
@@ -524,10 +526,12 @@ export default function App() {
         <nav className="sidebar-nav">
           <NavItem icon={Icons.Home} label={t("home")} active={activePage === 'home'} onClick={() => {setActivePage('home'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.CalendarCheck} label={t("daily_checkin")} active={activePage === 'checkin'} onClick={() => { setActivePage('checkin'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Pill} label="Medication" active={activePage === 'medication'} onClick={() => { setActivePage('medication'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Zap} label={t("lifestyle")} active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
+          <NavItem icon={Icons.Users} label="Community" active={activePage === 'community'} onClick={() => { setActivePage('community'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.MessageCircle} label={t("chat")} active={activePage === 'chat'} onClick={() => {setActivePage('chat'); setSidebarOpen(false);}} />
           <NavItem icon={Icons.Stethoscope} label={t("checkups")} active={activePage === 'checkups'} onClick={() => { setActivePage('checkups'); setSidebarOpen(false); }} />
           <NavItem icon={Icons.Sparkles} label={t("discover")} active={activePage === 'discovery'} onClick={() => { setActivePage('discovery'); setSidebarOpen(false); }} />
-          <NavItem icon={Icons.Zap} label={t("lifestyle")} active={activePage === 'lifestyle'} onClick={() => { setActivePage('lifestyle'); setSidebarOpen(false); }} />
         </nav>
         <div className="sidebar-bottom">
           <div className="mobile-only-sessions">
@@ -581,6 +585,8 @@ export default function App() {
 
       <main className="content-area">
         {activePage === 'home' && <Home profile={profile} setActivePage={setActivePage} t={t} onOpenDownloadModal={() => setDownloadModalOpen(true)} />}
+        {activePage === 'community' && <CommunityPage profile={profile} />}
+        {activePage === 'medication' && <MedicationPage profile={profile} />}
         {activePage === 'wellness' && <WellnessDashboard user={profile} profile={profile} records={profile.records || []} />}
         {activePage === 'chat' && <ChatErrorBoundary><Chat profile={profile} saveProfile={saveProfile} sessions={sessions} saveSession={saveSession} deleteSession={deleteSession} handleDeleteSession={handleDeleteSession} setShareSession={setShareSession} currentSessionId={currentSessionId} setCurrentSessionId={setCurrentSessionId} t={t} lang={lang} /></ChatErrorBoundary>}
         {activePage === 'records' && <MedicalRecords profile={profile} onBack={() => setActivePage('profile')} />}

@@ -8,6 +8,7 @@
   "dependencies": {
     "abort-controller": "^3.0.0",
     "babel-plugin-syntax-hermes-parser": "^0.37.0",
+    "expo-av": "^16.0.8",
     "hermes-parser": "^0.37.0",
     "pngjs": "^7.0.0",
     "source-map": "0.5.6",
