@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { MessageCircle, Calendar, Heart, Users, User, ShieldCheck } from 'lucide-react-native';
+import { MessageCircle, CalendarCheck, Pill, Heart, Users, ShieldCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 
 interface QuickActionsCardProps {
@@ -12,11 +12,11 @@ export default function QuickActionsCard({ title = 'Quick Actions' }: QuickActio
   const router = useRouter();
 
   const actions = [
-    { label: 'Nura Chat', icon: <MessageCircle size={20} color="#16a34a" />, route: '/chat' },
-    { label: 'Checkup', icon: <Calendar size={20} color="#16a34a" />, route: '/(tabs)/checkups' },
+    { label: 'Checkup', icon: <CalendarCheck size={20} color="#16a34a" />, route: '/(tabs)/checkups' },
+    { label: 'Medication', icon: <Pill size={20} color="#16a34a" />, route: '/(tabs)/medication' },
     { label: 'Lifestyle', icon: <Heart size={20} color="#16a34a" />, route: '/(tabs)/lifestyle' },
     { label: 'Community', icon: <Users size={20} color="#16a34a" />, route: '/(tabs)/community' },
-    { label: 'Profile', icon: <User size={20} color="#16a34a" />, route: '/profile' },
+    { label: 'Nura Chat', icon: <MessageCircle size={20} color="#16a34a" />, route: '/chat' },
     { label: 'Privacy Hub', icon: <ShieldCheck size={20} color="#16a34a" />, route: '/privacy-center' },
   ];
 

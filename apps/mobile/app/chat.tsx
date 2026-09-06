@@ -12,7 +12,7 @@ import {
   Alert
 } from 'react-native';
 import { Send, Bot, ArrowLeft, Mic, MicOff, AlertTriangle, Globe, Sparkles } from 'lucide-react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useChatStore } from '../src/store';
 import { useProfile } from '../src/context/ProfileContext';
 import { SupportedLanguage, SUPPORTED_LANGUAGES } from '../src/ai/aiTypes';
@@ -23,11 +23,12 @@ import PermissionExplanationModal from '../src/permissions/components/Permission
 import { permissionService } from '../src/permissions/permissionService';
 
 export default function ChatScreen() {
+  const { prompt: paramPrompt } = useLocalSearchParams<{ prompt?: string }>();
   const { messages, addMessage } = useChatStore() as any;
   const { profile } = useProfile();
   
   const [selectedLanguage, setSelectedLanguage] = useState<SupportedLanguage>('en');
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(paramPrompt || '');
   const [isLoading, setIsLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [emergencyAlert, setEmergencyAlert] = useState<string | null>(null);
@@ -35,6 +36,12 @@ export default function ChatScreen() {
   
   const scrollViewRef = useRef<ScrollView>(null);
   const prompts = TRILINGUAL_PROMPTS[selectedLanguage];
+
+  useEffect(() => {
+    if (paramPrompt && !input) {
+      setInput(paramPrompt);
+    }
+  }, [paramPrompt]);
 
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
