@@ -1,13 +1,15 @@
 import 'react-native-gesture-handler';
 import { Stack, router, useSegments } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { useWellnessStore } from '../src/store';
+import { useWellnessStore, useAuthStore } from '../src/store';
 import { startBackgroundSyncLoop } from '../src/services/supabase/syncEngine';
 import { AuthProvider, useAuth } from '../src/context/AuthContext';
 import { ProfileProvider, useProfile } from '../src/context/ProfileContext';
 
 function InnerLayout() {
   const { user, loading: authLoading } = useAuth();
+  const { user: storeUser } = useAuthStore();
+  const currentUser = user || storeUser;
   const { profile, loading: profileLoading } = useProfile();
   const { loadWellnessData } = useWellnessStore();
   const [isReady, setIsReady] = useState(false);
@@ -23,11 +25,19 @@ function InnerLayout() {
     if (!isReady || authLoading) return;
 
     const inAuthGroup = segments[0] === '(auth)';
+    const isGuest = currentUser?.id && String(currentUser.id).startsWith('guest_');
     
-    if (!user && !inAuthGroup) {
+    if (!currentUser && !inAuthGroup) {
       // Redirect to login
       router.replace('/(auth)/login');
-    } else if (user) {
+    } else if (currentUser) {
+      if (isGuest) {
+        if (inAuthGroup) {
+          router.replace('/(tabs)');
+        }
+        return;
+      }
+
       if (profileLoading) return;
       
       const needsOnboarding = !profile || !profile.name || profile._fallback || (Array.isArray(profile.conditions) === false && !profile.age);
@@ -39,7 +49,7 @@ function InnerLayout() {
         router.replace('/(tabs)');
       }
     }
-  }, [user, profile, authLoading, profileLoading, segments, isReady]);
+  }, [currentUser, profile, authLoading, profileLoading, segments, isReady]);
 
   return (
     <Stack>

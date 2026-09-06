@@ -233,7 +233,7 @@ export default function App() {
     if (onboardingStep === -1) {
       return (
         <>
-          <AuthPage setOnboardingStep={setOnboardingStep} setActivePage={setActivePage} useAuth={useAuth} t={t} />
+          <AuthPage setOnboardingStep={setOnboardingStep} setActivePage={setActivePage} useAuth={useAuth} saveProfile={saveProfile} t={t} />
           <ToastContainer />
         </>
       );
@@ -291,7 +291,20 @@ export default function App() {
             <button
               className="btn-outline-sm"
               style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--text-muted)', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.7)', padding: '10px 24px', borderRadius: '12px', cursor: 'pointer' }}
-              onClick={() => setOnboardingStep(1)}
+              onClick={() => {
+                saveProfile({
+                  name: 'Guest Explorer',
+                  age: '28',
+                  culturalHeritage: 'Global',
+                  langPref: 'English',
+                  conditions: [],
+                  medications: [],
+                  fastingMode: 'None',
+                  medicalNotes: '',
+                  records: []
+                });
+                setActivePage('home');
+              }}
             >
               Continue as Guest (no account needed)
             </button>

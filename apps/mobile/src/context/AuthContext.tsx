@@ -13,6 +13,7 @@ type AuthContextType = {
   signUpWithEmail: (email: string, pass: string, name: string) => Promise<any>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  setGuestUser: (guest: any) => void;
 };
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
@@ -113,8 +114,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) console.error('Error signing out:', error);
   };
 
+  const setGuestUser = (guest: any) => {
+    setUser(guest);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, loading }}>
+    <AuthContext.Provider value={{ user, signUpWithEmail, signInWithEmail, signInWithGoogle, signOut, setGuestUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

@@ -17,7 +17,7 @@ import { router } from 'expo-router';
 import FloatingNatureBackground from '../../src/components/ambient/FloatingNatureBackground';
 
 export default function LoginScreen() {
-  const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
+  const { signInWithEmail, signUpWithEmail, signInWithGoogle, setGuestUser } = useAuth();
   const { setUser } = useAuthStore();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -61,11 +61,15 @@ export default function LoginScreen() {
 
   // Instant guest preview mode for smooth evaluation
   const handleGuestPreview = () => {
-    setUser({
+    const guestData = {
       id: 'guest_' + Date.now(),
       name: 'Guest Explorer',
       fastingMode: 'Orthodox Christian (Tsom)',
-    });
+    };
+    setUser(guestData);
+    if (setGuestUser) {
+      setGuestUser(guestData);
+    }
     router.replace('/(tabs)');
   };
 

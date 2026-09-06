@@ -3,6 +3,8 @@ import { supabase } from '../services/supabase/client';
 import { useAuth } from './AuthContext';
 import { storage } from '../storage/mmkv';
 
+import { useAuthStore } from '../store';
+
 type ProfileContextType = {
   profile: any;
   loading: boolean;
@@ -14,12 +16,31 @@ const ProfileContext = createContext<ProfileContextType>({} as ProfileContextTyp
 
 export function ProfileProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
+  const { user: storeUser } = useAuthStore();
+  const currentUser = user || storeUser;
   const [profile, setProfileState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user) {
+    if (!currentUser) {
       setProfileState(null);
+      setLoading(false);
+      return;
+    }
+
+    if (currentUser?.id && String(currentUser.id).startsWith('guest_')) {
+      setProfileState({
+        id: currentUser.id,
+        name: currentUser.name || 'Guest Explorer',
+        age: 28,
+        culturalHeritage: 'Global',
+        langPref: 'English',
+        conditions: [],
+        medications: [],
+        fastingMode: currentUser.fastingMode || 'Orthodox Christian (Tsom)',
+        medicalNotes: '',
+        records: []
+      });
       setLoading(false);
       return;
     }

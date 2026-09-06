@@ -3,7 +3,7 @@ import * as Icons from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { showToast, formatDate, stripThinkTags, stripJsonBlock, parseUrgencyFromContent } from '@/lib/utils';
 
-function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
+function AuthPage({ setOnboardingStep, setActivePage, useAuth, saveProfile, t = (k)=>k }) {
   const { signInWithEmail, signUpWithEmail, signInWithGoogle } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
@@ -14,6 +14,26 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  const handleGuestLogin = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const guestProfile = {
+      name: 'Guest Explorer',
+      age: '28',
+      culturalHeritage: 'Global',
+      langPref: 'English',
+      conditions: [],
+      medications: [],
+      fastingMode: 'None',
+      medicalNotes: '',
+      records: []
+    };
+    if (saveProfile) {
+      saveProfile(guestProfile);
+    }
+    setActivePage('home');
+    setOnboardingStep(0);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -118,9 +138,24 @@ function AuthPage({ setOnboardingStep, setActivePage, useAuth, t = (k)=>k }) {
           </button>
 
           <div style={{textAlign: 'center', marginTop: 20}}>
-            <a href="#" onClick={(e) => { e.preventDefault(); setOnboardingStep(1); }} style={{fontSize: 13, color: 'var(--text-muted)'}}>
-              Skip — Continue as Guest (no account needed)
-            </a>
+            <button 
+              type="button" 
+              onClick={handleGuestLogin} 
+              style={{
+                background: 'transparent',
+                border: '1px dashed var(--green)',
+                color: 'var(--green-dark)',
+                padding: '10px 18px',
+                borderRadius: '12px',
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: 'pointer',
+                width: '100%',
+                display: 'inline-block'
+              }}
+            >
+              🌱 Continue as Guest (explore all features instantly)
+            </button>
           </div>
         </div>
       </div>
