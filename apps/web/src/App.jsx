@@ -184,6 +184,7 @@ export default function App() {
     setCurrentSessionId('session-' + Date.now());
     setObName(''); setObAge(''); setObCulturalHeritage('Global'); setObConditions([]); setObOtherCondition(''); setObFasting(TSOM_TYPES.NONE); setObMeds([]);
     localStorage.removeItem('nuracare_activePage');
+    localStorage.removeItem('nuracare_guest_profile');
   };
 
   const handleDeleteSession = (id) => {
@@ -286,6 +287,15 @@ export default function App() {
                 Download App (APK)
               </button>
             </div>
+
+            <button
+              className="btn-outline-sm"
+              style={{ marginBottom: '8px', fontSize: '14px', color: 'var(--text-muted)', border: '1px solid var(--border)', background: 'rgba(255,255,255,0.7)', padding: '10px 24px', borderRadius: '12px', cursor: 'pointer' }}
+              onClick={() => setOnboardingStep(1)}
+            >
+              Continue as Guest (no account needed)
+            </button>
+
 
             <div style={{height: 20}}></div>
             <img src="/hero.png" alt="Natural Wellness" className="hero-media" />

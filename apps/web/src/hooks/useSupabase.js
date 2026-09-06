@@ -2,48 +2,65 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 
+const GUEST_PROFILE_KEY = 'nuracare_guest_profile';
+
 export function useSupabaseProfile() {
   const { user } = useAuth();
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfileState] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (!user) {
-      setProfile(null);
+      // Guest mode — load from localStorage
+      try {
+        const saved = localStorage.getItem(GUEST_PROFILE_KEY);
+        if (saved) {
+          setProfileState(JSON.parse(saved));
+        } else {
+          setProfileState(null);
+        }
+      } catch (e) {
+        setProfileState(null);
+      }
       setLoading(false);
       return;
     }
 
     async function fetchProfile() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single();
-      
-      if (data) {
-        const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
-        const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
-        const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
-        setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
-      } else if (error && error.code === 'PGRST116') {
-        const { data: newProfile } = await supabase
+      try {
+        const { data, error } = await supabase
           .from('profiles')
-          .upsert({ id: user.id, name: user.user_metadata?.full_name || '', updated_at: new Date() })
-          .select()
+          .select('*')
+          .eq('id', user.id)
           .single();
-        if (newProfile) {
+        
+        if (data) {
           const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
           const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
           const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
-          setProfile({ ...newProfile, medicalNotes: newProfile.medical_notes, fastingMode, culturalHeritage, langPref });
+          setProfileState({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
+        } else if (error && error.code === 'PGRST116') {
+          const { data: newProfile } = await supabase
+            .from('profiles')
+            .upsert({ id: user.id, name: user.user_metadata?.full_name || '', updated_at: new Date() })
+            .select()
+            .single();
+          if (newProfile) {
+            const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
+            const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
+            const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
+            setProfileState({ ...newProfile, medicalNotes: newProfile.medical_notes, fastingMode, culturalHeritage, langPref });
+          } else {
+            setProfileState({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
+          }
         } else {
-          setProfile({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
+          console.error("Error fetching profile", error);
+          setProfileState({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
         }
-      } else {
-        console.error("Error fetching profile", error);
-        setProfile({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
+      } catch (e) {
+        console.error("Profile fetch failed", e);
+        setProfileState({ id: user.id, name: user.user_metadata?.full_name || '', _fallback: true });
       }
       setLoading(false);
     }
@@ -52,7 +69,15 @@ export function useSupabaseProfile() {
   }, [user]);
 
   const updateProfile = async (updates) => {
-    if (!user) return;
+    if (!user) {
+      // Guest mode — save to localStorage
+      const merged = { ...(profile || {}), ...updates };
+      try {
+        localStorage.setItem(GUEST_PROFILE_KEY, JSON.stringify(merged));
+      } catch (e) {}
+      setProfileState(merged);
+      return;
+    }
     
     // Convert camelCase to snake_case for the database
     const dbPayload = { ...updates };
@@ -76,25 +101,34 @@ export function useSupabaseProfile() {
       delete dbPayload.langPref;
     }
     
-    const { data, error } = await supabase
-      .from('profiles')
-      .upsert({ id: user.id, ...dbPayload, updated_at: new Date() })
-      .select()
-      .single();
-      
-    if (!error && data) {
-      const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
-      const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
-      const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
-      setProfile({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
-    } else {
-      console.error('Error updating profile', error);
-      window.dispatchEvent(new CustomEvent('nuracare-toast', { detail: { message: 'Failed to save profile: ' + error.message, type: 'error' } }));
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({ id: user.id, ...dbPayload, updated_at: new Date() })
+        .select()
+        .single();
+        
+      if (!error && data) {
+        const fastingMode = localStorage.getItem(`fastingMode_${user.id}`) || 'None';
+        const culturalHeritage = localStorage.getItem(`culturalHeritage_${user.id}`) || 'Global';
+        const langPref = localStorage.getItem(`langPref_${user.id}`) || 'English';
+        setProfileState({ ...data, medicalNotes: data.medical_notes, fastingMode, culturalHeritage, langPref });
+      } else if (error) {
+        console.error('Error updating profile', error);
+        // Save locally as fallback even for logged-in users when Supabase fails
+        const merged = { ...(profile || {}), ...updates };
+        setProfileState(merged);
+      }
+    } catch (e) {
+      console.error('Profile update network error', e);
+      const merged = { ...(profile || {}), ...updates };
+      setProfileState(merged);
     }
   };
 
   const clearProfile = () => {
-    setProfile(null);
+    setProfileState(null);
+    localStorage.removeItem(GUEST_PROFILE_KEY);
     setLoading(false);
   };
 
